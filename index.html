@@ -893,20 +893,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.title = `${grupo.icono || '⚽'} ${grupo.nombre} — Quiniela Mundial 2026`;
   aplicarTemaGrupo(grupo);
 
-  // Revisar sesión guardada
-  const saved = localStorage.getItem('q2026_user');
+  // Revisar sesión guardada para ESTE grupo específico
+  const sessionKey = 'q2026_user_' + grupoParam;
+  const saved = localStorage.getItem(sessionKey);
   if (saved) {
     try {
       currentUser = JSON.parse(saved);
-      // Si el user está registrado en otro grupo, actualizar currentGrupo a su grupo real
-      if (currentUser.grupo_quiniela && currentUser.grupo_quiniela !== grupoParam) {
-        const { data: grupoReal } = await sb.from('grupos_quiniela').select('*')
-          .eq('id', currentUser.grupo_quiniela).maybeSingle();
-        if (grupoReal) currentGrupo = grupoReal;
-      }
       await loadApp();
     } catch(e) {
-      localStorage.removeItem('q2026_user');
+      localStorage.removeItem(sessionKey);
     }
   }
 });
@@ -1030,30 +1025,34 @@ async function handleLogin() {
   if (!nombre) { showError(errEl, 'Ingresa tu nombre.'); return; }
   if (wa.length < 8) { showError(errEl, 'Ingresa un número de WhatsApp válido con código de país.'); return; }
 
-  // Intentar buscar participante existente
+  // Buscar participante en ESTE grupo específico
   const { data: existing } = await sb.from('participantes')
-    .select('*').eq('whatsapp', wa).maybeSingle();
+    .select('*').eq('whatsapp', wa).eq('grupo_quiniela', currentGrupo.id).maybeSingle();
 
   if (existing) {
+    if (existing.activo === false) {
+      showError(errEl, '⛔ Tu acceso ha sido desactivado. Contacta al administrador.');
+      return;
+    }
     currentUser = existing;
-    localStorage.setItem('q2026_user', JSON.stringify(currentUser));
+    localStorage.setItem('q2026_user_' + currentGrupo.id, JSON.stringify(currentUser));
     await loadApp();
     return;
   }
 
-  // Nuevo participante
+  // Nuevo participante en este grupo
   const { data: nuevo, error } = await sb.from('participantes')
-    .insert({ nombre, whatsapp: wa, grupo_quiniela: currentGrupo?.id }).select().single();
+    .insert({ nombre, whatsapp: wa, grupo_quiniela: currentGrupo.id }).select().single();
 
   if (error) { showError(errEl, 'Error al registrarte. Intenta de nuevo.'); return; }
   currentUser = nuevo;
-  localStorage.setItem('q2026_user', JSON.stringify(currentUser));
+  localStorage.setItem('q2026_user_' + currentGrupo.id, JSON.stringify(currentUser));
   await loadApp();
 }
 
 function showLogoutMenu() {
   if (confirm(`Hola ${currentUser.nombre}!\n\n¿Cerrar sesión?`)) {
-    localStorage.removeItem('q2026_user');
+    localStorage.removeItem('q2026_user_' + currentGrupo.id);
     location.reload();
   }
 }
@@ -1324,7 +1323,7 @@ async function loadLeaderboard() {
   cont.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Cargando...</div>';
 
   // Filtrar participantes por grupo si hay uno activo
-  let partQuery = sb.from('participantes').select('id,nombre,grupo_quiniela');
+  let partQuery = sb.from('participantes').select('id,nombre,grupo_quiniela').eq('activo', true);
   if (currentGrupo) partQuery = partQuery.eq('grupo_quiniela', currentGrupo.id);
 
   const [partRes, prRes, campRes, partRes2] = await Promise.all([
@@ -1648,7 +1647,7 @@ async function loadAdminPanel() {
 
   // Participantes
   const [{ data: parts }, { data: grupos }] = await Promise.all([
-    sb.from('participantes').select('id,nombre,whatsapp,grupo_quiniela,fecha_registro').order('fecha_registro'),
+    sb.from('participantes').select('id,nombre,whatsapp,grupo_quiniela,fecha_registro,activo').order('fecha_registro'),
     sb.from('grupos_quiniela').select('id,nombre').order('nombre'),
   ]);
   const pDiv = document.getElementById('admin-participantes');
@@ -1658,11 +1657,19 @@ async function loadAdminPanel() {
 
   const renderPart = p => {
     const opts = allGrupos.map(g => `<option value="${g.id}" ${g.id === p.grupo_quiniela ? 'selected' : ''}>${g.nombre}</option>`).join('');
-    return `<div style="font-size:0.82rem;padding:6px 0;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    const activo = p.activo !== false;
+    return `<div style="font-size:0.82rem;padding:6px 0;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:8px;flex-wrap:wrap;opacity:${activo ? 1 : 0.5}">
       <span style="flex:1;min-width:120px">${p.nombre} <span style="color:var(--gris)">· ${p.whatsapp}</span></span>
       <select onchange="cambiarGrupoParticipante('${p.whatsapp}', this.value, this)" style="font-size:0.78rem;padding:2px 6px;border:1px solid var(--borde);border-radius:4px">
         <option value="">Sin grupo</option>${opts}
       </select>
+      <label title="${activo ? 'Desactivar usuario' : 'Activar usuario'}" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.75rem;color:${activo ? 'var(--exito)' : 'var(--error)'}">
+        <div onclick="toggleActivoParticipante('${p.whatsapp}', ${activo}, this.parentElement.parentElement)"
+          style="width:34px;height:18px;border-radius:9px;background:${activo ? 'var(--exito)' : '#ccc'};position:relative;cursor:pointer;transition:background .2s">
+          <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${activo ? 'right:2px' : 'left:2px'};transition:all .2s"></div>
+        </div>
+        ${activo ? 'Activo' : 'Inactivo'}
+      </label>
     </div>`;
   };
 
@@ -1690,6 +1697,29 @@ async function loadAdminPanel() {
   }
 
   pDiv.innerHTML = html;
+}
+
+async function toggleActivoParticipante(whatsapp, currentActivo, rowEl) {
+  const nuevoEstado = !currentActivo;
+  const { error } = await sb.from('participantes')
+    .update({ activo: nuevoEstado })
+    .eq('whatsapp', whatsapp);
+  if (error) { alert('Error al cambiar estado: ' + error.message); return; }
+  // Actualizar visual del toggle y opacity sin recargar toda la lista
+  rowEl.style.opacity = nuevoEstado ? '1' : '0.5';
+  const toggle = rowEl.querySelector('[onclick^="toggleActivoParticipante"]');
+  if (toggle) {
+    toggle.style.background = nuevoEstado ? 'var(--exito)' : '#ccc';
+    const dot = toggle.querySelector('div');
+    if (dot) { dot.style.right = nuevoEstado ? '2px' : ''; dot.style.left = nuevoEstado ? '' : '2px'; }
+    toggle.setAttribute('onclick', `toggleActivoParticipante('${whatsapp}', ${nuevoEstado}, this.parentElement.parentElement)`);
+  }
+  const label = rowEl.querySelector('label');
+  if (label) {
+    label.style.color = nuevoEstado ? 'var(--exito)' : 'var(--error)';
+    label.title = nuevoEstado ? 'Desactivar usuario' : 'Activar usuario';
+    label.lastChild.textContent = nuevoEstado ? ' Activo' : ' Inactivo';
+  }
 }
 
 async function cambiarGrupoParticipante(whatsapp, nuevoGrupo, selEl) {
@@ -1765,7 +1795,12 @@ async function adminUpdateResult() {
     allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, estado: 'finalizado' };
   }
 
-  msgEl.innerHTML = `<div class="alert alert-ok">✅ Resultado guardado. ${(prons||[]).length} pronósticos calculados.</div>`;
+  // Si es la Final, premiar al campeón
+  if (partido.fase === 'final' && avanzaLocal !== null) {
+    await premiarCampeon(partido.equipo_local, partido.equipo_visita, avanzaLocal);
+  }
+
+  msgEl.innerHTML = `<div class="alert alert-ok">✅ Resultado guardado. ${(prons||[]).length} pronósticos calculados.${partido.fase === 'final' ? ' 🏆 Campeón premiado.' : ''}</div>`;
   loadAdminPanel();
 }
 
@@ -1813,7 +1848,12 @@ async function guardarEditResultado(pid) {
     allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, estado: 'finalizado' };
   }
 
-  msgEl.textContent = `✅ Actualizado. ${(prons||[]).length} pronósticos recalculados.`;
+  // Si es la Final, premiar al campeón
+  if (partido.fase === 'final' && avanzaLocal !== null) {
+    await premiarCampeon(partido.equipo_local, partido.equipo_visita, avanzaLocal);
+  }
+
+  msgEl.textContent = `✅ Actualizado. ${(prons||[]).length} pronósticos recalculados.${partido.fase === 'final' ? ' 🏆 Campeón premiado.' : ''}`;
   setTimeout(async () => {
     await renderResultados();
     // Refrescar leaderboard si está visible
@@ -2007,12 +2047,26 @@ async function recalcularTodo() {
       total++;
     }
   }
-  msgEl.textContent = `✅ ${total} pronósticos recalculados.`;
+  // Premiar campeón si la Final ya está finalizada
+  const finalPartido = finalizados.find(p => p.fase === 'final');
+  if (finalPartido && finalPartido.avanza_local !== null && finalPartido.avanza_local !== undefined) {
+    await premiarCampeon(finalPartido.equipo_local, finalPartido.equipo_visita, finalPartido.avanza_local);
+    msgEl.textContent = `✅ ${total} pronósticos recalculados. 🏆 Campeón premiado.`;
+  } else {
+    msgEl.textContent = `✅ ${total} pronósticos recalculados.`;
+  }
 }
 
 // ============================================================
 // CÁLCULO DE PUNTOS
 // ============================================================
+async function premiarCampeon(equipoLocal, equipoVisita, avanzaLocal) {
+  const campeon = avanzaLocal ? equipoLocal : equipoVisita;
+  await sb.from('pronostico_campeon').update({ puntos: BONUS_CAMPEON }).eq('equipo', campeon);
+  // Quitar puntos a quienes erraron
+  await sb.from('pronostico_campeon').update({ puntos: 0 }).neq('equipo', campeon);
+}
+
 function calcularPuntos(partido, pronostico) {
   const fase = partido.fase;
   const pts  = PUNTOS[fase];
@@ -2067,17 +2121,24 @@ async function verDetalleParticipante(participanteId, nombre) {
   body.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
   modal.style.display = 'block';
 
-  const { data: prons } = await sb.from('pronosticos')
-    .select('partido_id,goles_local,goles_visita,puntos,calculado')
-    .eq('participante_id', participanteId)
-    .eq('calculado', true)
-    .order('partido_id');
+  const [{ data: prons }, { data: campData }] = await Promise.all([
+    sb.from('pronosticos')
+      .select('partido_id,goles_local,goles_visita,puntos,calculado')
+      .eq('participante_id', participanteId)
+      .eq('calculado', true)
+      .order('partido_id'),
+    sb.from('pronostico_campeon')
+      .select('equipo,puntos')
+      .eq('participante_id', participanteId)
+      .maybeSingle(),
+  ]);
 
   const finalizados = prons || [];
-  const totalPts = finalizados.reduce((s, pr) => s + (pr.puntos || 0), 0);
+  const ptsCamp = campData?.puntos || 0;
+  const totalPts = finalizados.reduce((s, pr) => s + (pr.puntos || 0), 0) + ptsCamp;
   document.getElementById('modal-total').textContent = `${totalPts} pts · ${finalizados.length} partidos calculados`;
 
-  if (finalizados.length === 0) {
+  if (finalizados.length === 0 && !campData?.equipo) {
     body.innerHTML = '<div style="color:#999;text-align:center;padding:20px">Sin partidos calculados aún.</div>';
     return;
   }
@@ -2103,7 +2164,21 @@ async function verDetalleParticipante(participanteId, nombre) {
       </div>`;
   }).join('');
 
-  body.innerHTML = rows || '<div style="color:#999;text-align:center;padding:20px">Sin datos.</div>';
+  // Fila del campeón al final
+  let campRow = '';
+  if (campData?.equipo) {
+    const pts = campData.puntos || 0;
+    const badge = pts > 0
+      ? `<span style="background:var(--oro);color:#000;padding:2px 7px;border-radius:10px;font-size:0.75rem;font-weight:700">+${pts} 🏆</span>`
+      : `<span style="color:#bbb;font-size:0.75rem">0 pts</span>`;
+    campRow = `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem">
+        <div style="flex:1"><div style="font-weight:600">⭐ Campeón: ${b(campData.equipo)} ${campData.equipo}</div></div>
+        ${badge}
+      </div>`;
+  }
+
+  body.innerHTML = (campRow + rows) || '<div style="color:#999;text-align:center;padding:20px">Sin datos.</div>';
 }
 
 function cerrarModal() {
