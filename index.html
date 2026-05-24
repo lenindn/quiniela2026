@@ -1305,7 +1305,7 @@ function matchCard(p, editable) {
 
   let footerRight = '';
   if (p.estado === 'finalizado') {
-    footerRight = `<span class="result-badge">${p.goles_local} - ${p.goles_visita}</span>`;
+    footerRight = `<span class="result-badge">${p.goles_local ?? '?'} - ${p.goles_visita ?? '?'}</span>`;
     if (p.avanza_local !== null && p.avanza_local !== undefined && p.goles_local === p.goles_visita) {
       const avanzador = p.avanza_local ? p.equipo_local : p.equipo_visita;
       footerRight += ` <span class="avanza-info">Avanzó: ${b(avanzador)} ${avanzador}</span>`;
