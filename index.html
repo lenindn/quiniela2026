@@ -1381,7 +1381,13 @@ async function loadLeaderboard() {
 // ============================================================
 // RESULTADOS
 // ============================================================
-function renderResultados() {
+async function renderResultados() {
+  const cont = document.getElementById('resultados-content');
+  cont.innerHTML = '<div class="empty-state" style="padding:20px">Cargando...</div>';
+
+  const { data: fresh } = await sb.from('partidos').select('*').order('numero');
+  if (fresh) allPartidos = fresh;
+
   const tabs = document.getElementById('res-tabs');
   tabs.innerHTML = '';
   FASES_ORDEN.forEach(f => {
@@ -1394,7 +1400,7 @@ function renderResultados() {
     tabs.appendChild(btn);
   });
 
-  const cont = document.getElementById('resultados-content');
+  cont.innerHTML = '';
   const ps = allPartidos.filter(p => p.fase === currentResTab);
 
   if (ps.length === 0) {
