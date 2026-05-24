@@ -1414,18 +1414,44 @@ function renderResultados() {
     cont.innerHTML += `<div class="card" style="padding:0;overflow:hidden">`;
     partidos.forEach(p => {
       const finalizado = p.estado === 'finalizado';
+      const esKO = p.fase && p.fase !== 'grupos';
+      const scoreHtml = finalizado
+        ? `<div class="resultado-score">${p.goles_local} - ${p.goles_visita}</div>
+           ${p.avanza_local !== null && p.avanza_local !== undefined && p.goles_local === p.goles_visita
+             ? `<div class="avanza-info">Avanzó: ${p.avanza_local ? p.equipo_local : p.equipo_visita}</div>` : ''}
+           ${isAdmin ? `<button onclick="toggleEditResultado(${p.id})" title="Editar resultado"
+             style="margin-top:5px;background:none;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:2px 7px;color:var(--gris)">✏️ editar</button>` : ''}`
+        : `<div style="color:var(--gris);font-size:0.85rem">${p.fecha_partido ? formatDate(p.fecha_partido) : 'Por definir'}</div>`;
       cont.innerHTML += `
-        <div class="resultado-card">
-          <div class="team-r local">${b(p.equipo_local)} ${p.equipo_local}</div>
-          <div style="text-align:center">
-            ${finalizado
-              ? `<div class="resultado-score">${p.goles_local} - ${p.goles_visita}</div>
-                 ${p.avanza_local !== null && p.avanza_local !== undefined && p.goles_local === p.goles_visita
-                   ? `<div class="avanza-info">Avanzó: ${p.avanza_local ? p.equipo_local : p.equipo_visita}</div>` : ''}`
-              : `<div style="color:var(--gris);font-size:0.85rem">${p.fecha_partido ? formatDate(p.fecha_partido) : 'Por definir'}</div>`
-            }
+        <div style="border-bottom:1px solid var(--borde)">
+          <div class="resultado-card" style="border-bottom:none">
+            <div class="team-r local">${b(p.equipo_local)} ${p.equipo_local}</div>
+            <div style="text-align:center">${scoreHtml}</div>
+            <div class="team-r visita">${p.equipo_visita} ${b(p.equipo_visita)}</div>
           </div>
-          <div class="team-r visita">${p.equipo_visita} ${b(p.equipo_visita)}</div>
+          ${finalizado && isAdmin ? `
+            <div id="edit-form-${p.id}" style="display:none;background:#f7f7f7;padding:10px 12px;border-top:1px solid var(--borde)">
+              <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;font-size:0.85rem">
+                <span>${p.equipo_local}</span>
+                <input id="edit-gl-${p.id}" type="number" min="0" max="20" value="${p.goles_local}"
+                  style="width:46px;text-align:center;border:1px solid var(--borde);border-radius:4px;padding:4px;font-size:0.9rem">
+                <span style="font-weight:800">–</span>
+                <input id="edit-gv-${p.id}" type="number" min="0" max="20" value="${p.goles_visita}"
+                  style="width:46px;text-align:center;border:1px solid var(--borde);border-radius:4px;padding:4px;font-size:0.9rem">
+                <span>${p.equipo_visita}</span>
+              </div>
+              ${esKO ? `
+                <div style="margin-top:8px;font-size:0.8rem;text-align:center;color:var(--gris)">
+                  Si empate, avanzó:
+                  <label style="margin:0 6px"><input type="radio" name="edit-avanza-${p.id}" value="local" ${p.avanza_local === true ? 'checked' : ''}> ${p.equipo_local}</label>
+                  <label><input type="radio" name="edit-avanza-${p.id}" value="visita" ${p.avanza_local === false ? 'checked' : ''}> ${p.equipo_visita}</label>
+                </div>` : ''}
+              <div style="margin-top:8px;display:flex;gap:8px;justify-content:center">
+                <button onclick="guardarEditResultado(${p.id})" class="btn-sm" style="background:var(--exito)">✅ Guardar</button>
+                <button onclick="toggleEditResultado(${p.id})" class="btn-sm" style="background:#888">Cancelar</button>
+              </div>
+              <div id="edit-msg-${p.id}" style="font-size:0.78rem;margin-top:6px;text-align:center"></div>
+            </div>` : ''}
         </div>`;
     });
     cont.innerHTML += '</div>';
@@ -1579,6 +1605,54 @@ async function adminUpdateResult() {
 
   msgEl.innerHTML = `<div class="alert alert-ok">✅ Resultado guardado. ${(prons||[]).length} pronósticos calculados.</div>`;
   loadAdminPanel();
+}
+
+function toggleEditResultado(pid) {
+  const form = document.getElementById('edit-form-' + pid);
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function guardarEditResultado(pid) {
+  const gl = parseInt(document.getElementById('edit-gl-' + pid).value);
+  const gv = parseInt(document.getElementById('edit-gv-' + pid).value);
+  const msgEl = document.getElementById('edit-msg-' + pid);
+  if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) { msgEl.textContent = '⚠️ Ingresa el marcador.'; return; }
+
+  const partido = allPartidos.find(p => p.id === pid);
+  if (!partido) return;
+
+  let avanzaLocal = null;
+  if (partido.fase !== 'grupos') {
+    if (gl !== gv) {
+      avanzaLocal = gl > gv;
+    } else {
+      const radios = document.querySelectorAll(`input[name="edit-avanza-${pid}"]`);
+      const sel = Array.from(radios).find(r => r.checked);
+      if (!sel) { msgEl.textContent = '⚠️ Indica quién avanzó.'; return; }
+      avanzaLocal = sel.value === 'local';
+    }
+  }
+
+  msgEl.textContent = 'Actualizando...';
+
+  await sb.from('partidos').update({
+    goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, estado: 'finalizado', fuente: 'manual',
+  }).eq('id', pid);
+
+  const { data: prons } = await sb.from('pronosticos').select('*').eq('partido_id', pid);
+  for (const pr of (prons || [])) {
+    const puntos = calcularPuntos({ ...partido, goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal }, pr);
+    await sb.from('pronosticos').update({ puntos, calculado: true }).eq('id', pr.id);
+  }
+
+  const idx = allPartidos.findIndex(p => p.id === pid);
+  if (idx >= 0) {
+    allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, estado: 'finalizado' };
+  }
+
+  msgEl.textContent = `✅ Actualizado. ${(prons||[]).length} pronósticos recalculados.`;
+  setTimeout(() => renderResultados(), 1200);
 }
 
 async function openFasePrompt(fase) {
