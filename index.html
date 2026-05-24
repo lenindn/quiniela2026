@@ -919,9 +919,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       currentUser = JSON.parse(saved);
       await loadApp();
+      return;
     } catch(e) {
       localStorage.removeItem(sessionKey);
     }
+  }
+
+  // Auto-login si viene del switcher de grupos
+  const autoWa = localStorage.getItem('q2026_auto_wa');
+  if (autoWa) {
+    localStorage.removeItem('q2026_auto_wa');
+    const autoNombre = localStorage.getItem('q2026_auto_nombre') || '';
+    localStorage.removeItem('q2026_auto_nombre');
+
+    const { data: existing } = await sb.from('participantes')
+      .select('*').eq('whatsapp', autoWa).eq('grupo_quiniela', currentGrupo.id).maybeSingle();
+
+    if (existing && existing.activo !== false) {
+      // Ya registrado en este grupo → entrar directo
+      currentUser = existing;
+      localStorage.setItem(sessionKey, JSON.stringify(currentUser));
+      await loadApp();
+      return;
+    }
+    // No registrado aún → pre-rellenar el formulario
+    document.getElementById('login-wa').value     = autoWa;
+    document.getElementById('login-nombre').value = autoNombre;
   }
 });
 
@@ -1099,7 +1122,7 @@ async function showUserMenu() {
       const key   = g.slug || g.id;
       const link  = `${baseUrl}?g=${key}`;
       const color = g.color || '#1a5c2a';
-      return `<a href="${link}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:2px solid ${color};margin-bottom:8px;text-decoration:none;color:inherit;background:#fff">
+      return `<a href="${link}" onclick="prepararAutoLogin()" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:2px solid ${color};margin-bottom:8px;text-decoration:none;color:inherit;background:#fff">
         <span style="font-size:1.6rem;line-height:1">${g.icono || '⚽'}</span>
         <div style="flex:1">
           <div style="font-weight:700;font-size:0.95rem">${g.nombre}</div>
@@ -1108,6 +1131,11 @@ async function showUserMenu() {
         <span style="font-size:1.2rem;color:${color}">→</span>
       </a>`;
     }).join('')}`;
+}
+
+function prepararAutoLogin() {
+  localStorage.setItem('q2026_auto_wa',     currentUser.whatsapp);
+  localStorage.setItem('q2026_auto_nombre', currentUser.nombre);
 }
 
 function cerrarUserMenu() {
