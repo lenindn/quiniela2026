@@ -1454,16 +1454,34 @@ async function loadAdminPanel() {
   loadGruposAdmin();
 
   // Participantes
-  const { data: parts } = await sb.from('participantes').select('nombre,whatsapp,grupo_quiniela,fecha_registro').order('fecha_registro');
+  const [{ data: parts }, { data: grupos }] = await Promise.all([
+    sb.from('participantes').select('id,nombre,whatsapp,grupo_quiniela,fecha_registro').order('fecha_registro'),
+    sb.from('grupos_quiniela').select('id,nombre').order('nombre'),
+  ]);
   const pDiv = document.getElementById('admin-participantes');
   pDiv.innerHTML = `<p style="font-size:0.82rem;color:var(--gris);margin-bottom:8px">Total registrados: <strong>${(parts||[]).length}</strong></p>`;
   (parts || []).forEach(p => {
-    pDiv.innerHTML += `<div style="font-size:0.82rem;padding:4px 0;border-bottom:1px solid var(--borde)">
-      ${p.nombre}
-      <span style="color:var(--gris)"> · ${p.whatsapp}</span>
-      ${p.grupo_quiniela ? `<span style="color:var(--verde);margin-left:4px;font-size:0.72rem">📍${p.grupo_quiniela}</span>` : ''}
+    const grupoNombre = (grupos||[]).find(g => g.id === p.grupo_quiniela)?.nombre || p.grupo_quiniela || '—';
+    const opts = (grupos||[]).map(g => `<option value="${g.id}" ${g.id === p.grupo_quiniela ? 'selected' : ''}>${g.nombre}</option>`).join('');
+    pDiv.innerHTML += `<div style="font-size:0.82rem;padding:6px 0;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="flex:1;min-width:120px">${p.nombre} <span style="color:var(--gris)">· ${p.whatsapp}</span></span>
+      <select onchange="cambiarGrupoParticipante('${p.whatsapp}', this.value, this)" style="font-size:0.78rem;padding:2px 6px;border:1px solid var(--borde);border-radius:4px">
+        <option value="">Sin grupo</option>
+        ${opts}
+      </select>
     </div>`;
   });
+}
+
+async function cambiarGrupoParticipante(whatsapp, nuevoGrupo, selEl) {
+  selEl.disabled = true;
+  const { error } = await sb.from('participantes')
+    .update({ grupo_quiniela: nuevoGrupo || null })
+    .eq('whatsapp', whatsapp);
+  selEl.disabled = false;
+  if (error) { alert('Error al cambiar grupo: ' + error.message); return; }
+  selEl.style.borderColor = 'var(--exito)';
+  setTimeout(() => selEl.style.borderColor = '', 1500);
 }
 
 function onAdminPartidoChange() {
