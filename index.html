@@ -1482,13 +1482,34 @@ async function verifyAdmin() {
 }
 
 async function loadAdminPanel() {
-  // Selector de partido
+  // Selector de partido — agrupado por día
   const sel = document.getElementById('admin-partido-sel');
-  sel.innerHTML = '<option value="">— Selecciona partido —</option>';
-  const ps = allPartidos.filter(p => p.estado !== 'finalizado');
-  ps.forEach(p => {
-    sel.innerHTML += `<option value="${p.id}">[${p.grupo || p.fase}] ${p.equipo_local} vs ${p.equipo_visita}</option>`;
+  const psPend = allPartidos.filter(p => p.estado !== 'finalizado');
+  const conFecha = psPend.filter(p => p.fecha_partido).sort((a,b) => new Date(a.fecha_partido) - new Date(b.fecha_partido));
+  const sinFecha = psPend.filter(p => !p.fecha_partido);
+
+  const porDia = {};
+  conFecha.forEach(p => {
+    const d = new Date(p.fecha_partido);
+    const key = d.toLocaleDateString('es', { weekday:'long', day:'numeric', month:'long' });
+    const label = key.charAt(0).toUpperCase() + key.slice(1);
+    if (!porDia[label]) porDia[label] = [];
+    porDia[label].push(p);
   });
+
+  let selHtml = '<option value="">— Selecciona partido —</option>';
+  Object.entries(porDia).forEach(([dia, partidos]) => {
+    const opts = partidos.map(p => {
+      const hora = new Date(p.fecha_partido).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+      return `<option value="${p.id}">[${p.grupo || p.fase}] ${p.equipo_local} vs ${p.equipo_visita} · ${hora}h</option>`;
+    }).join('');
+    selHtml += `<optgroup label="📅 ${dia}">${opts}</optgroup>`;
+  });
+  if (sinFecha.length > 0) {
+    const opts = sinFecha.map(p => `<option value="${p.id}">[${p.grupo || p.fase}] ${p.equipo_local} vs ${p.equipo_visita}</option>`).join('');
+    selHtml += `<optgroup label="Sin fecha definida">${opts}</optgroup>`;
+  }
+  sel.innerHTML = selHtml;
 
   // Fases
   const fDiv = document.getElementById('admin-fases-list');
