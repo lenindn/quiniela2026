@@ -864,6 +864,7 @@ let adminPin      = '';
 let currentPicksTab = 'grupos';
 let currentResTab   = 'grupos';
 let filtroEquipo    = '';
+let currentGrupoKey = '';  // valor del ?g=... en la URL, clave de localStorage
 
 // ============================================================
 // INICIALIZACIÓN
@@ -881,8 +882,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Validar que el grupo existe en la DB
-  const { data: grupo } = await sb.from('grupos_quiniela').select('*').eq('id', grupoParam).maybeSingle();
+  // Validar que el grupo existe — buscar por slug primero, luego por id numérico
+  currentGrupoKey = grupoParam;
+  let { data: grupo } = await sb.from('grupos_quiniela').select('*').eq('slug', grupoParam).maybeSingle();
+  if (!grupo) {
+    const { data: byId } = await sb.from('grupos_quiniela').select('*').eq('id', grupoParam).maybeSingle();
+    grupo = byId;
+  }
   if (!grupo) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-nogrupo').classList.add('active');
@@ -1035,7 +1041,7 @@ async function handleLogin() {
       return;
     }
     currentUser = existing;
-    localStorage.setItem('q2026_user_' + currentGrupo.id, JSON.stringify(currentUser));
+    localStorage.setItem('q2026_user_' + currentGrupoKey, JSON.stringify(currentUser));
     await loadApp();
     return;
   }
@@ -1046,13 +1052,13 @@ async function handleLogin() {
 
   if (error) { showError(errEl, 'Error al registrarte. Intenta de nuevo.'); return; }
   currentUser = nuevo;
-  localStorage.setItem('q2026_user_' + currentGrupo.id, JSON.stringify(currentUser));
+  localStorage.setItem('q2026_user_' + currentGrupoKey, JSON.stringify(currentUser));
   await loadApp();
 }
 
 function showLogoutMenu() {
   if (confirm(`Hola ${currentUser.nombre}!\n\n¿Cerrar sesión?`)) {
-    localStorage.removeItem('q2026_user_' + currentGrupo.id);
+    localStorage.removeItem('q2026_user_' + currentGrupoKey);
     location.reload();
   }
 }
@@ -1879,12 +1885,12 @@ async function toggleFase(fase, abierta) {
 }
 
 async function crearGrupoQuiniela() {
-  const id     = document.getElementById('gq-id').value.trim().toLowerCase().replace(/\s+/g,'-');
+  const slug   = document.getElementById('gq-id').value.trim().toLowerCase().replace(/\s+/g,'-');
   const nombre = document.getElementById('gq-nombre').value.trim();
   const icono  = document.getElementById('gq-icono').value.trim() || '⚽';
   const color  = document.getElementById('gq-color').value || '#1a5c2a';
-  if (!id || !nombre) { alert('Ingresa código y nombre del grupo.'); return; }
-  const { error } = await sb.from('grupos_quiniela').insert({ id, nombre, icono, color });
+  if (!slug || !nombre) { alert('Ingresa código y nombre del grupo.'); return; }
+  const { error } = await sb.from('grupos_quiniela').insert({ slug, nombre, icono, color });
   if (error) { alert('Error: ' + (error.message || '¿El código ya existe?')); return; }
   document.getElementById('gq-id').value     = '';
   document.getElementById('gq-nombre').value = '';
@@ -1905,7 +1911,8 @@ async function loadGruposAdmin() {
   }
   lista.innerHTML = grupos.map(g => {
     const count = (parts || []).filter(p => p.grupo_quiniela === g.id).length;
-    const link  = `${baseUrl}?g=${g.id}`;
+    const linkKey = g.slug || g.id;
+    const link  = `${baseUrl}?g=${linkKey}`;
     const color = g.color || '#1a5c2a';
     const icono = g.icono || '⚽';
     const thumb = g.logo_url
@@ -1914,6 +1921,9 @@ async function loadGruposAdmin() {
     const logoStatus = g.logo_url
       ? `<span style="color:var(--exito);font-size:0.72rem">✅ Logo cargado</span>`
       : `<span style="color:var(--gris);font-size:0.72rem">Sin logo</span>`;
+    const slugStatus = g.slug
+      ? `<span style="color:var(--exito);font-size:0.72rem">🔗 /${g.slug}</span>`
+      : `<span style="color:var(--error);font-size:0.72rem">⚠️ Sin link amigable</span>`;
     return `
       <div style="border:2px solid ${color};border-radius:10px;padding:10px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -1923,6 +1933,7 @@ async function loadGruposAdmin() {
               <div style="font-weight:700;font-size:0.95rem">${g.nombre}</div>
               <div style="font-size:0.72rem;color:var(--gris)">id: ${g.id} · 👤 ${count}</div>
               <div style="margin-top:2px">${logoStatus}</div>
+              <div style="margin-top:1px">${slugStatus}</div>
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
@@ -1935,6 +1946,15 @@ async function loadGruposAdmin() {
             </label>
           </div>
         </div>
+        ${!g.slug ? `
+        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--borde)">
+          <span style="font-size:0.75rem;color:var(--gris);white-space:nowrap">Link amigable:</span>
+          <input id="slug-input-${g.id}" type="text" placeholder="ej: familia, amigos, liceo"
+            style="flex:1;padding:5px 8px;border:1px solid var(--borde);border-radius:6px;font-size:0.8rem"
+            onkeydown="if(event.key==='Enter') guardarSlug(${g.id})">
+          <button class="btn-sm" onclick="guardarSlug(${g.id})">Guardar</button>
+        </div>
+        <div id="slug-msg-${g.id}" style="font-size:0.75rem;margin-top:4px"></div>` : ''}
         <div style="font-size:0.7rem;color:var(--gris);margin-top:6px;word-break:break-all;background:#f8f8f8;padding:4px 8px;border-radius:6px">${link}</div>
         <div id="upload-msg-${g.id}" style="font-size:0.78rem;margin-top:4px"></div>
       </div>`;
@@ -1943,6 +1963,20 @@ async function loadGruposAdmin() {
 
 function copiarLink(link) {
   navigator.clipboard.writeText(link).then(() => alert('¡Link copiado!\n' + link));
+}
+
+async function guardarSlug(grupoId) {
+  const input = document.getElementById('slug-input-' + grupoId);
+  const msgEl = document.getElementById('slug-msg-' + grupoId);
+  const slug  = input.value.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  if (!slug) { msgEl.innerHTML = '<span style="color:var(--error)">Ingresa un código.</span>'; return; }
+  const { error } = await sb.from('grupos_quiniela').update({ slug }).eq('id', grupoId);
+  if (error) {
+    msgEl.innerHTML = `<span style="color:var(--error)">Error: ${error.message.includes('unique') ? 'Ese código ya está en uso.' : error.message}</span>`;
+    return;
+  }
+  msgEl.innerHTML = '<span style="color:var(--exito)">✅ Link amigable guardado.</span>';
+  setTimeout(() => loadGruposAdmin(), 1000);
 }
 
 async function verGrupoAdmin(grupoId, vista) {
