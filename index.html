@@ -1713,7 +1713,12 @@ async function guardarEditResultado(pid) {
   }
 
   msgEl.textContent = `✅ Actualizado. ${(prons||[]).length} pronósticos recalculados.`;
-  setTimeout(() => renderResultados(), 1200);
+  setTimeout(async () => {
+    await renderResultados();
+    // Refrescar leaderboard si está visible
+    const tablaView = document.getElementById('view-tabla');
+    if (tablaView && tablaView.classList.contains('active')) loadLeaderboard();
+  }, 1200);
 }
 
 async function openFasePrompt(fase) {
