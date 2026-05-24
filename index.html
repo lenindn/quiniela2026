@@ -864,6 +864,17 @@ const FASES_LABELS = {
 };
 const FASES_ORDEN = ['grupos','r32','r16','cuartos','semis','tercer_lugar','final'];
 
+// Fechas de inicio oficiales FIFA 2026 (primer partido de cada fase, UTC)
+const FASES_INICIO = {
+  grupos:       '2026-06-11T19:00:00Z',
+  r32:          '2026-06-28T00:00:00Z',
+  r16:          '2026-07-04T00:00:00Z',
+  cuartos:      '2026-07-09T00:00:00Z',
+  semis:        '2026-07-14T00:00:00Z',
+  tercer_lugar: '2026-07-18T00:00:00Z',
+  final:        '2026-07-19T00:00:00Z',
+};
+
 // ============================================================
 // ESTADO
 // ============================================================
@@ -1734,12 +1745,11 @@ async function loadAdminPanel() {
     if (!fData) return;
     const abierta = fData.abierta;
 
-    // Primer partido de esta fase
+    // Primer partido de esta fase (desde partidos cargados o fecha oficial hardcodeada)
     const partidosFase = allPartidos.filter(p => p.fase === f && p.fecha_partido);
     const primerPartido = partidosFase.sort((a,b) => new Date(a.fecha_partido) - new Date(b.fecha_partido))[0];
-    const inicioFase = primerPartido
-      ? `🗓 Inicia: ${formatDate(primerPartido.fecha_partido)}`
-      : '';
+    const fechaInicio = primerPartido?.fecha_partido || FASES_INICIO[f];
+    const inicioFase = fechaInicio ? `🗓 Inicia: ${formatDate(fechaInicio)}` : '';
 
     fDiv.innerHTML += `
       <div class="fase-control">
