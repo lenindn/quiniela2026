@@ -1153,13 +1153,24 @@ function doLogout() {
 // ============================================================
 // NAVEGACIÓN
 // ============================================================
-function navigate(view) {
+async function navigate(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.view === view);
   });
-  if (view === 'picks')      renderPicks();
+  if (view === 'picks') {
+    if (currentUser) {
+      const [pRes, prRes] = await Promise.all([
+        sb.from('partidos').select('*').order('numero'),
+        sb.from('pronosticos').select('*').eq('participante_id', currentUser.id),
+      ]);
+      if (pRes.data) allPartidos = pRes.data;
+      myPronosticos = {};
+      (prRes.data || []).forEach(p => myPronosticos[p.partido_id] = p);
+    }
+    renderPicks();
+  }
   if (view === 'tabla')      loadLeaderboard();
   if (view === 'resultados') renderResultados();
 }
