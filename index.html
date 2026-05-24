@@ -1614,7 +1614,9 @@ async function loadGruposAdmin() {
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-            <button class="btn-sm" style="background:${color}" onclick="copiarLink('${link}')">Copiar link</button>
+            <button class="btn-sm" style="background:${color}" onclick="copiarLink('${link}')">🔗 Copiar link</button>
+            <button class="btn-sm" style="background:#444" onclick="verGrupoAdmin('${g.id}','tabla')">📊 Ver tabla</button>
+            <button class="btn-sm" style="background:#444" onclick="verGrupoAdmin('${g.id}','resultados')">📋 Ver resultados</button>
             <label class="upload-logo-btn" style="background:${color};border-color:${color}">
               📷 ${g.logo_url ? 'Cambiar logo' : 'Subir logo'}
               <input type="file" accept="image/*" style="display:none" onchange="uploadLogo('${g.id}', this)">
@@ -1629,6 +1631,15 @@ async function loadGruposAdmin() {
 
 function copiarLink(link) {
   navigator.clipboard.writeText(link).then(() => alert('¡Link copiado!\n' + link));
+}
+
+async function verGrupoAdmin(grupoId, vista) {
+  const { data: g } = await sb.from('grupos_quiniela').select('*').eq('id', grupoId).maybeSingle();
+  if (g) {
+    currentGrupo = g;
+    aplicarTemaGrupo(g);
+  }
+  navigate(vista);
 }
 
 async function uploadLogo(grupoId, inputEl) {
