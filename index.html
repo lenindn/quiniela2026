@@ -746,6 +746,20 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   </div>
 </div>
 
+<!-- MODAL DETALLE PARTICIPANTE -->
+<div id="modal-detalle" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);overflow-y:auto;padding:16px">
+  <div style="background:#fff;border-radius:14px;max-width:480px;margin:0 auto;overflow:hidden">
+    <div id="modal-header" style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div id="modal-nombre" style="font-weight:700;font-size:1rem"></div>
+        <div id="modal-total" style="font-size:0.82rem;color:#fff;opacity:.9"></div>
+      </div>
+      <button onclick="cerrarModal()" style="background:rgba(255,255,255,.25);border:none;border-radius:50%;width:30px;height:30px;font-size:1.1rem;cursor:pointer;color:#fff">✕</button>
+    </div>
+    <div id="modal-body" style="padding:12px 16px 20px"></div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV -->
 <nav id="bottom-nav" style="display:none">
   <button class="nav-btn active" onclick="navigate('picks')" data-view="picks">
@@ -1336,7 +1350,7 @@ async function loadLeaderboard() {
       ${tabla.map((p, i) => `
         <div class="tabla-row ${i < 3 ? 'top1' : ''} ${currentUser && p.id === currentUser.id ? 'me' : ''}">
           <div class="rank">${i < 3 ? `<span class="rank-medal">${medals[i]}</span>` : i+1}</div>
-          <div class="nombre-cell">${p.nombre}${currentUser && p.id === currentUser.id ? ' 👈' : ''}</div>
+          <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',this)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${currentUser && p.id === currentUser.id ? ' 👈' : ''}</div>
           <div class="pts-cell">${p.total}</div>
           <div class="exacto-cell">${p.exactos}</div>
           <div class="ok-cell">${p.aciertos}</div>
@@ -1751,6 +1765,60 @@ function formatDate(ts) {
 function showError(el, msg) {
   el.textContent = msg;
   el.style.display = 'block';
+}
+
+async function verDetalleParticipante(participanteId, nombre) {
+  const color  = getComputedStyle(document.documentElement).getPropertyValue('--verde').trim() || '#1a5c2a';
+  const modal  = document.getElementById('modal-detalle');
+  const header = document.getElementById('modal-header');
+  const body   = document.getElementById('modal-body');
+  document.getElementById('modal-nombre').textContent = nombre;
+  document.getElementById('modal-total').textContent  = 'Cargando...';
+  header.style.background = color;
+  body.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
+  modal.style.display = 'block';
+
+  const { data: prons } = await sb.from('pronosticos')
+    .select('partido_id,goles_local,goles_visita,puntos,calculado')
+    .eq('participante_id', participanteId)
+    .eq('calculado', true)
+    .order('partido_id');
+
+  const finalizados = prons || [];
+  const totalPts = finalizados.reduce((s, pr) => s + (pr.puntos || 0), 0);
+  document.getElementById('modal-total').textContent = `${totalPts} pts · ${finalizados.length} partidos calculados`;
+
+  if (finalizados.length === 0) {
+    body.innerHTML = '<div style="color:#999;text-align:center;padding:20px">Sin partidos calculados aún.</div>';
+    return;
+  }
+
+  const rows = finalizados.map(pr => {
+    const partido = allPartidos.find(p => p.id === pr.partido_id);
+    if (!partido) return '';
+    const esExacto = pr.goles_local === partido.goles_local && pr.goles_visita === partido.goles_visita;
+    const pts = pr.puntos || 0;
+    const badge = pts > 0
+      ? `<span style="background:${esExacto ? 'var(--oro)' : '#e8f5e9'};color:${esExacto ? '#000' : '#1a5c2a'};padding:2px 7px;border-radius:10px;font-size:0.75rem;font-weight:700">+${pts}${esExacto ? ' ⭐' : ''}</span>`
+      : `<span style="color:#bbb;font-size:0.75rem">0 pts</span>`;
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${partido.equipo_local} vs ${partido.equipo_visita}</div>
+          <div style="color:#888;font-size:0.75rem">
+            Real: <strong>${partido.goles_local}-${partido.goles_visita}</strong>
+            &nbsp;·&nbsp; Tu pronóstico: <strong>${pr.goles_local}-${pr.goles_visita}</strong>
+          </div>
+        </div>
+        ${badge}
+      </div>`;
+  }).join('');
+
+  body.innerHTML = rows || '<div style="color:#999;text-align:center;padding:20px">Sin datos.</div>';
+}
+
+function cerrarModal() {
+  document.getElementById('modal-detalle').style.display = 'none';
 }
 </script>
 </body>
