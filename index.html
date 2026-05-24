@@ -1435,6 +1435,10 @@ async function renderResultados() {
             <div style="text-align:center">${scoreHtml}</div>
             <div class="team-r visita">${p.equipo_visita} ${b(p.equipo_visita)}</div>
           </div>
+          ${(p.ciudad || p.estadio) ? `
+            <div style="text-align:center;font-size:0.72rem;color:var(--gris);padding:2px 12px 8px">
+              📍 ${[p.ciudad, p.estadio].filter(Boolean).join(' · ')}
+            </div>` : ''}
           ${finalizado && isAdmin ? `
             <div id="edit-form-${p.id}" style="display:none;background:#f7f7f7;padding:10px 12px;border-top:1px solid var(--borde)">
               <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;font-size:0.85rem">
@@ -1501,12 +1505,16 @@ async function loadAdminPanel() {
   Object.entries(porDia).forEach(([dia, partidos]) => {
     const opts = partidos.map(p => {
       const hora = new Date(p.fecha_partido).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
-      return `<option value="${p.id}">[${p.grupo || p.fase}] ${p.equipo_local} vs ${p.equipo_visita} · ${hora}h</option>`;
+      const lugar = p.ciudad ? ` · ${p.ciudad}` : '';
+      return `<option value="${p.id}">[${p.grupo || p.fase}] ${p.equipo_local} vs ${p.equipo_visita} · ${hora}h${lugar}</option>`;
     }).join('');
     selHtml += `<optgroup label="📅 ${dia}">${opts}</optgroup>`;
   });
   if (sinFecha.length > 0) {
-    const opts = sinFecha.map(p => `<option value="${p.id}">[${p.grupo || p.fase}] ${p.equipo_local} vs ${p.equipo_visita}</option>`).join('');
+    const opts = sinFecha.map(p => {
+      const lugar = p.ciudad ? ` · ${p.ciudad}` : '';
+      return `<option value="${p.id}">[${p.grupo || p.fase}] ${p.equipo_local} vs ${p.equipo_visita}${lugar}</option>`;
+    }).join('');
     selHtml += `<optgroup label="Sin fecha definida">${opts}</optgroup>`;
   }
   sel.innerHTML = selHtml;
