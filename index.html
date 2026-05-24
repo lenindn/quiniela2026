@@ -1334,9 +1334,9 @@ async function loadLeaderboard() {
         <div style="text-align:center">✓</div>
       </div>
       ${tabla.map((p, i) => `
-        <div class="tabla-row ${i < 3 ? 'top1' : ''} ${p.id === currentUser.id ? 'me' : ''}">
+        <div class="tabla-row ${i < 3 ? 'top1' : ''} ${currentUser && p.id === currentUser.id ? 'me' : ''}">
           <div class="rank">${i < 3 ? `<span class="rank-medal">${medals[i]}</span>` : i+1}</div>
-          <div class="nombre-cell">${p.nombre}${p.id === currentUser.id ? ' 👈' : ''}</div>
+          <div class="nombre-cell">${p.nombre}${currentUser && p.id === currentUser.id ? ' 👈' : ''}</div>
           <div class="pts-cell">${p.total}</div>
           <div class="exacto-cell">${p.exactos}</div>
           <div class="ok-cell">${p.aciertos}</div>
