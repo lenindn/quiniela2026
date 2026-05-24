@@ -1516,18 +1516,44 @@ async function loadAdminPanel() {
     sb.from('grupos_quiniela').select('id,nombre').order('nombre'),
   ]);
   const pDiv = document.getElementById('admin-participantes');
-  pDiv.innerHTML = `<p style="font-size:0.82rem;color:var(--gris);margin-bottom:8px">Total registrados: <strong>${(parts||[]).length}</strong></p>`;
-  (parts || []).forEach(p => {
-    const grupoNombre = (grupos||[]).find(g => g.id === p.grupo_quiniela)?.nombre || p.grupo_quiniela || '—';
-    const opts = (grupos||[]).map(g => `<option value="${g.id}" ${g.id === p.grupo_quiniela ? 'selected' : ''}>${g.nombre}</option>`).join('');
-    pDiv.innerHTML += `<div style="font-size:0.82rem;padding:6px 0;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+  const allParts = parts || [];
+  const allGrupos = grupos || [];
+  const opts0 = allGrupos.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('');
+
+  const renderPart = p => {
+    const opts = allGrupos.map(g => `<option value="${g.id}" ${g.id === p.grupo_quiniela ? 'selected' : ''}>${g.nombre}</option>`).join('');
+    return `<div style="font-size:0.82rem;padding:6px 0;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="flex:1;min-width:120px">${p.nombre} <span style="color:var(--gris)">· ${p.whatsapp}</span></span>
       <select onchange="cambiarGrupoParticipante('${p.whatsapp}', this.value, this)" style="font-size:0.78rem;padding:2px 6px;border:1px solid var(--borde);border-radius:4px">
-        <option value="">Sin grupo</option>
-        ${opts}
+        <option value="">Sin grupo</option>${opts}
       </select>
     </div>`;
+  };
+
+  let html = `<p style="font-size:0.82rem;color:var(--gris);margin-bottom:12px">Total registrados: <strong>${allParts.length}</strong></p>`;
+
+  // Participantes por grupo
+  allGrupos.forEach(g => {
+    const miembros = allParts.filter(p => p.grupo_quiniela === g.id);
+    if (miembros.length === 0) return;
+    html += `<div style="margin-bottom:12px">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--verde);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;border-bottom:2px solid var(--verde)">${g.nombre}</div>
+      ${miembros.map(renderPart).join('')}
+      <div style="font-size:0.75rem;color:var(--gris);text-align:right;padding-top:4px">👤 ${miembros.length} participante${miembros.length !== 1 ? 's' : ''}</div>
+    </div>`;
   });
+
+  // Sin grupo
+  const sinGrupo = allParts.filter(p => !p.grupo_quiniela);
+  if (sinGrupo.length > 0) {
+    html += `<div style="margin-bottom:12px">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;border-bottom:2px solid var(--borde)">Sin grupo asignado</div>
+      ${sinGrupo.map(renderPart).join('')}
+      <div style="font-size:0.75rem;color:var(--gris);text-align:right;padding-top:4px">👤 ${sinGrupo.length} participante${sinGrupo.length !== 1 ? 's' : ''}</div>
+    </div>`;
+  }
+
+  pDiv.innerHTML = html;
 }
 
 async function cambiarGrupoParticipante(whatsapp, nuevoGrupo, selEl) {
