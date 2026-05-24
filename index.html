@@ -1733,10 +1733,19 @@ async function loadAdminPanel() {
     const fData = allFases[f];
     if (!fData) return;
     const abierta = fData.abierta;
+
+    // Primer partido de esta fase
+    const partidosFase = allPartidos.filter(p => p.fase === f && p.fecha_partido);
+    const primerPartido = partidosFase.sort((a,b) => new Date(a.fecha_partido) - new Date(b.fecha_partido))[0];
+    const inicioFase = primerPartido
+      ? `🗓 Inicia: ${formatDate(primerPartido.fecha_partido)}`
+      : '';
+
     fDiv.innerHTML += `
       <div class="fase-control">
         <div class="fase-control-info">
           <div class="fase-nombre">${FASES_LABELS[f]}</div>
+          ${inicioFase ? `<div style="font-size:0.75rem;color:var(--gris);margin-bottom:2px">${inicioFase}</div>` : ''}
           <div class="fase-status ${abierta ? 'badge-abierta' : 'badge-cerrada'}">
             ${abierta ? '✅ Abierta' : '🔒 Cerrada'}
             ${fData.fecha_cierre ? ` · Cierre: ${formatDate(fData.fecha_cierre)}` : ''}
