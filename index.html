@@ -1082,8 +1082,32 @@ async function handleLogin() {
   if (wa.length < 8) { showError(errEl, 'Ingresa un número de WhatsApp válido con código de país.'); return; }
 
   // Buscar participante en ESTE grupo específico
-  const { data: existing } = await sb.from('participantes')
+  let { data: existing } = await sb.from('participantes')
     .select('*').eq('whatsapp', wa).eq('grupo_quiniela', currentGrupo.id).maybeSingle();
+
+  // ── Migración automática de registros legacy (grupo_quiniela = NULL) ──
+  // Ocurre cuando la quiniela funcionó sin multi-grupo y se migró la BD.
+  // En ese caso el registro existe con grupo_quiniela NULL; lo asignamos al grupo actual
+  // para que el participante conserve todos sus pronósticos anteriores.
+  if (!existing) {
+    const { data: legados } = await sb.from('participantes')
+      .select('*').eq('whatsapp', wa).is('grupo_quiniela', null).limit(1);
+
+    if (legados && legados.length > 0) {
+      const legado = legados[0];
+      if (legado.activo === false) {
+        showError(errEl, '⛔ Tu acceso ha sido desactivado. Contacta al administrador.');
+        return;
+      }
+      // Actualizar el registro legacy con el grupo actual
+      const { error: migErr } = await sb.from('participantes')
+        .update({ grupo_quiniela: currentGrupo.id }).eq('id', legado.id);
+      if (!migErr) {
+        existing = { ...legado, grupo_quiniela: currentGrupo.id };
+      }
+      // Si migErr → ya existe otro registro (whatsapp, grupo_id) → continúa al insert normal
+    }
+  }
 
   if (existing) {
     if (existing.activo === false) {
@@ -1100,7 +1124,14 @@ async function handleLogin() {
   const { data: nuevo, error } = await sb.from('participantes')
     .insert({ nombre, whatsapp: wa, grupo_quiniela: currentGrupo.id }).select().single();
 
-  if (error) { showError(errEl, 'Error al registrarte. Intenta de nuevo.'); return; }
+  if (error) {
+    // Mostrar detalle del error para facilitar diagnóstico
+    const msg = error.code === '23505'
+      ? 'Ya existe un registro con ese WhatsApp en este grupo. Recarga la página e intenta de nuevo.'
+      : `Error al registrarte (${error.code || error.message}). Intenta de nuevo.`;
+    showError(errEl, msg);
+    return;
+  }
   currentUser = nuevo;
   localStorage.setItem('q2026_user_' + currentGrupoKey, JSON.stringify(currentUser));
   await loadApp();
@@ -1401,7 +1432,12 @@ async function autoSave(pid) {
   }, { onConflict: 'participante_id,partido_id' });
 
   if (error) {
-    if (ssEl) { ssEl.textContent = '✗'; ssEl.className = 'save-status error'; }
+    console.error('autoSave error:', error);
+    if (ssEl) {
+      ssEl.textContent = '✗ Error';
+      ssEl.className = 'save-status error';
+      ssEl.title = error.message || 'Error de conexión';
+    }
   } else {
     if (ssEl) { ssEl.textContent = '✓'; ssEl.className = 'save-status saved'; }
     myPronosticos[pid] = { goles_local: gl, goles_visita: gv, puntos: 0, calculado: false };
