@@ -2235,8 +2235,7 @@ async function guardarPote(fase) {
   const clave = `pote_${fase}`;
   const msgEl = document.getElementById(`pote-msg-${fase}`);
   msgEl.textContent = '⏳';
-  const { error } = await sb.from('config')
-    .upsert({ clave, valor: val }, { onConflict: 'clave' });
+  const { error } = await sb.rpc('set_config_valor', { p_clave: clave, p_valor: val });
   if (error) { msgEl.style.color = 'var(--error)'; msgEl.textContent = '✗ Error'; return; }
   allPotes[fase] = val;
   msgEl.style.color = 'var(--exito)';
