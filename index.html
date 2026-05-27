@@ -933,9 +933,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem(sessionKey);
   if (saved) {
     try {
-      currentUser = JSON.parse(saved);
-      await loadApp();
-      return;
+      const savedUser = JSON.parse(saved);
+      // Re-verificar estado activo en BD (puede haber sido desactivado por el admin)
+      const { data: freshUser } = await sb.from('participantes')
+        .select('*').eq('id', savedUser.id).maybeSingle();
+      if (!freshUser || freshUser.activo === false) {
+        localStorage.removeItem(sessionKey);
+        const errEl = document.getElementById('login-error');
+        if (errEl) showError(errEl, '⛔ Tu acceso ha sido desactivado. Contacta al administrador.');
+      } else {
+        currentUser = freshUser;
+        localStorage.setItem(sessionKey, JSON.stringify(currentUser)); // refrescar datos
+        await loadApp();
+        return;
+      }
     } catch(e) {
       localStorage.removeItem(sessionKey);
     }
