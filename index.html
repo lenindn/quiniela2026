@@ -1208,6 +1208,23 @@ function doLogout() {
 // NAVEGACIÓN
 // ============================================================
 async function navigate(view) {
+  // Verificar que el usuario sigue activo en cada navegación
+  if (currentUser) {
+    const { data: freshUser } = await sb.from('participantes')
+      .select('activo').eq('id', currentUser.id).maybeSingle();
+    if (!freshUser || freshUser.activo === false) {
+      const sessionKey = 'q2026_user_' + grupoParam;
+      localStorage.removeItem(sessionKey);
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-login').classList.add('active');
+      document.getElementById('app-header').style.display = 'none';
+      document.getElementById('bottom-nav').style.display  = 'none';
+      currentUser = null;
+      const errEl = document.getElementById('login-error');
+      if (errEl) showError(errEl, '⛔ Tu acceso ha sido desactivado. Contacta al administrador.');
+      return;
+    }
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => {
