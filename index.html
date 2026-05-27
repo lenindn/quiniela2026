@@ -889,7 +889,7 @@ let myPronosticos = {};  // {partido_id: {goles_local, goles_visita, puntos, cal
 let myCampeon     = null;
 let isAdmin       = false;
 let saveTimers    = {};
-let adminPin      = '';
+// adminPin eliminado — verificación ahora es server-side via RPC verify_admin_pin
 let currentPicksTab = 'grupos';
 let currentResTab   = 'grupos';
 let filtroEquipo    = '';
@@ -1031,9 +1031,8 @@ function mostrarAdminSinGrupo() {
 }
 async function adminSinGrupoLogin() {
   const pin = document.getElementById('ng-pin-input').value.trim();
-  const { data: cfg } = await sb.from('config').select('valor').eq('clave','admin_pin').maybeSingle();
-  if (!cfg || pin !== cfg.valor) { alert('PIN incorrecto'); return; }
-  adminPin = pin;
+  const { data: ok, error } = await sb.rpc('verify_admin_pin', { input_pin: pin });
+  if (error || !ok) { alert('PIN incorrecto'); return; }
   isAdmin = true;
   allFases = {};
   const { data: fData } = await sb.from('fases').select('*');
@@ -1073,10 +1072,7 @@ async function loadApp() {
   (prRes.data || []).forEach(p => myPronosticos[p.partido_id] = p);
 
   myCampeon = cRes.data;
-  if (cfgRes.data) {
-    const pinRow = cfgRes.data.find(r => r.clave === 'admin_pin');
-    if (pinRow) adminPin = pinRow.valor;
-  }
+  // PIN admin no se carga al cliente — se verifica server-side en verifyAdmin()
 
   navigate('picks');
 }
@@ -1739,14 +1735,42 @@ async function renderResultados() {
 // ADMIN
 // ============================================================
 async function verifyAdmin() {
-  const pin = document.getElementById('admin-pin').value.trim();
-  const errEl = document.getElementById('admin-pin-error');
-  if (pin !== adminPin) {
-    errEl.textContent = 'PIN incorrecto.';
+  const pin    = document.getElementById('admin-pin').value.trim();
+  const errEl  = document.getElementById('admin-pin-error');
+  errEl.textContent = '';
+
+  // Bloqueo por intentos fallidos (localStorage)
+  const bloqueoKey = 'admin_bloqueo';
+  const intentosKey = 'admin_intentos';
+  const bloqueoHasta = parseInt(localStorage.getItem(bloqueoKey) || '0');
+  if (Date.now() < bloqueoHasta) {
+    const mins = Math.ceil((bloqueoHasta - Date.now()) / 60000);
+    errEl.textContent = `⛔ Demasiados intentos. Espera ${mins} min.`;
     return;
   }
+
+  if (!pin) { errEl.textContent = 'Ingresa el PIN.'; return; }
+
+  // Verificación server-side — el PIN nunca llega al cliente
+  const { data: ok, error } = await sb.rpc('verify_admin_pin', { input_pin: pin });
+
+  if (error || !ok) {
+    const intentos = parseInt(localStorage.getItem(intentosKey) || '0') + 1;
+    localStorage.setItem(intentosKey, intentos);
+    if (intentos >= 5) {
+      localStorage.setItem(bloqueoKey, Date.now() + 5 * 60 * 1000);
+      localStorage.removeItem(intentosKey);
+      errEl.textContent = '⛔ 5 intentos fallidos. Bloqueado 5 minutos.';
+    } else {
+      errEl.textContent = `PIN incorrecto. Intento ${intentos}/5.`;
+    }
+    return;
+  }
+
+  // PIN correcto
+  localStorage.removeItem(intentosKey);
+  localStorage.removeItem(bloqueoKey);
   isAdmin = true;
-  errEl.textContent = '';
   document.getElementById('admin-login-section').style.display = 'none';
   document.getElementById('admin-panel').style.display = 'block';
   loadAdminPanel();
