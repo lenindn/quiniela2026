@@ -1212,7 +1212,7 @@ async function navigate(view) {
   if (currentUser) {
     const { data: freshUser } = await sb.from('participantes')
       .select('activo').eq('id', currentUser.id).maybeSingle();
-    if (!freshUser || freshUser.activo === false) {
+    if (freshUser && freshUser.activo === false) {
       const sessionKey = 'q2026_user_' + grupoParam;
       localStorage.removeItem(sessionKey);
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
