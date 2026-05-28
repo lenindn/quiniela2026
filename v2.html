@@ -1582,12 +1582,20 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
   // ── Ranking acumulado ──
   const acumulado = parts.map(p => {
     let totalPts = 0, totalExactos = 0, totalAciertos = 0;
-    const ptsPorFase = {};
+    const ptsPorFase   = {};
+    const fasesFaltantes = []; // fases jugadas en las que el participante estaba inactivo
+
     FASES_ORDEN.forEach(f => {
       const matchesFase  = partidos.filter(pd => pd.fase === f);
       const hayJugados   = matchesFase.some(pd => pd.estado === 'finalizado');
       const activoEnFase = !p.fases_activas || p.fases_activas[f] !== false;
-      if (!hayJugados || !activoEnFase) { ptsPorFase[f] = null; return; }
+
+      if (!hayJugados) { ptsPorFase[f] = null; return; }
+      if (!activoEnFase) {
+        ptsPorFase[f] = null;
+        fasesFaltantes.push(FASES_LABELS[f]); // registrar fase que le falta
+        return;
+      }
 
       const partidoIds = matchesFase.map(pd => pd.id);
       const myProns    = prons.filter(pr => pr.participante_id === p.id && partidoIds.includes(pr.partido_id));
@@ -1599,32 +1607,59 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
       totalExactos    += exactos;
       totalAciertos   += aciertos;
     });
-    return { ...p, totalPts, totalExactos, totalAciertos, ptsPorFase };
-  }).sort((a, b) =>
+
+    const elegible = fasesFaltantes.length === 0;
+    return { ...p, totalPts, totalExactos, totalAciertos, ptsPorFase, elegible, fasesFaltantes };
+  });
+
+  // Elegibles primero (por puntos), luego inelegibles (también por puntos)
+  const elegibles   = acumulado.filter(p =>  p.elegible).sort((a, b) =>
     b.totalPts - a.totalPts || b.totalExactos - a.totalExactos || b.totalAciertos - a.totalAciertos
   );
+  const inelegibles = acumulado.filter(p => !p.elegible).sort((a, b) =>
+    b.totalPts - a.totalPts || b.totalExactos - a.totalExactos || b.totalAciertos - a.totalAciertos
+  );
+  const ranking = [...elegibles, ...inelegibles];
 
   // Grid dinámico según cuántas fases tienen datos
-  const colsFases  = fasesConDatos.map(() => '38px').join(' ');
-  const gridCols   = `32px 1fr 55px ${colsFases} 38px`;
-  const medals     = ['🥇','🥈','🥉'];
+  const colsFases = fasesConDatos.map(() => '38px').join(' ');
+  const gridCols  = `32px 1fr 55px ${colsFases} 38px`;
+  const medals    = ['🥇','🥈','🥉'];
 
   const headerFases = fasesConDatos.map(f =>
     `<div style="text-align:center;font-size:0.68rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${FASES_LABELS[f]}">${FASES_LABELS[f].slice(0,3)}</div>`
   ).join('');
 
-  const rows = acumulado.map((p, i) => {
-    const pos  = i + 1;
-    const esMi = currentUser && p.id === currentUser.id;
+  const rows = ranking.map((p, i) => {
+    const esMi    = currentUser && p.id === currentUser.id;
+    // Posición y medalla solo para elegibles
+    const posEleg = p.elegible ? elegibles.indexOf(p) + 1 : null;
+    const rankHTML = p.elegible
+      ? (posEleg <= 3 ? `<span class="rank-medal">${medals[posEleg-1]}</span>` : posEleg)
+      : `<span style="font-size:0.75rem;color:var(--gris)">—</span>`;
+
     const faseCols = fasesConDatos.map(f => {
       const v = p.ptsPorFase[f];
-      return `<div style="text-align:center;font-size:0.78rem;color:${v === null ? 'var(--gris)' : 'var(--texto)'}">${v === null ? '—' : v}</div>`;
+      return `<div style="text-align:center;font-size:0.78rem;color:${v === null ? '#f87171' : 'var(--texto)'}">${v === null ? '✗' : v}</div>`;
     }).join('');
+
+    // Badge de no elegible con las fases que le faltan
+    const inelegibleBadge = !p.elegible
+      ? `<div style="font-size:0.68rem;color:#b45309;margin-top:2px">
+           ⚠️ No elegible para ganar General · no participó en: ${p.fasesFaltantes.join(', ')}
+         </div>` : '';
+
+    const bgRow = !p.elegible ? 'background:#fffbeb' : (p.elegible && posEleg <= 3 ? '' : '');
+
     return `
-      <div class="tabla-row ${pos <= 3 ? 'top1' : ''} ${esMi ? 'me' : ''}" style="grid-template-columns:${gridCols}">
-        <div class="rank">${pos <= 3 ? `<span class="rank-medal">${medals[pos-1]}</span>` : pos}</div>
-        <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',this)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
-        <div class="pts-cell" style="font-size:1rem">${p.totalPts}</div>
+      <div class="tabla-row ${p.elegible && posEleg <= 3 ? 'top1' : ''} ${esMi ? 'me' : ''}"
+           style="grid-template-columns:${gridCols};${!p.elegible ? 'opacity:0.8' : ''}">
+        <div class="rank">${rankHTML}</div>
+        <div style="min-width:0">
+          <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',this)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
+          ${inelegibleBadge}
+        </div>
+        <div class="pts-cell" style="font-size:1rem;${!p.elegible ? 'color:var(--gris)' : ''}">${p.totalPts}</div>
         ${faseCols}
         <div class="exacto-cell">${p.totalExactos}</div>
       </div>`;
@@ -1641,7 +1676,9 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
       </div>
       ${rows}
     </div>
-    <div style="font-size:0.7rem;color:var(--gris);text-align:center;margin-top:6px">⭐ = Total exactos · columnas = pts por fase</div>`;
+    <div style="font-size:0.7rem;color:var(--gris);text-align:center;margin-top:6px">
+      ⭐ = Total exactos · columnas = pts por fase · ✗ = no participó
+    </div>`;
 
   cont.innerHTML = grupoTxt + ganadoresHTML + tablaHTML;
 }
