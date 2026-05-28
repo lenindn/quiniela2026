@@ -1580,10 +1580,16 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
     </div>` : '';
 
   // ── Ranking acumulado ──
+  // Una fase es "requerida" para elegibilidad solo si al menos un participante estuvo activo en ella.
+  // Si NADIE participó en una fase, no cuenta como requisito (todos serían elegibles igual).
+  const fasesRequeridas = fasesConDatos.filter(f =>
+    parts.some(p => !p.fases_activas || p.fases_activas[f] !== false)
+  );
+
   const acumulado = parts.map(p => {
     let totalPts = 0, totalExactos = 0, totalAciertos = 0;
     const ptsPorFase   = {};
-    const fasesFaltantes = []; // fases jugadas en las que el participante estaba inactivo
+    const fasesFaltantes = []; // fases requeridas en las que el participante estuvo inactivo
 
     FASES_ORDEN.forEach(f => {
       const matchesFase  = partidos.filter(pd => pd.fase === f);
@@ -1593,7 +1599,7 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
       if (!hayJugados) { ptsPorFase[f] = null; return; }
       if (!activoEnFase) {
         ptsPorFase[f] = null;
-        fasesFaltantes.push(FASES_LABELS[f]); // registrar fase que le falta
+        if (fasesRequeridas.includes(f)) fasesFaltantes.push(FASES_LABELS[f]);
         return;
       }
 
