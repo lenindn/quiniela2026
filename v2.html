@@ -897,7 +897,7 @@ let isAdmin       = false;
 let saveTimers    = {};
 // adminPin eliminado — verificación server-side via RPC verify_admin_pin
 let currentPicksTab  = 'grupos';
-let currentTablaFase = 'grupos'; // declarado aquí pero también en módulo 6 — se usa el último
+let currentTablaFase = 'general';
 let currentResTab   = 'grupos';
 let filtroEquipo    = '';
 let currentGrupoKey = '';  // valor del ?g=... en la URL, clave de localStorage
@@ -1468,11 +1468,10 @@ function updateProgressBar() {
 // ╚══════════════════════════════════════════════════════════════╝
 // ── Carga inicial del ranking — construye tabs y renderiza la fase activa ──
 async function loadLeaderboard() {
-  const cont    = document.getElementById('tabla-content');
-  const tabsEl  = document.getElementById('tabla-fase-tabs');
+  const cont   = document.getElementById('tabla-content');
+  const tabsEl = document.getElementById('tabla-fase-tabs');
   cont.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Cargando...</div>';
 
-  // Datos necesarios (participantes de este grupo, todos los pronósticos, partidos)
   let partQuery = sb.from('participantes').select('id,nombre,grupo_quiniela,activo,fases_activas').eq('activo', true);
   if (currentGrupo) partQuery = partQuery.eq('grupo_quiniela', currentGrupo.id);
 
@@ -1486,11 +1485,21 @@ async function loadLeaderboard() {
   const prons    = prRes.data     || [];
   const partidos = pardosRes.data || [];
 
-  // Construir tabs de fase
+  // ── Construir tabs: General primero, luego cada fase ──
   tabsEl.innerHTML = '';
+
+  const btnGeneral = document.createElement('button');
+  btnGeneral.className = 'tab-btn' + (currentTablaFase === 'general' ? ' active' : '');
+  btnGeneral.textContent = '🏆 General';
+  btnGeneral.onclick = () => {
+    currentTablaFase = 'general';
+    renderLeaderboardGeneral(parts, prons, partidos);
+    tabsEl.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btnGeneral));
+  };
+  tabsEl.appendChild(btnGeneral);
+
   FASES_ORDEN.forEach(f => {
-    const matchesFase = partidos.filter(p => p.fase === f);
-    const tieneData   = matchesFase.length > 0;
+    const tieneData = partidos.some(p => p.fase === f);
     const btn = document.createElement('button');
     btn.className = 'tab-btn' + (f === currentTablaFase ? ' active' : '');
     if (!tieneData) btn.classList.add('cerrado');
@@ -1503,7 +1512,138 @@ async function loadLeaderboard() {
     tabsEl.appendChild(btn);
   });
 
-  renderLeaderboardFase(currentTablaFase, parts, prons, partidos);
+  if (currentTablaFase === 'general') {
+    renderLeaderboardGeneral(parts, prons, partidos);
+  } else {
+    renderLeaderboardFase(currentTablaFase, parts, prons, partidos);
+  }
+}
+
+// ── Ranking General: resumen de ganadores por fase + tabla acumulada ──
+function renderLeaderboardGeneral(parts, prons, partidos) {
+  const cont = document.getElementById('tabla-content');
+  const grupoTxt = currentGrupo
+    ? `<div style="font-size:0.78rem;color:var(--gris);margin-bottom:10px">📍 ${currentGrupo.nombre}</div>` : '';
+
+  // Fases con al menos un partido finalizado (aparecen como columna en la tabla)
+  const fasesConDatos = FASES_ORDEN.filter(f =>
+    partidos.some(p => p.fase === f && p.estado === 'finalizado')
+  );
+
+  if (fasesConDatos.length === 0) {
+    cont.innerHTML = grupoTxt + `
+      <div class="fase-cerrada">
+        <div class="lock-icon">⏳</div>
+        <p>El torneo aún no ha comenzado.<br>
+        El ranking general estará disponible cuando se juegue el primer partido.</p>
+      </div>`;
+    return;
+  }
+
+  // ── Resumen de ganadores por fase completada ──
+  const filasFaseGanadores = FASES_ORDEN.map(f => {
+    const matchesFase   = partidos.filter(p => p.fase === f);
+    const totalPartidos = matchesFase.length;
+    if (totalPartidos === 0) return null;
+    const finalizados = matchesFase.filter(p => p.estado === 'finalizado').length;
+    if (finalizados < totalPartidos) return null; // solo fases 100% completadas
+
+    const partidoIds   = matchesFase.map(p => p.id);
+    const partsActivos = parts.filter(p => !p.fases_activas || p.fases_activas[f] !== false);
+    const ranking = partsActivos.map(p => {
+      const myProns = prons.filter(pr => pr.participante_id === p.id && partidoIds.includes(pr.partido_id));
+      const pts     = myProns.reduce((s, pr) => s + (pr.puntos || 0), 0);
+      const exactos = myProns.filter(pr => pr.calculado && pr.puntos >= (PUNTOS[f]?.exacto || 5)).length;
+      return { ...p, pts, exactos };
+    }).sort((a, b) => b.pts - a.pts || b.exactos - a.exactos);
+
+    const medals = ['🥇','🥈','🥉'];
+    const chips  = ranking.slice(0, 3).map((p, i) => `
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:3px 8px;font-size:0.8rem">
+        ${medals[i]} <strong>${p.nombre}</strong>
+        <span style="color:var(--gris);font-size:0.7rem">${p.pts}pts</span>
+      </span>`).join('');
+
+    return `
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--borde)">
+        <span style="min-width:72px;font-size:0.78rem;font-weight:700;color:var(--texto);flex-shrink:0">${FASES_LABELS[f]}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${chips}</div>
+      </div>`;
+  }).filter(Boolean);
+
+  const ganadoresHTML = filasFaseGanadores.length > 0 ? `
+    <div class="card" style="padding:14px;margin-bottom:14px">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+        🏆 Ganadores por Fase
+      </div>
+      ${filasFaseGanadores.join('')}
+    </div>` : '';
+
+  // ── Ranking acumulado ──
+  const acumulado = parts.map(p => {
+    let totalPts = 0, totalExactos = 0, totalAciertos = 0;
+    const ptsPorFase = {};
+    FASES_ORDEN.forEach(f => {
+      const matchesFase  = partidos.filter(pd => pd.fase === f);
+      const hayJugados   = matchesFase.some(pd => pd.estado === 'finalizado');
+      const activoEnFase = !p.fases_activas || p.fases_activas[f] !== false;
+      if (!hayJugados || !activoEnFase) { ptsPorFase[f] = null; return; }
+
+      const partidoIds = matchesFase.map(pd => pd.id);
+      const myProns    = prons.filter(pr => pr.participante_id === p.id && partidoIds.includes(pr.partido_id));
+      const pts        = myProns.reduce((s, pr) => s + (pr.puntos || 0), 0);
+      const exactos    = myProns.filter(pr => pr.calculado && pr.puntos >= (PUNTOS[f]?.exacto || 5)).length;
+      const aciertos   = myProns.filter(pr => pr.calculado && (pr.puntos || 0) > 0).length;
+      ptsPorFase[f]    = pts;
+      totalPts        += pts;
+      totalExactos    += exactos;
+      totalAciertos   += aciertos;
+    });
+    return { ...p, totalPts, totalExactos, totalAciertos, ptsPorFase };
+  }).sort((a, b) =>
+    b.totalPts - a.totalPts || b.totalExactos - a.totalExactos || b.totalAciertos - a.totalAciertos
+  );
+
+  // Grid dinámico según cuántas fases tienen datos
+  const colsFases  = fasesConDatos.map(() => '38px').join(' ');
+  const gridCols   = `32px 1fr 55px ${colsFases} 38px`;
+  const medals     = ['🥇','🥈','🥉'];
+
+  const headerFases = fasesConDatos.map(f =>
+    `<div style="text-align:center;font-size:0.68rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${FASES_LABELS[f]}">${FASES_LABELS[f].slice(0,3)}</div>`
+  ).join('');
+
+  const rows = acumulado.map((p, i) => {
+    const pos  = i + 1;
+    const esMi = currentUser && p.id === currentUser.id;
+    const faseCols = fasesConDatos.map(f => {
+      const v = p.ptsPorFase[f];
+      return `<div style="text-align:center;font-size:0.78rem;color:${v === null ? 'var(--gris)' : 'var(--texto)'}">${v === null ? '—' : v}</div>`;
+    }).join('');
+    return `
+      <div class="tabla-row ${pos <= 3 ? 'top1' : ''} ${esMi ? 'me' : ''}" style="grid-template-columns:${gridCols}">
+        <div class="rank">${pos <= 3 ? `<span class="rank-medal">${medals[pos-1]}</span>` : pos}</div>
+        <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',this)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
+        <div class="pts-cell" style="font-size:1rem">${p.totalPts}</div>
+        ${faseCols}
+        <div class="exacto-cell">${p.totalExactos}</div>
+      </div>`;
+  }).join('');
+
+  const tablaHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="tabla-header" style="grid-template-columns:${gridCols}">
+        <div style="text-align:center">#</div>
+        <div>Participante</div>
+        <div style="text-align:center">Total</div>
+        ${headerFases}
+        <div style="text-align:center">⭐</div>
+      </div>
+      ${rows}
+    </div>
+    <div style="font-size:0.7rem;color:var(--gris);text-align:center;margin-top:6px">⭐ = Total exactos · columnas = pts por fase</div>`;
+
+  cont.innerHTML = grupoTxt + ganadoresHTML + tablaHTML;
 }
 
 // ── Renderiza el ranking o podio para una fase específica ──
