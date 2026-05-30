@@ -1129,15 +1129,15 @@ async function handleLogin() {
     return;
   }
 
-  // Bloquear duplicado: mismo nombre + mismo WhatsApp en este grupo
+  // Bloquear duplicado: mismo nombre en el mismo grupo (el WhatsApp es la clave, pero el nombre debe ser único por grupo)
   const { data: dupCheck } = await sb.from('participantes')
-    .select('id')
+    .select('id,whatsapp')
     .ilike('nombre', nombre)
-    .eq('whatsapp', wa)
     .eq('grupo_quiniela', currentGrupo.id)
     .maybeSingle();
   if (dupCheck) {
-    showError(errEl, `Ya existe un participante registrado con ese nombre y WhatsApp en este grupo.`);
+    const waMasked = dupCheck.whatsapp.slice(0,-4).replace(/\d/g,'•') + dupCheck.whatsapp.slice(-4);
+    showError(errEl, `Ya existe "${nombre}" en este grupo (WhatsApp: ${waMasked}). Si eres tú, entra con ese número.`);
     return;
   }
 
