@@ -831,65 +831,7 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   </button>
 </nav>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  MÓDULO 15 — ADMIN: ACTIVIDAD DE USUARIOS                   ║
-// ╚══════════════════════════════════════════════════════════════╝
-async function renderAdminActividad() {
-  const el = document.getElementById('admin-actividad-list');
-  if (!el) return;
-  el.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
-
-  const { data, error } = await sb.rpc('get_actividad', { p_limit: 300 });
-  if (error || !data) {
-    el.innerHTML = '<div class="alert alert-error">Error al cargar actividad.</div>';
-    return;
-  }
-  if (data.length === 0) {
-    el.innerHTML = '<div class="empty-state">Sin actividad registrada aún.</div>';
-    return;
-  }
-
-  const iconos = { login: '🔑', registro: '🆕', pick_guardado: '⚽', pick_editado: '✏️' };
-  const colores = { login: '#dbeafe', registro: '#dcfce7', pick_guardado: '#fef9c3', pick_editado: '#fce7f3' };
-
-  // Agrupar por grupo para filtro
-  const grupos = [...new Set(data.map(r => r.grupo).filter(Boolean))].sort();
-  let filtroHtml = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-    <button onclick="filtrarActividad('',this)" class="btn-sm" style="background:var(--verde);color:#fff">Todos</button>
-    ${grupos.map(g => `<button onclick="filtrarActividad('${g}',this)" class="btn-sm">${g}</button>`).join('')}
-  </div>`;
-
-  const filas = data.map(r => {
-    const icono  = iconos[r.accion]  || '📝';
-    const color  = colores[r.accion] || '#f3f4f6';
-    const fecha  = new Date(r.created_at).toLocaleString('es', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-    return `<div class="act-row" data-grupo="${r.grupo || ''}" style="display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:7px 12px;border-bottom:1px solid var(--borde);align-items:center;background:${color}20">
-      <div style="font-size:1.1rem;text-align:center">${icono}</div>
-      <div>
-        <span style="font-size:0.85rem;font-weight:600">${r.nombre}</span>
-        <span style="font-size:0.78rem;color:var(--gris)"> · ${r.grupo || '—'}</span>
-        ${r.detalle ? `<div style="font-size:0.75rem;color:var(--gris)">${r.detalle}</div>` : ''}
-      </div>
-      <div style="font-size:0.7rem;color:var(--gris);white-space:nowrap;text-align:right">${fecha}</div>
-    </div>`;
-  }).join('');
-
-  el.innerHTML = filtroHtml + `
-    <div style="font-size:0.75rem;color:var(--gris);margin-bottom:6px">${data.length} registros</div>
-    <div class="card" style="padding:0;overflow:hidden" id="act-tabla">${filas}</div>`;
-}
-
-function filtrarActividad(grupo, btn) {
-  document.querySelectorAll('#admin-actividad-list .btn-sm').forEach(b => {
-    b.style.background = b === btn ? 'var(--verde)' : '';
-    b.style.color = b === btn ? '#fff' : '';
-  });
-  document.querySelectorAll('.act-row').forEach(row => {
-    row.style.display = (!grupo || row.dataset.grupo === grupo) ? '' : 'none';
-  });
-}
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 1 — CONFIGURACIÓN Y CONSTANTES                      ║
@@ -2135,6 +2077,7 @@ async function verifyAdmin() {
 // ║  MÓDULO 8 — ADMIN: RESULTADOS                               ║
 // ╚══════════════════════════════════════════════════════════════╝
 async function loadAdminPanel() {
+  renderAdminActividad();
   // Selector de partido — agrupado por día
   const sel = document.getElementById('admin-partido-sel');
   const psPend = allPartidos.filter(p => p.estado !== 'finalizado');
