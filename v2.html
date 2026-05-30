@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1138,6 +1138,18 @@ async function handleLogin() {
     currentUser = existing;
     localStorage.setItem('q2026_user_' + currentGrupoKey, JSON.stringify(currentUser));
     await loadApp();
+    return;
+  }
+
+  // Bloquear duplicado: mismo nombre + mismo WhatsApp en este grupo
+  const { data: dupCheck } = await sb.from('participantes')
+    .select('id')
+    .ilike('nombre', nombre)
+    .eq('whatsapp', wa)
+    .eq('grupo_quiniela', currentGrupo.id)
+    .maybeSingle();
+  if (dupCheck) {
+    showError(errEl, `Ya existe un participante registrado con ese nombre y WhatsApp en este grupo.`);
     return;
   }
 
