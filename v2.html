@@ -1645,123 +1645,114 @@ async function loadGruposView() {
   const el = document.getElementById('grupos-content');
   if (!el) return;
   el.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Cargando grupos...</div>';
-
-  const { data: partidos } = await sb.from('partidos')
-    .select('id,grupo,equipo_local,equipo_visita,goles_local,goles_visita,estado,fecha_partido')
-    .eq('fase', 'grupos').order('numero');
-
-  if (!partidos || partidos.length === 0) {
-    el.innerHTML = '<div class="empty-state">Los partidos de grupos se cargar?n pr?ximamente.</div>';
-    return;
+  try {
+    const { data: partidos, error } = await sb.from('partidos')
+      .select('id,grupo,equipo_local,equipo_visita,goles_local,goles_visita,estado,fecha_partido')
+      .eq('fase', 'grupos').order('numero');
+    if (error) throw new Error('Supabase: ' + error.message);
+    if (!partidos || partidos.length === 0) {
+      el.innerHTML = '<div class="empty-state">Los partidos de grupos se cargar?n pr?ximamente.</div>';
+      return;
+    }
+    const gruposMap = {};
+    partidos.forEach(p => {
+      const g = p.grupo || '?';
+      if (!gruposMap[g]) gruposMap[g] = [];
+      gruposMap[g].push(p);
+    });
+    let html = '';
+    Object.keys(gruposMap).sort().forEach(g => {
+      const gPartidos   = gruposMap[g];
+      const finalizados = gPartidos.filter(p => p.estado === 'finalizado' && p.goles_local !== null);
+      const equiposSet  = new Set();
+      gPartidos.forEach(p => { equiposSet.add(p.equipo_local); equiposSet.add(p.equipo_visita); });
+      const nEq         = equiposSet.size;
+      const maxP        = nEq * (nEq - 1) / 2;
+      const completo    = finalizados.length >= maxP && maxP > 0;
+      const stats = {};
+      equiposSet.forEach(eq => { stats[eq] = { eq, pts:0, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, gd:0 }; });
+      finalizados.forEach(p => {
+        const { equipo_local: loc, equipo_visita: vis, goles_local: gl, goles_visita: gv } = p;
+        if (!stats[loc] || !stats[vis]) return;
+        stats[loc].pj++; stats[vis].pj++;
+        stats[loc].gf += gl; stats[loc].gc += gv; stats[loc].gd += (gl - gv);
+        stats[vis].gf += gv; stats[vis].gc += gl; stats[vis].gd += (gv - gl);
+        if      (gl > gv) { stats[loc].pts += 3; stats[loc].pg++; stats[vis].pp++; }
+        else if (gl === gv){ stats[loc].pts++;    stats[vis].pts++; stats[loc].pe++; stats[vis].pe++; }
+        else               { stats[vis].pts += 3; stats[vis].pg++; stats[loc].pp++; }
+      });
+      const sorted = Object.values(stats).sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf || a.eq.localeCompare(b.eq));
+      const bgs    = ['#f0fdf4','#f0fdf4','#fffbeb','#f9fafb'];
+      html += '<div class="card" style="padding:14px;margin-bottom:14px">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+        + '<div style="font-weight:800;font-size:1rem">Grupo ' + g + '</div>'
+        + '<div style="font-size:0.72rem;color:var(--gris)">' + finalizados.length + '/' + maxP + (completo ? ' completo' : ' partidos') + '</div>'
+        + '</div>';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:10px">'
+        + '<thead><tr style="border-bottom:2px solid var(--borde);font-size:0.7rem;color:var(--gris)">'
+        + '<th style="text-align:left;padding:4px 6px">Equipo</th>'
+        + '<th style="text-align:center;padding:4px 3px" title="Partidos jugados">PJ</th>'
+        + '<th style="text-align:center;padding:4px 3px" title="Ganados">G</th>'
+        + '<th style="text-align:center;padding:4px 3px" title="Empates">E</th>'
+        + '<th style="text-align:center;padding:4px 3px" title="Perdidos">P</th>'
+        + '<th style="text-align:center;padding:4px 3px" title="Diferencia de goles">GD</th>'
+        + '<th style="text-align:center;padding:4px 6px;font-weight:800;color:var(--texto)" title="Puntos">Pts</th>'
+        + '</tr></thead><tbody>';
+      sorted.forEach((t, i) => {
+        const avanza  = i < 2;
+        const gdColor = t.gd > 0 ? 'var(--exito)' : t.gd < 0 ? 'var(--error)' : 'inherit';
+        const badge   = avanza
+          ? ' <span style="font-size:0.6rem;background:var(--verde);color:#fff;border-radius:4px;padding:1px 4px">R32</span>'
+          : i === 2
+          ? ' <span style="font-size:0.6rem;background:#f59e0b;color:#fff;border-radius:4px;padding:1px 4px">3ro</span>'
+          : '';
+        const medal   = i === 0 ? '?? ' : i === 1 ? '?? ' : '';
+        html += '<tr style="border-bottom:1px solid var(--borde);background:' + bgs[Math.min(i,3)] + '">'
+          + '<td style="padding:8px 6px;font-weight:' + (avanza?'700':'500') + '">' + medal + t.eq + badge + '</td>'
+          + '<td style="text-align:center;padding:8px 3px">' + t.pj + '</td>'
+          + '<td style="text-align:center;padding:8px 3px">' + t.pg + '</td>'
+          + '<td style="text-align:center;padding:8px 3px">' + t.pe + '</td>'
+          + '<td style="text-align:center;padding:8px 3px">' + t.pp + '</td>'
+          + '<td style="text-align:center;padding:8px 3px;color:' + gdColor + '">' + (t.gd>0?'+':'') + t.gd + '</td>'
+          + '<td style="text-align:center;padding:8px 6px;font-weight:900;font-size:0.95rem">' + t.pts + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table>';
+      const resultados = [...finalizados].reverse().slice(0,3);
+      if (resultados.length > 0) {
+        html += '<div style="font-size:0.72rem;color:var(--gris);font-weight:600;margin-bottom:4px">Resultados</div>';
+        resultados.forEach(p => {
+          const wL = p.goles_local > p.goles_visita, wV = p.goles_visita > p.goles_local;
+          html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--borde);font-size:0.79rem">'
+            + '<span style="flex:1;text-align:right;font-weight:' + (wL?'700':'400') + '">' + p.equipo_local + '</span>'
+            + '<span style="background:var(--texto);color:#fff;border-radius:6px;padding:2px 10px;font-weight:800">' + p.goles_local + ' - ' + p.goles_visita + '</span>'
+            + '<span style="flex:1;font-weight:' + (wV?'700':'400') + '">' + p.equipo_visita + '</span>'
+            + '</div>';
+        });
+      }
+      const proximos = gPartidos.filter(p => p.estado === 'pendiente' && p.fecha_partido)
+        .sort((a,b) => new Date(a.fecha_partido)-new Date(b.fecha_partido)).slice(0,2);
+      if (proximos.length > 0) {
+        html += '<div style="font-size:0.72rem;color:var(--gris);font-weight:600;margin-top:8px;margin-bottom:4px">Pr?ximos</div>';
+        proximos.forEach(p => {
+          const fecha = new Date(p.fecha_partido).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+          html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--borde);font-size:0.79rem">'
+            + '<span style="flex:1;text-align:right;color:var(--gris)">' + p.equipo_local + '</span>'
+            + '<span style="background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:2px 8px;font-size:0.7rem;color:var(--gris);white-space:nowrap">' + fecha + '</span>'
+            + '<span style="flex:1;color:var(--gris)">' + p.equipo_visita + '</span>'
+            + '</div>';
+        });
+      }
+      html += '</div>';
+    });
+    html += '<div style="font-size:0.7rem;color:var(--gris);text-align:center;padding:8px">Desempate FIFA: Pts / DG / GF</div>';
+    el.innerHTML = html;
+  } catch(err) {
+    console.error('loadGruposView error:', err);
+    el.innerHTML = '<div class="alert alert-error" style="margin:12px 0">Error al cargar: ' + (err.message || 'Error de conexi?n') + '</div>';
   }
-
-  // Agrupar por letra de grupo
-  const gruposMap = {};
-  partidos.forEach(p => {
-    const g = p.grupo || '?';
-    if (!gruposMap[g]) gruposMap[g] = [];
-    gruposMap[g].push(p);
-  });
-
-  let html = '';
-
-  Object.keys(gruposMap).sort().forEach(g => {
-    const gPartidos  = gruposMap[g];
-    const finalizados = gPartidos.filter(p => p.estado === 'finalizado' && p.goles_local !== null);
-    const equiposSet  = new Set();
-    gPartidos.forEach(p => { equiposSet.add(p.equipo_local); equiposSet.add(p.equipo_visita); });
-    const nEq        = equiposSet.size;
-    const maxPartidos = nEq * (nEq - 1) / 2;
-    const completo    = finalizados.length >= maxPartidos && maxPartidos > 0;
-
-    // Standings FIFA: Pts -> GD -> GF
-    const stats = {};
-    equiposSet.forEach(eq => { stats[eq] = { eq, pts:0, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, gd:0 }; });
-    finalizados.forEach(p => {
-      const { equipo_local: loc, equipo_visita: vis, goles_local: gl, goles_visita: gv } = p;
-      if (!stats[loc] || !stats[vis]) return;
-      stats[loc].pj++; stats[vis].pj++;
-      stats[loc].gf += gl; stats[loc].gc += gv; stats[loc].gd += (gl - gv);
-      stats[vis].gf += gv; stats[vis].gc += gl; stats[vis].gd += (gv - gl);
-      if      (gl > gv) { stats[loc].pts += 3; stats[loc].pg++; stats[vis].pp++; }
-      else if (gl === gv){ stats[loc].pts++;    stats[vis].pts++; stats[loc].pe++; stats[vis].pe++; }
-      else               { stats[vis].pts += 3; stats[vis].pg++; stats[loc].pp++; }
-    });
-    const sorted = Object.values(stats).sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf || a.eq.localeCompare(b.eq));
-    const bgs = ['#f0fdf4','#f0fdf4','#fffbeb','#f9fafb'];
-
-    html += '<div class="card" style="padding:14px;margin-bottom:14px">';
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
-      + '<div style="font-weight:800;font-size:1rem">Grupo ' + g + '</div>'
-      + '<div style="font-size:0.72rem;color:var(--gris)">' + finalizados.length + '/' + maxPartidos + ' partidos' + (completo ? ' ?' : '') + '</div>'
-      + '</div>';
-
-    // Tabla standings
-    html += '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:10px">'
-      + '<thead><tr style="border-bottom:2px solid var(--borde);color:var(--gris);font-size:0.7rem">'
-      + '<th style="text-align:left;padding:4px 6px">Equipo</th>'
-      + '<th style="text-align:center;padding:4px 3px">PJ</th>'
-      + '<th style="text-align:center;padding:4px 3px">G</th>'
-      + '<th style="text-align:center;padding:4px 3px">E</th>'
-      + '<th style="text-align:center;padding:4px 3px">P</th>'
-      + '<th style="text-align:center;padding:4px 3px">GD</th>'
-      + '<th style="text-align:center;padding:4px 6px;font-weight:800;color:var(--texto)">Pts</th>'
-      + '</tr></thead><tbody>';
-
-    sorted.forEach((t, i) => {
-      const avanza  = i < 2;
-      const gdColor = t.gd > 0 ? 'var(--exito)' : t.gd < 0 ? 'var(--error)' : 'inherit';
-      let nombre = t.eq;
-      if (i === 0)      nombre = '?? ' + t.eq + ' <span style="font-size:0.6rem;background:var(--verde);color:#fff;border-radius:4px;padding:1px 4px;margin-left:4px">R32</span>';
-      else if (i === 1) nombre = '?? ' + t.eq + ' <span style="font-size:0.6rem;background:var(--verde);color:#fff;border-radius:4px;padding:1px 4px;margin-left:4px">R32</span>';
-      else if (i === 2) nombre = t.eq + ' <span style="font-size:0.6rem;background:#f59e0b;color:#fff;border-radius:4px;padding:1px 4px;margin-left:4px">3ro</span>';
-      html += '<tr style="border-bottom:1px solid var(--borde);background:' + bgs[Math.min(i,3)] + '">'
-        + '<td style="padding:8px 6px;font-weight:' + (avanza?'700':'500') + '">' + nombre + '</td>'
-        + '<td style="text-align:center;padding:8px 3px">' + t.pj + '</td>'
-        + '<td style="text-align:center;padding:8px 3px">' + t.pg + '</td>'
-        + '<td style="text-align:center;padding:8px 3px">' + t.pe + '</td>'
-        + '<td style="text-align:center;padding:8px 3px">' + t.pp + '</td>'
-        + '<td style="text-align:center;padding:8px 3px;color:' + gdColor + '">' + (t.gd>0?'+':'') + t.gd + '</td>'
-        + '<td style="text-align:center;padding:8px 6px;font-weight:900;font-size:0.95rem">' + t.pts + '</td>'
-        + '</tr>';
-    });
-    html += '</tbody></table>';
-
-    // Ultimos resultados
-    const resultados = [...finalizados].reverse().slice(0,3);
-    if (resultados.length > 0) {
-      html += '<div style="font-size:0.72rem;color:var(--gris);font-weight:600;margin-bottom:4px">Resultados</div>';
-      resultados.forEach(p => {
-        const wL = p.goles_local > p.goles_visita;
-        const wV = p.goles_visita > p.goles_local;
-        html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--borde);font-size:0.79rem">'
-          + '<span style="flex:1;text-align:right;font-weight:' + (wL?'700':'400') + '">' + p.equipo_local + '</span>'
-          + '<span style="background:var(--texto);color:#fff;border-radius:6px;padding:2px 10px;font-weight:800;font-size:0.85rem">' + p.goles_local + ' - ' + p.goles_visita + '</span>'
-          + '<span style="flex:1;font-weight:' + (wV?'700':'400') + '">' + p.equipo_visita + '</span>'
-          + '</div>';
-      });
-    }
-
-    // Proximos partidos
-    const proximos = gPartidos.filter(p => p.estado === 'pendiente' && p.fecha_partido)
-      .sort((a,b) => new Date(a.fecha_partido)-new Date(b.fecha_partido)).slice(0,2);
-    if (proximos.length > 0) {
-      html += '<div style="font-size:0.72rem;color:var(--gris);font-weight:600;margin-top:8px;margin-bottom:4px">Pr?ximos</div>';
-      proximos.forEach(p => {
-        const fecha = new Date(p.fecha_partido).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-        html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--borde);font-size:0.79rem">'
-          + '<span style="flex:1;text-align:right;color:var(--gris)">' + p.equipo_local + '</span>'
-          + '<span style="background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:2px 8px;font-size:0.7rem;color:var(--gris);white-space:nowrap">' + fecha + '</span>'
-          + '<span style="flex:1;color:var(--gris)">' + p.equipo_visita + '</span>'
-          + '</div>';
-      });
-    }
-    html += '</div>';
-  });
-
-  html += '<div style="font-size:0.7rem;color:var(--gris);text-align:center;padding:8px">Desempate FIFA: Pts / DG / GF</div>';
-  el.innerHTML = html;
 }
+
 
 function renderLeaderboardGeneral(parts, prons, partidos) {
   const cont = document.getElementById('tabla-content');
