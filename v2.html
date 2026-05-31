@@ -2073,6 +2073,17 @@ async function verifyAdmin() {
   isAdmin = true;
   document.getElementById('admin-login-section').style.display = 'none';
   document.getElementById('admin-panel').style.display = 'block';
+
+  // Cargar datos si el admin entro sin pasar por loadApp (login directo)
+  if (Object.keys(allFases).length === 0) {
+    const [fRes, pRes] = await Promise.all([
+      sb.from('fases').select('*'),
+      sb.from('partidos').select('*').order('numero'),
+    ]);
+    (fRes.data || []).forEach(f => allFases[f.id] = f);
+    allPartidos = pRes.data || [];
+  }
+
   loadAdminPanel();
 }
 
