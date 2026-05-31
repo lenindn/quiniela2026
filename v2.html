@@ -743,6 +743,52 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
         <div id="admin-result-msg"></div>
       </div>
     </div>
+    <!-- Crear Partido -->
+    <div class="card admin-section">
+      <h3>&#x2795; Crear Partido</h3>
+      <p style="font-size:0.82rem;color:var(--gris);margin-bottom:12px">Agrega partidos de eliminatorias cuando se conozcan los cruces.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;display:block;margin-bottom:4px">Fase</label>
+          <select id="np-fase" onchange="toggleGrupoField()" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff">
+            <option value="grupos">Grupos</option>
+            <option value="r32" selected>Ronda de 32</option>
+            <option value="r16">Octavos de Final</option>
+            <option value="cuartos">Cuartos de Final</option>
+            <option value="semis">Semifinales</option>
+            <option value="tercer_lugar">Tercer Lugar</option>
+            <option value="final">Final</option>
+          </select>
+        </div>
+        <div id="np-grupo-wrap" style="display:none">
+          <label style="font-size:0.78rem;font-weight:600;display:block;margin-bottom:4px">Grupo</label>
+          <input id="np-grupo" type="text" maxlength="2" placeholder="Ej: A" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;display:block;margin-bottom:4px">Equipo Local</label>
+          <input id="np-local" type="text" placeholder="Ej: Mexico" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;display:block;margin-bottom:4px">Equipo Visita</label>
+          <input id="np-visita" type="text" placeholder="Ej: Argentina" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;display:block;margin-bottom:4px">Fecha y hora</label>
+          <input id="np-fecha" type="datetime-local" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;display:block;margin-bottom:4px">Ciudad (opcional)</label>
+          <input id="np-ciudad" type="text" placeholder="Ej: Dallas" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;box-sizing:border-box">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="crearPartido()" style="width:100%">Crear partido</button>
+      <div id="np-msg" style="margin-top:8px;font-size:0.85rem"></div>
+    </div>
+
     <!-- Gestión de fases -->
     <div class="card admin-section">
       <h3>🔓 Gestión de Fases</h3>
@@ -2091,6 +2137,69 @@ async function verifyAdmin() {
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 8 — ADMIN: RESULTADOS                               ║
 // ╚══════════════════════════════════════════════════════════════╝
+
+// ????????????????????????????????????????????????????????????????
+// ?  M?DULO 8b ? ADMIN: CREAR PARTIDO                           ?
+// ????????????????????????????????????????????????????????????????
+function toggleGrupoField() {
+  const fase = document.getElementById('np-fase').value;
+  document.getElementById('np-grupo-wrap').style.display = fase === 'grupos' ? 'block' : 'none';
+}
+
+async function crearPartido() {
+  const fase   = document.getElementById('np-fase').value;
+  const local  = document.getElementById('np-local').value.trim();
+  const visita = document.getElementById('np-visita').value.trim();
+  const fecha  = document.getElementById('np-fecha').value;
+  const ciudad = document.getElementById('np-ciudad').value.trim();
+  const grupo  = document.getElementById('np-grupo').value.trim().toUpperCase();
+  const msgEl  = document.getElementById('np-msg');
+  msgEl.textContent = '';
+
+  if (!local)  { msgEl.style.color = 'var(--error)'; msgEl.textContent = '?? Ingresa el equipo local.';  return; }
+  if (!visita) { msgEl.style.color = 'var(--error)'; msgEl.textContent = '?? Ingresa el equipo visita.'; return; }
+  if (local.toLowerCase() === visita.toLowerCase()) {
+    msgEl.style.color = 'var(--error)'; msgEl.textContent = '?? Los equipos no pueden ser iguales.'; return;
+  }
+
+  msgEl.style.color = 'var(--gris)';
+  msgEl.textContent = '? Creando...';
+
+  // Siguiente n?mero de partido
+  const { data: maxRow } = await sb.from('partidos')
+    .select('numero').order('numero', { ascending: false }).limit(1).maybeSingle();
+  const numero = (maxRow?.numero || 0) + 1;
+
+  const { error } = await sb.from('partidos').insert({
+    numero,
+    fase,
+    equipo_local:  local,
+    equipo_visita: visita,
+    fecha_partido: fecha ? new Date(fecha).toISOString() : null,
+    ciudad:        ciudad || null,
+    grupo:         fase === 'grupos' ? (grupo || null) : null,
+    estado:        'pendiente',
+  });
+
+  if (error) {
+    msgEl.style.color = 'var(--error)';
+    msgEl.textContent = '? Error: ' + error.message;
+    return;
+  }
+
+  msgEl.style.color = 'var(--exito)';
+  msgEl.textContent = '? Partido creado: ' + local + ' vs ' + visita + ' (' + FASES_LABELS[fase] + ')';
+
+  // Limpiar campos
+  ['np-local','np-visita','np-fecha','np-ciudad','np-grupo'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+
+  // Refrescar lista de partidos en el selector de resultados
+  allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
+  loadAdminPanel();
+}
+
 async function loadAdminPanel() {
   renderAdminActividad();
   // Selector de partido — agrupado por día
