@@ -1937,20 +1937,27 @@ function renderLeaderboardFase(fase, parts, prons, partidos) {
   const completada       = totalPartidos > 0 && finalizados === totalPartidos;
   const enCurso          = finalizados > 0 && !completada;
   const sinIniciar       = totalPartidos === 0 || finalizados === 0;
-
-  // Filtrado de participantes seg?n estado de la fase:
-  // - Fase COMPLETADA: incluir todos (activos e inactivos) que participaron en ella ? datos hist?ricos
-  // - Fase EN CURSO / SIN INICIAR: solo participantes activos (siguen jugando)
-  const partsActivos = parts.filter(p => {
-    // Excluir siempre si fases_activas indica que no particip? en esta fase
-    if (p.fases_activas && p.fases_activas[fase] === false) return false;
-    // Si la fase NO est? completada, excluir participantes desactivados
-    if (!completada && p.activo === false) return false;
-    return true;
-  });
+  // Filtrado de participantes segun estado de la fase:
+  // - Fase COMPLETADA: mostrar a quien tenga al menos 1 pronostico calculado
+  //   (ignora fases_activas actual — pudo haber sido desactivado despues de participar)
+  // - Fase EN CURSO / SIN INICIAR: solo activos segun fases_activas y activo global
+  const partidoIds = matchesFase.map(p => p.id);
+  const partsActivos = (() => {
+    if (completada) {
+      return parts.filter(p => prons.some(pr =>
+        pr.participante_id === p.id &&
+        partidoIds.includes(pr.partido_id) &&
+        pr.calculado === true
+      ));
+    }
+    return parts.filter(p => {
+      if (p.activo === false) return false;
+      if (p.fases_activas && p.fases_activas[fase] === false) return false;
+      return true;
+    });
+  })();
 
   // Calcular ranking de esta fase
-  const partidoIds = matchesFase.map(p => p.id);
   const ranking = partsActivos.map(p => {
     const myProns = prons.filter(pr =>
       pr.participante_id === p.id && partidoIds.includes(pr.partido_id)
