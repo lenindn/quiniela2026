@@ -2133,39 +2133,43 @@ async function loadAdminPanel() {
     if (!fData) return;
     const abierta = fData.abierta;
 
-    // Primer partido de esta fase (desde partidos cargados o fecha oficial hardcodeada)
-    const partidosFase = allPartidos.filter(p => p.fase === f && p.fecha_partido);
+    // Primer partido de esta fase
+    const partidosFase  = allPartidos.filter(p => p.fase === f && p.fecha_partido);
     const primerPartido = partidosFase.sort((a,b) => new Date(a.fecha_partido) - new Date(b.fecha_partido))[0];
-    const fechaInicio = primerPartido?.fecha_partido || FASES_INICIO[f];
-    const inicioFase = fechaInicio ? `🗓 Inicia: ${formatDate(fechaInicio)}` : '';
+    const fechaInicio   = primerPartido?.fecha_partido || FASES_INICIO[f];
+    const inicioFase    = fechaInicio ? '\uD83D\uDCC5 Inicia: ' + formatDate(fechaInicio) : '';
 
-    const cierreVal = fData.fecha_cierre
-      ? new Date(new Date(fData.fecha_cierre).getTime() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)
+    // Pre-calcular sin template literals anidados
+    const cierreVal  = fData.fecha_cierre
+      ? new Date(new Date(fData.fecha_cierre).getTime() - new Date().getTimezoneOffset()*60000)
+          .toISOString().slice(0, 16)
       : '';
-    fDiv.innerHTML += `
-      <div class="fase-control">
-        <div class="fase-control-info">
-          <div class="fase-nombre">${FASES_LABELS[f]}</div>
-          ${inicioFase ? `<div style="font-size:0.75rem;color:var(--gris);margin-bottom:2px">${inicioFase}</div>` : ""}
-          <div class="fase-status ${abierta ? `badge-abierta` : `badge-cerrada`}">
-            ${abierta ? "✅ Abierta" : "🔒 Cerrada"}
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-          <div style="display:flex;align-items:center;gap:6px">
-            <label style="font-size:0.72rem;color:var(--gris);white-space:nowrap">⏰ Cierre:</label>
-            <input type="datetime-local" id="cierre-${f}" value="${cierreVal}"
-              style="font-size:0.78rem;border:1px solid var(--borde);border-radius:6px;padding:4px 6px">
-          </div>
-          <div style="display:flex;gap:6px">
-            <button class="btn-sm" onclick="guardarCierre('${f}')" title="Guardar fecha de cierre">💾 Guardar</button>
-            ${abierta
-              ? `<button class="btn-rojo" onclick="toggleFase('${f}', false)">Cerrar fase</button>`
-              : `<button class="btn-sm" style="background:var(--verde);color:#fff" onclick="abrirFase('${f}')">Abrir fase</button>`
-            }
-          </div>
-        </div>
-      </div>`;
+    const badgeClass = abierta ? 'badge-abierta' : 'badge-cerrada';
+    const badgeText  = abierta ? '\u2705 Abierta' : '\uD83D\uDD12 Cerrada';
+    const inicioDiv  = inicioFase
+      ? '<div style="font-size:0.75rem;color:var(--gris);margin-bottom:2px">' + inicioFase + '</div>'
+      : '';
+    const btnAccion  = abierta
+      ? '<button class="btn-rojo" onclick="toggleFase(\'' + f + '\', false)">Cerrar fase</button>'
+      : '<button class="btn-sm" style="background:var(--verde);color:#fff" onclick="abrirFase(\'' + f + '\')">Abrir fase</button>';
+
+    fDiv.innerHTML += '<div class="fase-control">'
+      + '<div class="fase-control-info">'
+      + '<div class="fase-nombre">' + FASES_LABELS[f] + '</div>'
+      + inicioDiv
+      + '<div class="fase-status ' + badgeClass + '">' + badgeText + '</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">'
+      + '<div style="display:flex;align-items:center;gap:6px">'
+      + '<label style="font-size:0.72rem;color:var(--gris);white-space:nowrap">\u23f0 Cierre:</label>'
+      + '<input type="datetime-local" id="cierre-' + f + '" value="' + cierreVal + '" style="font-size:0.78rem;border:1px solid var(--borde);border-radius:6px;padding:4px 6px">'
+      + '</div>'
+      + '<div style="display:flex;gap:6px">'
+      + '<button class="btn-sm" onclick="guardarCierre(\'' + f + '\')" title="Guardar">\uD83D\uDCBE Guardar</button>'
+      + btnAccion
+      + '</div>'
+      + '</div>'
+      + '</div>';
   });
 
   // Grupos de quiniela
