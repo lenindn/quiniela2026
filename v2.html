@@ -2125,20 +2125,32 @@ async function loadAdminPanel() {
     const fechaInicio = primerPartido?.fecha_partido || FASES_INICIO[f];
     const inicioFase = fechaInicio ? `🗓 Inicia: ${formatDate(fechaInicio)}` : '';
 
+    const cierreVal = fData.fecha_cierre
+      ? new Date(new Date(fData.fecha_cierre).getTime() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)
+      : '';
     fDiv.innerHTML += `
       <div class="fase-control">
         <div class="fase-control-info">
           <div class="fase-nombre">${FASES_LABELS[f]}</div>
-          ${inicioFase ? `<div style="font-size:0.75rem;color:var(--gris);margin-bottom:2px">${inicioFase}</div>` : ''}
-          <div class="fase-status ${abierta ? 'badge-abierta' : 'badge-cerrada'}">
-            ${abierta ? '✅ Abierta' : '🔒 Cerrada'}
-            ${fData.fecha_cierre ? ` · Cierre: ${formatDate(fData.fecha_cierre)}` : ''}
+          ${inicioFase ? `<div style="font-size:0.75rem;color:var(--gris);margin-bottom:2px">${inicioFase}</div>` : ""}
+          <div class="fase-status ${abierta ? `badge-abierta` : `badge-cerrada`}">
+            ${abierta ? "✅ Abierta" : "🔒 Cerrada"}
           </div>
         </div>
-        ${abierta
-          ? `<button class="btn-rojo" onclick="toggleFase('${f}', false)">Cerrar</button>`
-          : `<button class="btn-sm" onclick="openFasePrompt('${f}')">Abrir</button>`
-        }
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="font-size:0.72rem;color:var(--gris);white-space:nowrap">⏰ Cierre:</label>
+            <input type="datetime-local" id="cierre-${f}" value="${cierreVal}"
+              style="font-size:0.78rem;border:1px solid var(--borde);border-radius:6px;padding:4px 6px">
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-sm" onclick="guardarCierre(`${f}`)" title="Guardar fecha de cierre">💾 Guardar</button>
+            ${abierta
+              ? `<button class="btn-rojo" onclick="toggleFase(`${f}`, false)">Cerrar fase</button>`
+              : `<button class="btn-sm" style="background:var(--verde);color:#fff" onclick="abrirFase(`${f}`)">Abrir fase</button>`
+            }
+          </div>
+        </div>
       </div>`;
   });
 
@@ -2409,13 +2421,24 @@ async function guardarEditResultado(pid) {
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 9 — ADMIN: FASES                                    ║
 // ╚══════════════════════════════════════════════════════════════╝
-async function openFasePrompt(fase) {
-  const cierre = prompt(`Fecha/hora de cierre para ${FASES_LABELS[fase]}\n(formato: YYYY-MM-DDTHH:MM, hora local)`);
-  if (!cierre) return;
-  const fecha = new Date(cierre);
+async function abrirFase(fase) {
+  const input = document.getElementById(`cierre-${fase}`);
+  const fecha = input?.value ? new Date(input.value) : null;
   if (isNaN(fecha)) { alert('Formato inválido.'); return; }
   await sb.from('fases').update({ abierta: true, fecha_cierre: fecha.toISOString() }).eq('id', fase);
   allFases[fase] = { ...allFases[fase], abierta: true, fecha_cierre: fecha.toISOString() };
+  loadAdminPanel();
+}
+
+
+async function guardarCierre(fase) {
+  const input = document.getElementById(`cierre-${fase}`);
+  if (!input || !input.value) { alert('Selecciona una fecha y hora de cierre.'); return; }
+  const fecha = new Date(input.value);
+  const { error } = await sb.from('fases').update({ fecha_cierre: fecha.toISOString() }).eq('id', fase);
+  if (error) { alert('Error: ' + error.message); return; }
+  allFases[fase] = { ...allFases[fase], fecha_cierre: fecha.toISOString() };
+  const btn = input.nextElementSibling;
   loadAdminPanel();
 }
 
