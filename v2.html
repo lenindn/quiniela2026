@@ -761,13 +761,11 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
         Standings en tiempo real basados en resultados finalizados.<br>
         Usa esta tabla para crear los cruces del R32 con el formulario de abajo.
       </p>
+      <button class="btn-primary" onclick="generarCrucesR32()" style="width:100%;margin-bottom:12px">
+        &#x1F3AF; Generar cruces R32
+      </button>
+      <div id="admin-r32-bracket" style="display:none;margin-bottom:14px"></div>
       <div id="admin-clasificados"></div>
-      <div style="margin-top:12px;border-top:1px solid var(--borde);padding-top:12px">
-        <button class="btn-primary" onclick="generarCrucesR32()" style="width:100%">
-          &#x1F3AF; Generar cruces R32 (basado en clasificados)
-        </button>
-        <div id="admin-r32-bracket" style="display:none;margin-top:14px"></div>
-      </div>
     </div>
 
     <!-- Crear Partido -->
