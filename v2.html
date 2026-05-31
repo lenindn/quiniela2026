@@ -1589,7 +1589,9 @@ async function loadLeaderboard() {
   const tabsEl = document.getElementById('tabla-fase-tabs');
   cont.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Cargando...</div>';
 
-  let partQuery = sb.from('participantes').select('id,nombre,grupo_quiniela,activo,fases_activas').eq('activo', true);
+  // Cargamos TODOS los participantes (activos e inactivos)
+  // Las funciones de rendering deciden por fase: completada = todos, en curso = solo activos
+  let partQuery = sb.from('participantes').select('id,nombre,grupo_quiniela,activo,fases_activas');
   if (currentGrupo) partQuery = partQuery.eq('grupo_quiniela', currentGrupo.id);
 
   const [partRes, prRes, pardosRes] = await Promise.all([
@@ -1820,7 +1822,10 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
     parts.some(p => !p.fases_activas || p.fases_activas[f] !== false)
   );
 
-  const acumulado = parts.map(p => {
+  // Para el ranking acumulado solo participantes activos
+  // (los inactivos aparecen en los podios de fases completadas pero no compiten en general)
+  const partsParaGeneral = parts.filter(p => p.activo !== false);
+  const acumulado = partsParaGeneral.map(p => {
     let totalPts = 0, totalExactos = 0, totalAciertos = 0;
     const ptsPorFase   = {};
     const fasesFaltantes = []; // fases requeridas en las que el participante estuvo inactivo
@@ -1933,11 +1938,15 @@ function renderLeaderboardFase(fase, parts, prons, partidos) {
   const enCurso          = finalizados > 0 && !completada;
   const sinIniciar       = totalPartidos === 0 || finalizados === 0;
 
-  // Participantes activos en esta fase
-  // fases_activas: null = activo en todo; {"grupos": false} = inactivo en grupos
+  // Filtrado de participantes seg?n estado de la fase:
+  // - Fase COMPLETADA: incluir todos (activos e inactivos) que participaron en ella ? datos hist?ricos
+  // - Fase EN CURSO / SIN INICIAR: solo participantes activos (siguen jugando)
   const partsActivos = parts.filter(p => {
-    if (!p.fases_activas) return true;
-    return p.fases_activas[fase] !== false;
+    // Excluir siempre si fases_activas indica que no particip? en esta fase
+    if (p.fases_activas && p.fases_activas[fase] === false) return false;
+    // Si la fase NO est? completada, excluir participantes desactivados
+    if (!completada && p.activo === false) return false;
+    return true;
   });
 
   // Calcular ranking de esta fase
