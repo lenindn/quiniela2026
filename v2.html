@@ -2191,6 +2191,10 @@ async function verifyAdmin() {
 // Zonas de emparejamiento FIFA 2026 (grupos que se cruzan entre s?)
 const ZONAS_R32 = [['A','B'],['C','D'],['E','F'],['G','H'],['I','J'],['K','L']];
 
+function ocultarBracketR32() {
+  document.getElementById('admin-r32-bracket').style.display = 'none';
+}
+
 async function generarCrucesR32() {
   const bracketEl = document.getElementById('admin-r32-bracket');
   bracketEl.style.display = 'block';
@@ -2310,7 +2314,7 @@ async function generarCrucesR32() {
   html += '<div id="r32-msg" style="font-size:0.82rem;margin-bottom:8px"></div>';
   html += '<div style="display:flex;gap:8px">';
   html += '<button class="btn-primary" onclick="crearTodosR32('+cruces.length+')" style="flex:1">\u2705 Crear los '+cruces.length+' partidos del R32</button>';
-  html += '<button class="btn-sm" onclick="document.getElementById('admin-r32-bracket').style.display='none'" style="flex-shrink:0">Cancelar</button>';
+  html += '<button class="btn-sm" onclick="ocultarBracketR32()" style="flex-shrink:0">Cancelar</button>';
   html += '</div>';
 
   bracketEl.innerHTML = html;
