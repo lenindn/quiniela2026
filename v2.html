@@ -542,6 +542,19 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   <div style="font-size:3rem;margin-bottom:12px">⚽</div>
   <h2 style="color:var(--verde);margin-bottom:8px">Quiniela Mundial 2026</h2>
   <p style="color:var(--texto2);margin-bottom:20px">Para unirte necesitas el link de tu grupo.<br>Pídelo al organizador de tu quiniela.</p>
+  <!-- Buscar mis grupos por WhatsApp -->
+  <div class="card" style="text-align:left;margin-bottom:12px">
+    <p style="font-size:0.9rem;font-weight:700;margin-bottom:4px">&#x1F50D; &#xBF;Ya est&#xE1;s registrado?</p>
+    <p style="font-size:0.82rem;color:var(--gris);margin-bottom:10px">Ingresa tu WhatsApp y te mostramos tus grupos.</p>
+    <div style="display:flex;gap:8px">
+      <input type="tel" id="ng-wa-buscar" placeholder="Ej: 584141234567" inputmode="numeric" autocomplete="off"
+        style="flex:1;padding:10px;border:1px solid var(--borde);border-radius:8px;font-size:0.9rem"
+        onkeydown="if(event.key==='Enter') buscarMisGrupos()">
+      <button class="btn-primary" onclick="buscarMisGrupos()" style="white-space:nowrap;padding:10px 16px">Buscar</button>
+    </div>
+    <div id="ng-grupos-resultado" style="margin-top:12px"></div>
+  </div>
+
   <div class="card" style="text-align:left">
     <p style="font-size:0.85rem;color:var(--gris);margin-bottom:8px">¿Eres el organizador? Accede al panel admin:</p>
     <input type="text" id="ng-url" placeholder="Pega aquí el link de tu grupo" style="width:100%;padding:10px;border:1px solid var(--borde);border-radius:8px;font-size:0.9rem;margin-bottom:8px">
@@ -1138,6 +1151,54 @@ function aplicarTemaGrupo(grupo) {
 }
 
 // Helpers para la página sin grupo
+async function buscarMisGrupos() {
+  const wa    = document.getElementById('ng-wa-buscar').value.trim().replace(/\D/g, '');
+  const resEl = document.getElementById('ng-grupos-resultado');
+  if (!wa || wa.length < 7) {
+    resEl.innerHTML = '<p style="color:var(--error);font-size:0.82rem">Ingresa tu n&#xFA;mero de WhatsApp completo.</p>';
+    return;
+  }
+  resEl.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  const { data: registros, error } = await sb.from('participantes')
+    .select('id,nombre,activo,grupo_quiniela').eq('whatsapp', wa);
+  if (error || !registros || registros.length === 0) {
+    resEl.innerHTML = '<p style="font-size:0.85rem;color:var(--gris);text-align:center;padding:8px">No encontramos ningún registro con ese WhatsApp.</p>';
+    return;
+  }
+  const grupoIds = [...new Set(registros.map(r => r.grupo_quiniela).filter(Boolean))];
+  if (grupoIds.length === 0) {
+    resEl.innerHTML = '<p style="font-size:0.85rem;color:var(--gris);text-align:center;padding:8px">No tienes grupos asignados a&#xFA;n.</p>';
+    return;
+  }
+  const { data: grupos } = await sb.from('grupos_quiniela')
+    .select('id,nombre,slug,icono,color').in('id', grupoIds);
+  if (!grupos || grupos.length === 0) { resEl.innerHTML = '<p style="font-size:0.85rem;color:var(--gris);text-align:center">Sin grupos encontrados.</p>'; return; }
+  // Separar activos y bloqueados
+  const activos    = grupos.filter(g => { const r = registros.find(x => x.grupo_quiniela === g.id); return r && r.activo !== false; });
+  const bloqueados = grupos.filter(g => { const r = registros.find(x => x.grupo_quiniela === g.id); return r && r.activo === false; });
+  // Un solo grupo activo → redirigir directo
+  if (activos.length === 1 && bloqueados.length === 0) {
+    window.location.href = DEPLOY_URL + '?g=' + activos[0].slug;
+    return;
+  }
+  // Múltiples grupos → mostrar tarjetas
+  const baseUrl = window.location.protocol === 'file:' ? DEPLOY_URL : window.location.origin + window.location.pathname;
+  let html = '<p style="font-size:0.82rem;font-weight:700;margin-bottom:8px">Selecciona tu grupo:</p>';
+  activos.forEach(g => {
+    const icono = g.icono || '⚽';
+    const color = g.color || 'var(--verde)';
+    html += `<a href="${baseUrl}?g=${g.slug}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:8px;background:#fff;border:2px solid ${color};border-radius:10px;text-decoration:none;color:var(--texto)">
+      <span style="font-size:1.4rem">${icono}</span>
+      <span style="font-weight:700;flex:1">${g.nombre}</span>
+      <span style="font-size:0.78rem;background:${color};color:#fff;border-radius:6px;padding:3px 8px">Entrar</span>
+    </a>`;
+  });
+  if (bloqueados.length > 0) {
+    bloqueados.forEach(g => { html += `<p style="font-size:0.75rem;color:var(--error)">⛔ ${g.nombre}: acceso desactivado</p>`; });
+  }
+  resEl.innerHTML = html;
+}
+
 function irAGrupo() {
   const url = document.getElementById('ng-url').value.trim();
   if (url) window.location.href = url;
