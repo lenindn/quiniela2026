@@ -2932,7 +2932,7 @@ async function loadAdminPanel() {
             <option value="">Sin grupo</option>${opts}
           </select>
           <label title="${activo ? 'Desactivar usuario' : 'Activar usuario'}" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.75rem;color:${activo ? 'var(--exito)' : 'var(--error)'}">
-            <div onclick="toggleActivoParticipante('${p.whatsapp}', ${activo}, document.getElementById('part-row-${p.id}'))"
+            <div onclick="toggleActivoParticipante('${p.id}', ${activo}, document.getElementById('part-row-${p.id}'))"
               style="width:34px;height:18px;border-radius:9px;background:${activo ? 'var(--exito)' : '#ccc'};position:relative;cursor:pointer;transition:background .2s">
               <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${activo ? 'right:2px' : 'left:2px'};transition:all .2s"></div>
             </div>
@@ -2972,20 +2972,20 @@ async function loadAdminPanel() {
   pDiv.innerHTML = html;
 }
 
-async function toggleActivoParticipante(whatsapp, currentActivo, rowEl) {
+async function toggleActivoParticipante(participanteId, currentActivo, rowEl) {
   const nuevoEstado = !currentActivo;
   const { error } = await sb.from('participantes')
     .update({ activo: nuevoEstado })
-    .eq('whatsapp', whatsapp);
+    .eq('id', participanteId);
   if (error) { alert('Error al cambiar estado: ' + error.message); return; }
-  // Actualizar visual del toggle y opacity sin recargar toda la lista
+  // Actualizar visual sin recargar toda la lista
   rowEl.style.opacity = nuevoEstado ? '1' : '0.5';
   const toggle = rowEl.querySelector('[onclick^="toggleActivoParticipante"]');
   if (toggle) {
     toggle.style.background = nuevoEstado ? 'var(--exito)' : '#ccc';
     const dot = toggle.querySelector('div');
     if (dot) { dot.style.right = nuevoEstado ? '2px' : ''; dot.style.left = nuevoEstado ? '' : '2px'; }
-    toggle.setAttribute('onclick', `toggleActivoParticipante('${whatsapp}', ${nuevoEstado}, this.parentElement.parentElement)`);
+    toggle.setAttribute('onclick', `toggleActivoParticipante('${participanteId}', ${nuevoEstado}, this.parentElement.parentElement)`);
   }
   const label = rowEl.querySelector('label');
   if (label) {
