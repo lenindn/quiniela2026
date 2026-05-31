@@ -743,6 +743,16 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
         <div id="admin-result-msg"></div>
       </div>
     </div>
+    <!-- Clasificados por Grupo -->
+    <div class="card admin-section">
+      <h3>&#x1F3C6; Clasificados por Grupo</h3>
+      <p style="font-size:0.82rem;color:var(--gris);margin-bottom:10px">
+        Standings en tiempo real basados en resultados finalizados.<br>
+        Usa esta tabla para crear los cruces del R32 con el formulario de abajo.
+      </p>
+      <div id="admin-clasificados"></div>
+    </div>
+
     <!-- Crear Partido -->
     <div class="card admin-section">
       <h3>&#x2795; Crear Partido</h3>
@@ -2141,6 +2151,137 @@ async function verifyAdmin() {
 // ????????????????????????????????????????????????????????????????
 // ?  M?DULO 8b ? ADMIN: CREAR PARTIDO                           ?
 // ????????????????????????????????????????????????????????????????
+
+// ????????????????????????????????????????????????????????????????
+// ?  M?DULO 8c ? ADMIN: CLASIFICADOS POR GRUPO                  ?
+// ????????????????????????????????????????????????????????????????
+async function renderAdminClasificados() {
+  const el = document.getElementById('admin-clasificados');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+  const { data: partidos } = await sb.from('partidos')
+    .select('id,grupo,equipo_local,equipo_visita,goles_local,goles_visita,estado')
+    .eq('fase', 'grupos')
+    .order('numero');
+
+  if (!partidos || partidos.length === 0) {
+    el.innerHTML = '<div class="empty-state">No hay partidos de grupos cargados.</div>';
+    return;
+  }
+
+  // Agrupar por campo grupo
+  const gruposMap = {};
+  partidos.forEach(p => {
+    const g = p.grupo || 'Sin grupo';
+    if (!gruposMap[g]) gruposMap[g] = [];
+    gruposMap[g].push(p);
+  });
+
+  const allStandings = [];
+  let html = '';
+
+  Object.keys(gruposMap).sort().forEach(g => {
+    const gPartidos = gruposMap[g];
+    const finalizados = gPartidos.filter(p => p.estado === 'finalizado' && p.goles_local !== null);
+
+    // Equipos del grupo
+    const equiposSet = new Set();
+    gPartidos.forEach(p => { equiposSet.add(p.equipo_local); equiposSet.add(p.equipo_visita); });
+    const nEq = equiposSet.size;
+    const maxPartidos = nEq === 4 ? 6 : nEq === 3 ? 3 : nEq * (nEq - 1) / 2;
+    const completo = finalizados.length >= maxPartidos && maxPartidos > 0;
+
+    // Calcular estad?sticas FIFA
+    const stats = {};
+    equiposSet.forEach(eq => {
+      stats[eq] = { eq, pts:0, pj:0, pg:0, pe:0, pp:0, gf:0, gc:0, gd:0 };
+    });
+    finalizados.forEach(p => {
+      const { equipo_local: loc, equipo_visita: vis, goles_local: gl, goles_visita: gv } = p;
+      if (!stats[loc] || !stats[vis]) return;
+      stats[loc].pj++; stats[vis].pj++;
+      stats[loc].gf += gl; stats[loc].gc += gv; stats[loc].gd += (gl - gv);
+      stats[vis].gf += gv; stats[vis].gc += gl; stats[vis].gd += (gv - gl);
+      if (gl > gv)       { stats[loc].pts += 3; stats[loc].pg++; stats[vis].pp++; }
+      else if (gl === gv){ stats[loc].pts++; stats[vis].pts++; stats[loc].pe++; stats[vis].pe++; }
+      else               { stats[vis].pts += 3; stats[vis].pg++; stats[loc].pp++; }
+    });
+
+    // Ordenar: pts ? GD ? GF ? nombre
+    const sorted = Object.values(stats).sort((a,b) =>
+      b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.eq.localeCompare(b.eq)
+    );
+    sorted.forEach((t, i) => allStandings.push({ ...t, grupo: g, pos: i + 1 }));
+
+    // Badges por posici?n
+    const badges = ['\uD83D\uDFE2 1ro \u2192 R32', '\uD83D\uDFE2 2do \u2192 R32', '\uD83D\uDFE1 3ro (posible)', '\u26AA Eliminado'];
+    const bgs    = ['#f0fdf4','#f0fdf4','#fffbeb','#f9fafb'];
+
+    html += '<div style="margin-bottom:18px">';
+    html += '<div style="font-weight:700;font-size:0.9rem;margin-bottom:6px">Grupo ' + g +
+      (completo ? ' \u2705 Completo' : ' \u23F3 ' + finalizados.length + '/' + maxPartidos + ' jugados') + '</div>';
+    html += '<div class="card" style="padding:0;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:0.8rem">';
+    html += '<thead><tr style="background:var(--fondo);border-bottom:2px solid var(--borde);font-size:0.72rem;color:var(--gris)">';
+    ['#','Equipo','PJ','G','E','P','GF','GC','GD','Pts',''].forEach(h => {
+      html += '<th style="padding:5px 6px;text-align:' + (h==='Equipo'?'left':'center') + '">' + h + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    sorted.forEach((t, i) => {
+      const gdColor = t.gd > 0 ? 'var(--exito)' : t.gd < 0 ? 'var(--error)' : 'var(--gris)';
+      html += '<tr style="border-bottom:1px solid var(--borde);background:' + bgs[Math.min(i,3)] + '">';
+      html += '<td style="padding:8px 6px;text-align:center;font-weight:700">' + (i+1) + '</td>';
+      html += '<td style="padding:8px 8px;font-weight:600">' + t.eq + '</td>';
+      html += '<td style="padding:8px 6px;text-align:center">' + t.pj + '</td>';
+      html += '<td style="padding:8px 6px;text-align:center">' + t.pg + '</td>';
+      html += '<td style="padding:8px 6px;text-align:center">' + t.pe + '</td>';
+      html += '<td style="padding:8px 6px;text-align:center">' + t.pp + '</td>';
+      html += '<td style="padding:8px 6px;text-align:center">' + t.gf + '</td>';
+      html += '<td style="padding:8px 6px;text-align:center">' + t.gc + '</td>';
+      html += '<td style="padding:8px 6px;text-align:center;color:' + gdColor + '">' + (t.gd > 0 ? '+' : '') + t.gd + '</td>';
+      html += '<td style="padding:8px 6px;text-align:center;font-weight:800;font-size:0.95rem">' + t.pts + '</td>';
+      html += '<td style="padding:8px 8px;text-align:center;font-size:0.68rem;white-space:nowrap">' + (badges[Math.min(i,3)]) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  });
+
+  // Ranking de 3ros para determinar los 8 mejores
+  const terceros = allStandings.filter(t => t.pos === 3)
+    .sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+
+  if (terceros.length > 0) {
+    html += '<div style="margin-top:4px">';
+    html += '<div style="font-weight:700;font-size:0.88rem;margin-bottom:6px">\uD83D\uDFE1 Ranking de 3ros \ \u2014 clasifican los 8 mejores</div>';
+    html += '<div class="card" style="padding:0;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:0.8rem">';
+    html += '<thead><tr style="background:var(--fondo);border-bottom:2px solid var(--borde);font-size:0.72rem;color:var(--gris)">';
+    ['#','Equipo','Grupo','Pts','GD','GF',''].forEach(h => {
+      html += '<th style="padding:5px 8px;text-align:' + (h==='Equipo'?'left':'center') + '">' + h + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    terceros.forEach((t, i) => {
+      const clasifica = i < 8;
+      const bg = clasifica ? 'background:#fffbeb' : 'background:#f9fafb';
+      html += '<tr style="border-bottom:1px solid var(--borde);' + bg + '">';
+      html += '<td style="padding:8px;text-align:center;font-weight:700">' + (i+1) + '</td>';
+      html += '<td style="padding:8px;font-weight:' + (clasifica?'700':'400') + '">' + t.eq + '</td>';
+      html += '<td style="padding:8px;text-align:center">' + t.grupo + '</td>';
+      html += '<td style="padding:8px;text-align:center;font-weight:800">' + t.pts + '</td>';
+      html += '<td style="padding:8px;text-align:center;color:' + (t.gd>=0?'var(--exito)':'var(--error)') + '">' + (t.gd>=0?'+':'') + t.gd + '</td>';
+      html += '<td style="padding:8px;text-align:center">' + t.gf + '</td>';
+      html += '<td style="padding:8px;text-align:center;font-size:0.72rem">' + (clasifica ? '\uD83D\uDFE1 Clasifica' : '\u26AA Fuera') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    html += '<div style="font-size:0.7rem;color:var(--gris);margin-top:6px">Desempate: Pts \u2192 DG \u2192 GF (criterios FIFA)</div>';
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
 function toggleGrupoField() {
   const fase = document.getElementById('np-fase').value;
   document.getElementById('np-grupo-wrap').style.display = fase === 'grupos' ? 'block' : 'none';
@@ -2202,6 +2343,7 @@ async function crearPartido() {
 
 async function loadAdminPanel() {
   renderAdminActividad();
+  renderAdminClasificados();
   // Selector de partido — agrupado por día
   const sel = document.getElementById('admin-partido-sel');
   const psPend = allPartidos.filter(p => p.estado !== 'finalizado');
