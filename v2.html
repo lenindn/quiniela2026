@@ -797,6 +797,21 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
       </div>
       <button class="btn-primary" onclick="crearPartido()" style="width:100%">Crear partido</button>
       <div id="np-msg" style="margin-top:8px;font-size:0.85rem"></div>
+
+      <!-- Lista de partidos existentes para editar -->
+      <div style="margin-top:16px;border-top:1px solid var(--borde);padding-top:12px">
+        <div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;color:var(--texto)">&#x270F;&#xFE0F; Editar partido existente</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="np-fase-filtro">
+          <button onclick="filtrarPartidosAdmin('')"    class="btn-sm" style="background:var(--verde);color:#fff">Todos</button>
+          <button onclick="filtrarPartidosAdmin('grupos')"        class="btn-sm">Grupos</button>
+          <button onclick="filtrarPartidosAdmin('r32')"           class="btn-sm">R32</button>
+          <button onclick="filtrarPartidosAdmin('r16')"           class="btn-sm">Octavos</button>
+          <button onclick="filtrarPartidosAdmin('cuartos')"       class="btn-sm">Cuartos</button>
+          <button onclick="filtrarPartidosAdmin('semis')"         class="btn-sm">Semis</button>
+          <button onclick="filtrarPartidosAdmin('final')"         class="btn-sm">Final</button>
+        </div>
+        <div id="np-lista-partidos" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:10px"></div>
+      </div>
     </div>
 
     <!-- Gestión de fases -->
@@ -961,6 +976,7 @@ let allPotes         = {};     // {fase: texto_pote} cargado desde config
 let isAdmin       = false;
 let saveTimers    = {};
 // adminPin eliminado — verificación server-side via RPC verify_admin_pin
+let editingPartidoId = null; // null = crear nuevo, numero = editar existente
 let currentPicksTab  = 'grupos';
 let currentTablaFase = 'general';
 let currentResTab   = 'grupos';
@@ -2297,53 +2313,156 @@ async function crearPartido() {
   const msgEl  = document.getElementById('np-msg');
   msgEl.textContent = '';
 
-  if (!local)  { msgEl.style.color = 'var(--error)'; msgEl.textContent = '?? Ingresa el equipo local.';  return; }
-  if (!visita) { msgEl.style.color = 'var(--error)'; msgEl.textContent = '?? Ingresa el equipo visita.'; return; }
+  if (!local)  { msgEl.style.color = 'var(--error)'; msgEl.textContent = '\u26a0\ufe0f Ingresa el equipo local.';  return; }
+  if (!visita) { msgEl.style.color = 'var(--error)'; msgEl.textContent = '\u26a0\ufe0f Ingresa el equipo visita.'; return; }
   if (local.toLowerCase() === visita.toLowerCase()) {
-    msgEl.style.color = 'var(--error)'; msgEl.textContent = '?? Los equipos no pueden ser iguales.'; return;
+    msgEl.style.color = 'var(--error)'; msgEl.textContent = '\u26a0\ufe0f Los equipos no pueden ser iguales.'; return;
   }
 
   msgEl.style.color = 'var(--gris)';
-  msgEl.textContent = '? Creando...';
-
-  // Siguiente n?mero de partido
-  const { data: maxRow } = await sb.from('partidos')
-    .select('numero').order('numero', { ascending: false }).limit(1).maybeSingle();
-  const numero = (maxRow?.numero || 0) + 1;
-
-  const { error } = await sb.from('partidos').insert({
-    numero,
+  const campos = {
     fase,
     equipo_local:  local,
     equipo_visita: visita,
     fecha_partido: fecha ? new Date(fecha).toISOString() : null,
     ciudad:        ciudad || null,
     grupo:         fase === 'grupos' ? (grupo || null) : null,
-    estado:        'pendiente',
-  });
+  };
+
+  let error;
+  if (editingPartidoId) {
+    // MODO EDICI?N ? actualizar partido existente
+    msgEl.textContent = '\u23f3 Actualizando...';
+    ({ error } = await sb.from('partidos').update(campos).eq('id', editingPartidoId));
+    if (!error) {
+      msgEl.style.color = 'var(--exito)';
+      msgEl.textContent = '\u2705 Partido actualizado: ' + local + ' vs ' + visita;
+      cancelarEdicionPartido();
+    }
+  } else {
+    // MODO CREACI?N ? insertar nuevo partido
+    msgEl.textContent = '\u23f3 Creando...';
+    const { data: maxRow } = await sb.from('partidos')
+      .select('numero').order('numero', { ascending: false }).limit(1).maybeSingle();
+    campos.numero = (maxRow?.numero || 0) + 1;
+    campos.estado = 'pendiente';
+    ({ error } = await sb.from('partidos').insert(campos));
+    if (!error) {
+      msgEl.style.color = 'var(--exito)';
+      msgEl.textContent = '\u2705 Partido creado: ' + local + ' vs ' + visita + ' (' + FASES_LABELS[fase] + ')';
+      ['np-local','np-visita','np-fecha','np-ciudad','np-grupo'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+    }
+  }
 
   if (error) {
     msgEl.style.color = 'var(--error)';
-    msgEl.textContent = '? Error: ' + error.message;
+    msgEl.textContent = '\u274c Error: ' + error.message;
     return;
   }
 
-  msgEl.style.color = 'var(--exito)';
-  msgEl.textContent = '? Partido creado: ' + local + ' vs ' + visita + ' (' + FASES_LABELS[fase] + ')';
+  allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
+  loadAdminPanel();
+}
 
-  // Limpiar campos
+function editarPartido(id) {
+  const p = allPartidos.find(x => x.id === id);
+  if (!p) return;
+  editingPartidoId = id;
+
+  document.getElementById('np-fase').value   = p.fase || 'r32';
+  document.getElementById('np-local').value  = p.equipo_local || '';
+  document.getElementById('np-visita').value = p.equipo_visita || '';
+  document.getElementById('np-ciudad').value = p.ciudad || '';
+  document.getElementById('np-grupo').value  = p.grupo || '';
+  toggleGrupoField();
+
+  if (p.fecha_partido) {
+    const dt = new Date(new Date(p.fecha_partido).getTime() - new Date().getTimezoneOffset()*60000);
+    document.getElementById('np-fecha').value = dt.toISOString().slice(0,16);
+  } else {
+    document.getElementById('np-fecha').value = '';
+  }
+
+  // Cambiar UI a modo edici?n
+  const btn = document.querySelector('button[onclick="crearPartido()"]');
+  if (btn) { btn.textContent = '\uD83D\uDCBE Actualizar partido'; btn.style.background = '#1d4ed8'; }
+
+  let cancelBtn = document.getElementById('np-cancel-btn');
+  if (!cancelBtn) {
+    cancelBtn = document.createElement('button');
+    cancelBtn.id = 'np-cancel-btn';
+    cancelBtn.className = 'btn-sm';
+    cancelBtn.textContent = '\u2716 Cancelar edici?n';
+    cancelBtn.onclick = cancelarEdicionPartido;
+    cancelBtn.style.cssText = 'width:100%;margin-top:6px;background:#6b7280;color:#fff';
+    btn?.insertAdjacentElement('afterend', cancelBtn);
+  }
+  cancelBtn.style.display = 'block';
+
+  const msgEl = document.getElementById('np-msg');
+  msgEl.style.color = '#1d4ed8';
+  msgEl.textContent = '\u270f\ufe0f Editando: ' + p.equipo_local + ' vs ' + p.equipo_visita;
+  document.getElementById('np-local').focus();
+  document.getElementById('np-local').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelarEdicionPartido() {
+  editingPartidoId = null;
   ['np-local','np-visita','np-fecha','np-ciudad','np-grupo'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  document.getElementById('np-fase').value = 'r32';
+  toggleGrupoField();
+  const btn = document.querySelector('button[onclick="crearPartido()"]');
+  if (btn) { btn.textContent = 'Crear partido'; btn.style.background = ''; }
+  const cancelBtn = document.getElementById('np-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+  const msgEl = document.getElementById('np-msg');
+  if (msgEl) msgEl.textContent = '';
+}
 
-  // Refrescar lista de partidos en el selector de resultados
-  allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
-  loadAdminPanel();
+function filtrarPartidosAdmin(fase) {
+  // Resaltar bot?n activo
+  document.querySelectorAll('#np-fase-filtro .btn-sm').forEach(b => {
+    b.style.background = b.textContent.toLowerCase().includes(fase) || (fase === '' && b.textContent === 'Todos')
+      ? 'var(--verde)' : '';
+    b.style.color = b.style.background ? '#fff' : '';
+  });
+  renderListaPartidosAdmin(fase);
+}
+
+function renderListaPartidosAdmin(faseFiltro) {
+  const el = document.getElementById('np-lista-partidos');
+  if (!el) return;
+  const lista = faseFiltro ? allPartidos.filter(p => p.fase === faseFiltro) : allPartidos;
+  if (lista.length === 0) {
+    el.innerHTML = '<div style="padding:12px;text-align:center;color:var(--gris);font-size:0.82rem">Sin partidos en esta fase.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(p => {
+    const fecha = p.fecha_partido ? new Date(p.fecha_partido).toLocaleDateString('es',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '?';
+    const estadoBadge = p.estado === 'finalizado' ? '\u2705' : p.estado === 'en_curso' ? '\uD83D\uDD34' : '\u23F3';
+    const marcador = p.estado === 'finalizado' && p.goles_local !== null ? p.goles_local + '-' + p.goles_visita : '';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--borde);font-size:0.8rem">'
+      + '<span style="font-size:0.9rem">' + estadoBadge + '</span>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+      + p.equipo_local + ' vs ' + p.equipo_visita
+      + (marcador ? ' <span style="color:var(--verde);font-weight:800">(' + marcador + ')</span>' : '')
+      + '</div>'
+      + '<div style="color:var(--gris);font-size:0.72rem">' + FASES_LABELS[p.fase] + (p.grupo ? ' Gr.' + p.grupo : '') + ' ? ' + fecha + '</div>'
+      + '</div>'
+      + '<button class="btn-sm" onclick="editarPartido(' + p.id + ')" style="flex-shrink:0;padding:4px 8px">\u270f\ufe0f</button>'
+      + '</div>';
+  }).join('');
 }
 
 async function loadAdminPanel() {
   renderAdminActividad();
   renderAdminClasificados();
+  renderListaPartidosAdmin('');
   // Selector de partido — agrupado por día
   const sel = document.getElementById('admin-partido-sel');
   const psPend = allPartidos.filter(p => p.estado !== 'finalizado');
