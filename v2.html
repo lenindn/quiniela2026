@@ -762,6 +762,12 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
         Usa esta tabla para crear los cruces del R32 con el formulario de abajo.
       </p>
       <div id="admin-clasificados"></div>
+      <div style="margin-top:12px;border-top:1px solid var(--borde);padding-top:12px">
+        <button class="btn-primary" onclick="generarCrucesR32()" style="width:100%">
+          &#x1F3AF; Generar cruces R32 (basado en clasificados)
+        </button>
+        <div id="admin-r32-bracket" style="display:none;margin-top:14px"></div>
+      </div>
     </div>
 
     <!-- Crear Partido -->
@@ -2178,6 +2184,194 @@ async function verifyAdmin() {
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 8 — ADMIN: RESULTADOS                               ║
 // ╚══════════════════════════════════════════════════════════════╝
+
+
+// ????????????????????????????????????????????????????????????????
+// ?  M?DULO 8d ? ADMIN: GENERADOR DE CRUCES R32                 ?
+// ????????????????????????????????????????????????????????????????
+
+// Zonas de emparejamiento FIFA 2026 (grupos que se cruzan entre s?)
+const ZONAS_R32 = [['A','B'],['C','D'],['E','F'],['G','H'],['I','J'],['K','L']];
+
+async function generarCrucesR32() {
+  const bracketEl = document.getElementById('admin-r32-bracket');
+  bracketEl.style.display = 'block';
+  bracketEl.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Calculando clasificados...</div>';
+
+  // Leer todos los partidos de grupos finalizados
+  const { data: partidos } = await sb.from('partidos')
+    .select('grupo,equipo_local,equipo_visita,goles_local,goles_visita,estado')
+    .eq('fase','grupos').order('numero');
+
+  if (!partidos || partidos.length === 0) {
+    bracketEl.innerHTML = '<div class="alert alert-error">No hay partidos de grupos cargados.</div>';
+    return;
+  }
+
+  // Calcular standings por grupo
+  const gruposMap = {};
+  partidos.forEach(p => {
+    const g = p.grupo || '?';
+    if (!gruposMap[g]) gruposMap[g] = [];
+    gruposMap[g].push(p);
+  });
+
+  const clasificados = { primeros:{}, segundos:{}, terceros:[] };
+
+  Object.keys(gruposMap).sort().forEach(g => {
+    const fin = gruposMap[g].filter(p => p.estado==='finalizado' && p.goles_local!==null);
+    const equipos = new Set();
+    gruposMap[g].forEach(p => { equipos.add(p.equipo_local); equipos.add(p.equipo_visita); });
+
+    const stats = {};
+    equipos.forEach(eq => { stats[eq] = {eq,pts:0,pj:0,pg:0,pe:0,pp:0,gf:0,gc:0,gd:0}; });
+    fin.forEach(p => {
+      const {equipo_local:loc,equipo_visita:vis,goles_local:gl,goles_visita:gv} = p;
+      if (!stats[loc]||!stats[vis]) return;
+      stats[loc].pj++; stats[vis].pj++;
+      stats[loc].gf+=gl; stats[loc].gc+=gv; stats[loc].gd+=(gl-gv);
+      stats[vis].gf+=gv; stats[vis].gc+=gl; stats[vis].gd+=(gv-gl);
+      if      (gl>gv){stats[loc].pts+=3;stats[loc].pg++;stats[vis].pp++;}
+      else if (gl===gv){stats[loc].pts++;stats[vis].pts++;stats[loc].pe++;stats[vis].pe++;}
+      else   {stats[vis].pts+=3;stats[vis].pg++;stats[loc].pp++;}
+    });
+    const sorted = Object.values(stats).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.eq.localeCompare(b.eq));
+    if (sorted[0]) clasificados.primeros[g]  = sorted[0].eq;
+    if (sorted[1]) clasificados.segundos[g]  = sorted[1].eq;
+    if (sorted[2]) clasificados.terceros.push({...sorted[2], grupo:g});
+  });
+
+  // 8 mejores terceros por pts ? GD ? GF
+  clasificados.terceros.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
+  const mejoresTerceros = clasificados.terceros.slice(0,8);
+
+  // Generar 16 cruces
+  const cruces = [];
+
+  // Cruces por zonas (1X vs 2Y y 1Y vs 2X)
+  ZONAS_R32.forEach(([g1, g2]) => {
+    const p1 = clasificados.primeros[g1];
+    const p2 = clasificados.primeros[g2];
+    const s1 = clasificados.segundos[g1];
+    const s2 = clasificados.segundos[g2];
+    if (p1 && s2) cruces.push({ local: p1, visita: s2, etiqueta: '1'+g1+' vs 2'+g2 });
+    if (p2 && s1) cruces.push({ local: p2, visita: s1, etiqueta: '1'+g2+' vs 2'+g1 });
+  });
+
+  // 4 cruces entre los 8 mejores terceros
+  for (let i = 0; i < mejoresTerceros.length; i += 2) {
+    const t1 = mejoresTerceros[i];
+    const t2 = mejoresTerceros[i+1];
+    if (t1 && t2) cruces.push({
+      local: t1.eq, visita: t2.eq,
+      etiqueta: '3ro Gr.'+t1.grupo+' vs 3ro Gr.'+t2.grupo
+    });
+  }
+
+  // Todos los equipos clasificados para los selects
+  const todosEquipos = [
+    ...Object.values(clasificados.primeros),
+    ...Object.values(clasificados.segundos),
+    ...mejoresTerceros.map(t=>t.eq)
+  ].filter((v,i,a)=>a.indexOf(v)===i).sort();
+
+  const optsHtml = todosEquipos.map(eq=>'<option value="'+eq+'">'+eq+'</option>').join('');
+  const FECHAS_R32 = [
+    '2026-06-28T18:00','2026-06-28T21:00',
+    '2026-06-29T18:00','2026-06-29T21:00',
+    '2026-06-30T18:00','2026-06-30T21:00',
+    '2026-07-01T18:00','2026-07-01T21:00',
+    '2026-07-02T18:00','2026-07-02T21:00',
+    '2026-07-03T18:00','2026-07-03T21:00',
+    '2026-07-04T18:00','2026-07-04T21:00',
+    '2026-07-05T18:00','2026-07-05T21:00',
+  ];
+
+  let html = '<div style="font-weight:700;margin-bottom:10px;font-size:0.9rem">\uD83C\uDFC6 16 Cruces del R32 ? ajusta si es necesario</div>';
+  html += '<div style="font-size:0.75rem;color:var(--gris);margin-bottom:12px">Emparejamiento por zonas FIFA 2026. Los 4 ?ltimos cruces son entre los 8 mejores 3ros.</div>';
+
+  // Header
+  html += '<div style="display:grid;grid-template-columns:1fr 20px 1fr 150px 100px;gap:6px;font-size:0.72rem;font-weight:700;color:var(--gris);padding:0 0 4px 0;border-bottom:1px solid var(--borde);margin-bottom:6px">'
+    + '<div>Local</div><div></div><div>Visita</div><div>Fecha/hora</div><div>Ciudad</div></div>';
+
+  cruces.forEach((c, i) => {
+    const localOpts  = optsHtml.replace(`value="${c.local}"`,  `value="${c.local}" selected`);
+    const visitaOpts = optsHtml.replace(`value="${c.visita}"`, `value="${c.visita}" selected`);
+    const fecha = FECHAS_R32[i] || '2026-07-05T18:00';
+    const isTercero = i >= 12;
+    html += '<div style="display:grid;grid-template-columns:1fr 20px 1fr 150px 100px;gap:6px;margin-bottom:6px;align-items:center'+(isTercero?';background:#fffbeb;padding:4px;border-radius:6px':'')+'"">'
+      + '<select id="r32-local-'+i+'" style="padding:6px;border:1px solid var(--borde);border-radius:6px;font-size:0.78rem;background:#fff">'+ localOpts +'</select>'
+      + '<div style="text-align:center;font-weight:700;color:var(--gris)">vs</div>'
+      + '<select id="r32-visita-'+i+'" style="padding:6px;border:1px solid var(--borde);border-radius:6px;font-size:0.78rem;background:#fff">'+ visitaOpts +'</select>'
+      + '<input type="datetime-local" id="r32-fecha-'+i+'" value="'+fecha+'" style="padding:6px;border:1px solid var(--borde);border-radius:6px;font-size:0.78rem">'
+      + '<input type="text" id="r32-ciudad-'+i+'" placeholder="Ciudad" style="padding:6px;border:1px solid var(--borde);border-radius:6px;font-size:0.78rem">'
+      + '</div>';
+  });
+
+  html += '<div style="font-size:0.72rem;color:var(--gris);margin:4px 0 12px 0">\uD83D\uDFE2 1ro/2do de grupos ? \uD83D\uDFE1 Mejores 3ros</div>';
+  html += '<div id="r32-msg" style="font-size:0.82rem;margin-bottom:8px"></div>';
+  html += '<div style="display:flex;gap:8px">';
+  html += '<button class="btn-primary" onclick="crearTodosR32('+cruces.length+')" style="flex:1">\u2705 Crear los '+cruces.length+' partidos del R32</button>';
+  html += '<button class="btn-sm" onclick="document.getElementById('admin-r32-bracket').style.display='none'" style="flex-shrink:0">Cancelar</button>';
+  html += '</div>';
+
+  bracketEl.innerHTML = html;
+}
+
+async function crearTodosR32(total) {
+  const msgEl = document.getElementById('r32-msg');
+  msgEl.textContent = '\u23F3 Verificando datos...';
+  msgEl.style.color = 'var(--gris)';
+
+  // Validar duplicados
+  const equiposUsados = [];
+  for (let i = 0; i < total; i++) {
+    const loc = document.getElementById('r32-local-'+i)?.value;
+    const vis = document.getElementById('r32-visita-'+i)?.value;
+    if (!loc || !vis) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Falta equipo en partido '+(i+1); return; }
+    if (loc === vis)  { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Partido '+(i+1)+': equipo local y visita son iguales'; return; }
+    if (equiposUsados.includes(loc)) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c '+loc+' aparece dos veces. Ajusta los cruces.'; return; }
+    if (equiposUsados.includes(vis)) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c '+vis+' aparece dos veces. Ajusta los cruces.'; return; }
+    equiposUsados.push(loc, vis);
+  }
+
+  msgEl.textContent = '\u23F3 Creando partidos...';
+
+  // Obtener siguiente n?mero
+  const { data: maxRow } = await sb.from('partidos')
+    .select('numero').order('numero',{ascending:false}).limit(1).maybeSingle();
+  let numero = (maxRow?.numero || 0) + 1;
+
+  const inserts = [];
+  for (let i = 0; i < total; i++) {
+    const loc    = document.getElementById('r32-local-'+i).value;
+    const vis    = document.getElementById('r32-visita-'+i).value;
+    const fecha  = document.getElementById('r32-fecha-'+i).value;
+    const ciudad = document.getElementById('r32-ciudad-'+i).value.trim();
+    inserts.push({
+      numero: numero++,
+      fase: 'r32',
+      equipo_local:  loc,
+      equipo_visita: vis,
+      fecha_partido: fecha ? new Date(fecha).toISOString() : null,
+      ciudad: ciudad || null,
+      estado: 'pendiente',
+    });
+  }
+
+  const { error } = await sb.from('partidos').insert(inserts);
+  if (error) {
+    msgEl.style.color = 'var(--error)';
+    msgEl.textContent = '\u274c Error: ' + error.message;
+    return;
+  }
+
+  msgEl.style.color = 'var(--exito)';
+  msgEl.textContent = '\u2705 ' + total + ' partidos del R32 creados exitosamente.';
+
+  allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
+  setTimeout(() => loadAdminPanel(), 1500);
+}
 
 // ????????????????????????????????????????????????????????????????
 // ?  M?DULO 8b ? ADMIN: CREAR PARTIDO                           ?
