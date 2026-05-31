@@ -2147,10 +2147,10 @@ async function loadAdminPanel() {
               style="font-size:0.78rem;border:1px solid var(--borde);border-radius:6px;padding:4px 6px">
           </div>
           <div style="display:flex;gap:6px">
-            <button class="btn-sm" onclick="guardarCierre(`${f}`)" title="Guardar fecha de cierre">💾 Guardar</button>
+            <button class="btn-sm" onclick="guardarCierre('${f}')" title="Guardar fecha de cierre">💾 Guardar</button>
             ${abierta
-              ? `<button class="btn-rojo" onclick="toggleFase(`${f}`, false)">Cerrar fase</button>`
-              : `<button class="btn-sm" style="background:var(--verde);color:#fff" onclick="abrirFase(`${f}`)">Abrir fase</button>`
+              ? `<button class="btn-rojo" onclick="toggleFase('${f}', false)">Cerrar fase</button>`
+              : `<button class="btn-sm" style="background:var(--verde);color:#fff" onclick="abrirFase('${f}')">Abrir fase</button>`
             }
           </div>
         </div>
