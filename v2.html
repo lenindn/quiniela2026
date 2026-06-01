@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -3557,9 +3557,13 @@ async function guardarEditResultado(pid) {
 // ║  MÓDULO 9 — ADMIN: FASES                                    ║
 // ╚══════════════════════════════════════════════════════════════╝
 async function abrirFase(fase) {
-  const input = document.getElementById(`cierre-${fase}`);
-  const fecha = input?.value ? new Date(input.value) : null;
-  if (isNaN(fecha)) { alert('Formato inválido.'); return; }
+  const input = document.getElementById('cierre-' + fase);
+  const val   = input ? input.value : '';
+  const fecha = val ? new Date(val) : null;
+  if (!fecha || isNaN(fecha.getTime())) {
+    alert('Selecciona la fecha y hora de cierre antes de abrir la fase.');
+    return;
+  }
   await sb.from('fases').update({ abierta: true, fecha_cierre: fecha.toISOString() }).eq('id', fase);
   allFases[fase] = { ...allFases[fase], abierta: true, fecha_cierre: fecha.toISOString() };
   loadAdminPanel();
