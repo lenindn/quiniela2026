@@ -1522,6 +1522,7 @@ function renderPicks() {
   const ahora = new Date();
   const estaAbierta = faseData && faseData.abierta &&
     (!faseData.fecha_cierre || new Date(faseData.fecha_cierre) > ahora);
+  const usuarioActivoEnFase = !currentUser?.fases_activas || currentUser.fases_activas[fase] !== false;
   const partidosFase = allPartidos.filter(p => p.fase === fase);
 
   if (fase !== 'grupos' && !faseData?.abierta && partidosFase.length === 0) {
@@ -1559,7 +1560,7 @@ function renderPicks() {
         <div class="group-header">Grupo ${g}
           <span style="font-weight:400;font-size:0.78rem;opacity:0.85"> — ${equiposLabel}</span>
         </div>`;
-      ps.forEach(p => content.innerHTML += matchCard(p, estaAbierta));
+      ps.forEach(p => content.innerHTML += matchCard(p, estaAbierta && usuarioActivoEnFase));
     });
   } else {
     // Fases eliminatorias
@@ -1573,7 +1574,7 @@ function renderPicks() {
         <p>Los partidos de <strong>${FASES_LABELS[fase]}</strong> se cargarán automáticamente cuando estén disponibles.</p>
       </div>`;
     } else {
-      partidosFase.forEach(p => content.innerHTML += matchCard(p, estaAbierta));
+      partidosFase.forEach(p => content.innerHTML += matchCard(p, estaAbierta && usuarioActivoEnFase));
     }
   }
 
