@@ -3373,9 +3373,15 @@ async function loadAdminPanel() {
             ${activo ? 'Activo' : 'Inactivo'}
           </label>
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">
-          <span style="font-size:0.68rem;color:var(--gris);padding-top:3px">Fases:</span>
-          ${faseChips}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span style="font-size:0.68rem;color:var(--gris);padding-top:3px">Fases:</span>
+            ${faseChips}
+          </div>
+          <button data-pid="${p.id}" data-nombre="${p.nombre.replace(/"/g,'&quot;')}"
+            onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, true)"
+            style="font-size:0.72rem;padding:3px 8px;border:1px solid var(--borde);border-radius:6px;background:#fff;cursor:pointer;white-space:nowrap;color:var(--gris)"
+            title="Ver todos los picks">&#x1F441; Picks</button>
         </div>
       </div>`;
   };
@@ -3923,7 +3929,7 @@ async function logActividad(accion, detalle) {
   try { await sb.from('actividad').insert({ participante_id: currentUser.id, nombre: currentUser.nombre, grupo: currentGrupo?.nombre || null, accion, detalle: detalle || null }); } catch(e) {}
 }
 
-async function verDetalleParticipante(participanteId, nombre) {
+async function verDetalleParticipante(participanteId, nombre, verTodo = false) {
   const color  = getComputedStyle(document.documentElement).getPropertyValue('--verde').trim() || '#1a5c2a';
   const modal  = document.getElementById('modal-detalle');
   const header = document.getElementById('modal-header');
@@ -3934,37 +3940,48 @@ async function verDetalleParticipante(participanteId, nombre) {
   body.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
   modal.style.display = 'block';
 
-  // v2: sin pronostico_campeon
-  const { data: prons } = await sb.from('pronosticos')
+  // Cargar picks: verTodo=true (admin) trae todos; false solo calculados
+  let query = sb.from('pronosticos')
     .select('partido_id,goles_local,goles_visita,puntos,calculado')
     .eq('participante_id', participanteId)
-    .eq('calculado', true)
     .order('partido_id');
+  if (!verTodo) query = query.eq('calculado', true);
+  const { data: prons } = await query;
 
-  const finalizados = prons || [];
-  const totalPts = finalizados.reduce((s, pr) => s + (pr.puntos || 0), 0);
-  document.getElementById('modal-total').textContent = `${totalPts} pts · ${finalizados.length} partidos calculados`;
+  const allPicks  = prons || [];
+  const calculados = allPicks.filter(pr => pr.calculado);
+  const totalPts   = calculados.reduce((s, pr) => s + (pr.puntos || 0), 0);
+  document.getElementById('modal-total').textContent = verTodo
+    ? `${totalPts} pts · ${calculados.length} calculados · ${allPicks.length - calculados.length} pendientes`
+    : `${totalPts} pts · ${calculados.length} partidos calculados`;
 
-  if (finalizados.length === 0) {
-    body.innerHTML = '<div style="color:#999;text-align:center;padding:20px">Sin partidos calculados aún.</div>';
+  if (allPicks.length === 0) {
+    body.innerHTML = '<div style="color:#999;text-align:center;padding:20px">Sin pron\u00f3sticos registrados a\u00fan.</div>';
     return;
   }
 
-  const rows = finalizados.map(pr => {
-    const partido = allPartidos.find(p => p.id === pr.partido_id);
+  const rows = allPicks.map(pr => {
+    const partido  = allPartidos.find(p => p.id === pr.partido_id);
     if (!partido) return '';
-    const esExacto = pr.goles_local === partido.goles_local && pr.goles_visita === partido.goles_visita;
+    const pendiente = !pr.calculado;
+    const esExacto  = pr.calculado && pr.goles_local === partido.goles_local && pr.goles_visita === partido.goles_visita;
     const pts = pr.puntos || 0;
-    const badge = pts > 0
-      ? `<span style="background:${esExacto ? 'var(--oro)' : '#e8f5e9'};color:${esExacto ? '#000' : '#1a5c2a'};padding:2px 7px;border-radius:10px;font-size:0.75rem;font-weight:700">+${pts}${esExacto ? ' ⭐' : ''}</span>`
-      : `<span style="color:#bbb;font-size:0.75rem">0 pts</span>`;
+    const badge = pendiente
+      ? '<span style="color:#888;font-size:0.72rem;font-style:italic">Pendiente</span>'
+      : pts > 0
+        ? `<span style="background:${esExacto ? 'var(--oro)' : '#e8f5e9'};color:${esExacto ? '#000' : '#1a5c2a'};padding:2px 7px;border-radius:10px;font-size:0.75rem;font-weight:700">+${pts}${esExacto ? ' ⭐' : ''}</span>`
+        : '<span style="color:#bbb;font-size:0.75rem">0 pts</span>';
+    const realStr = pendiente
+      ? '<span style="color:#aaa">A\u00fan no jugado</span>'
+      : `Real: <strong>${partido.goles_local}-${partido.goles_visita}</strong>`;
     return `
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem">
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem;${pendiente ? 'opacity:0.7' : ''}">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${partido.equipo_local} vs ${partido.equipo_visita}</div>
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${partido.equipo_local} vs ${partido.equipo_visita}
+            <span style="font-size:0.68rem;color:var(--gris);font-weight:400"> · ${FASES_LABELS[partido.fase] || partido.fase}</span>
+          </div>
           <div style="color:#888;font-size:0.75rem">
-            Real: <strong>${partido.goles_local}-${partido.goles_visita}</strong>
-            &nbsp;·&nbsp; Tu pronóstico: <strong>${pr.goles_local}-${pr.goles_visita}</strong>
+            ${realStr}&nbsp;·&nbsp; Pron\u00f3stico: <strong>${pr.goles_local}-${pr.goles_visita}</strong>
           </div>
         </div>
         ${badge}
@@ -3972,7 +3989,6 @@ async function verDetalleParticipante(participanteId, nombre) {
   }).join('');
 
   body.innerHTML = rows || '<div style="color:#999;text-align:center;padding:20px">Sin datos.</div>';
-}
 
 function cerrarModal() {
   document.getElementById('modal-detalle').style.display = 'none';
