@@ -2053,12 +2053,15 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
     }).sort((a, b) => b.pts - a.pts || b.exactos - a.exactos);
 
     const medals = ['🥇','🥈','🥉'];
-    const chips  = ranking.slice(0, 3).map((p, i) => `
-      <span onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,\"\\'\")}',this)"
+    const chips  = ranking.slice(0, 3).map((p, i) => {
+      const nEsc = p.nombre.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      return `<span data-pid="${p.id}" data-nombre="${nEsc}"
+        onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, this)"
         style="display:inline-flex;align-items:center;gap:4px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:3px 8px;font-size:0.8rem;cursor:pointer;text-decoration:underline dotted">
         ${medals[i]} <strong>${p.nombre}</strong>
         <span style="color:var(--gris);font-size:0.7rem">${p.pts}pts</span>
-      </span>`).join('');
+      </span>`;
+    }).join('');
 
     return `
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--borde)">
