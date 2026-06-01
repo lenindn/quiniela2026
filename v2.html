@@ -2760,6 +2760,29 @@ const FECHAS_ELIM = {
   final:        ['2026-07-19T18:00'],
 };
 
+// Deshabilita en el select las fases que ya tienen partidos generados
+function actualizarOpcionesFaseElim() {
+  const sel = document.getElementById('gen-fase-dest');
+  if (!sel) return;
+  Array.from(sel.options).forEach(opt => {
+    const fase  = opt.value;
+    const count = allPartidos.filter(p => p.fase === fase).length;
+    if (count > 0) {
+      opt.disabled = true;
+      opt.textContent = opt.textContent.split(' (Ya')[0] + ' (Ya generados: ' + count + ' partidos)';
+      opt.style.color = 'var(--gris)';
+    } else {
+      opt.disabled = false;
+      opt.style.color = '';
+    }
+  });
+  // Si la opci?n seleccionada qued? deshabilitada, mover al primer habilitado
+  if (sel.selectedOptions[0]?.disabled) {
+    const first = Array.from(sel.options).find(o => !o.disabled);
+    if (first) sel.value = first.value;
+  }
+}
+
 function ocultarElimBracket() {
   document.getElementById('admin-elim-bracket').style.display = 'none';
 }
@@ -3190,6 +3213,7 @@ async function loadAdminPanel() {
   renderAdminActividad();
   renderAdminClasificados();
   renderListaPartidosAdmin('');
+  actualizarOpcionesFaseElim();
   // Selector de partido — agrupado por día
   const sel = document.getElementById('admin-partido-sel');
   const psPend = allPartidos.filter(p => p.estado !== 'finalizado');
