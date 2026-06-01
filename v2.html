@@ -2054,7 +2054,8 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
 
     const medals = ['🥇','🥈','🥉'];
     const chips  = ranking.slice(0, 3).map((p, i) => `
-      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:3px 8px;font-size:0.8rem">
+      <span onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,\"\\'\")}',this)"
+        style="display:inline-flex;align-items:center;gap:4px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:3px 8px;font-size:0.8rem;cursor:pointer;text-decoration:underline dotted">
         ${medals[i]} <strong>${p.nombre}</strong>
         <span style="color:var(--gris);font-size:0.7rem">${p.pts}pts</span>
       </span>`).join('');
