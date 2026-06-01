@@ -953,8 +953,14 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     </div>
     <!-- Actividad -->
     <div class="card admin-section">
-      <h3>📋 Actividad de Usuarios</h3>
-      <div id="admin-actividad-list"><div class="empty-state">Cargando...</div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 0"
+           onclick="toggleActividad()">
+        <h3 style="margin:0">&#x1F4CB; Actividad de Usuarios</h3>
+        <span id="actividad-toggle-icon" style="font-size:1rem;color:var(--gris);transition:transform .25s">&#x25BC;</span>
+      </div>
+      <div id="admin-actividad-wrap" style="display:none;margin-top:12px">
+        <div id="admin-actividad-list"><div class="empty-state">Cargando...</div></div>
+      </div>
     </div>
     <!-- Recalcular puntos -->
     <div class="card admin-section">
@@ -3241,7 +3247,7 @@ function renderListaPartidosAdmin(faseFiltro) {
 }
 
 async function loadAdminPanel() {
-  renderAdminActividad();
+  // Actividad se carga al expandir (toggleActividad)
   renderAdminClasificados();
   renderListaPartidosAdmin('');
   actualizarOpcionesFaseElim();
@@ -3985,6 +3991,15 @@ function cerrarModal() {
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 15 — ADMIN: ACTIVIDAD DE USUARIOS                   ║
 // ╚══════════════════════════════════════════════════════════════╝
+function toggleActividad() {
+  const wrap = document.getElementById('admin-actividad-wrap');
+  const icon = document.getElementById('actividad-toggle-icon');
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? 'block' : 'none';
+  icon.style.transform = open ? 'rotate(180deg)' : '';
+  if (open) renderAdminActividad();
+}
+
 async function renderAdminActividad() {
   const el = document.getElementById('admin-actividad-list');
   if (!el) return;
