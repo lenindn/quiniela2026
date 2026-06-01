@@ -401,6 +401,27 @@ body {
 .pts-cell { text-align: center; font-size: 1rem; font-weight: 700; color: var(--verde); }
 .exacto-cell { text-align: center; font-size: 0.85rem; color: var(--oro); font-weight: 600; }
 .ok-cell { text-align: center; font-size: 0.85rem; color: var(--gris); }
+/* BRACKET */
+.bracket-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:12px; }
+.bracket-rounds { display:flex; gap:0; min-width:max-content; }
+.bracket-col { display:flex; flex-direction:column; min-width:150px; }
+.bracket-col-header { font-size:0.7rem; font-weight:800; color:var(--verde); text-transform:uppercase;
+  letter-spacing:.5px; padding:4px 8px; background:var(--fondo); border-bottom:2px solid var(--verde);
+  margin-bottom:8px; text-align:center; position:sticky; top:0; z-index:1; }
+.bracket-spacer { flex:1; }
+.bracket-match { border:1.5px solid var(--borde); border-radius:8px; overflow:hidden;
+  margin-bottom:16px; background:#fff; font-size:0.8rem; }
+.bracket-team { display:flex; align-items:center; justify-content:space-between;
+  padding:7px 10px; border-bottom:1px solid var(--borde); gap:6px; }
+.bracket-team:last-child { border-bottom:none; }
+.bracket-team.winner { background:#f0fdf4; font-weight:700; color:var(--verde); }
+.bracket-team.loser  { color:var(--gris); }
+.bracket-team.tbd    { color:var(--gris); font-style:italic; font-size:0.72rem; }
+.bracket-score { font-weight:800; font-size:0.9rem; min-width:18px; text-align:center; flex-shrink:0; }
+.bracket-name  { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Connector visual entre rondas */
+.bracket-connector { width:20px; flex-shrink:0; display:flex; flex-direction:column; }
+
 /* RESULTS */
 .resultado-card {
   display: grid;
@@ -627,12 +648,20 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
 <!-- VISTA RESULTADOS -->
 <!-- VISTA GRUPOS MUNDIAL -->
 <div id="view-grupos" class="view">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
     <div class="section-title" style="margin-bottom:0">?? Fase de Grupos</div>
     <button onclick="loadGruposView()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--gris);padding:4px 8px" title="Actualizar">??</button>
   </div>
+  <!-- Sub-tabs: Grupos | Bracket -->
+  <div class="phase-tabs" id="grupos-subtabs" style="margin-bottom:12px">
+    <button class="tab-btn active" onclick="switchGruposTab('grupos',this)">&#x1F4CA; Grupos</button>
+    <button class="tab-btn" onclick="switchGruposTab('bracket',this)">&#x1F3C6; Bracket</button>
+  </div>
   <div id="grupos-content">
     <div class="empty-state"><div class="spinner"></div><br>Cargando...</div>
+  </div>
+  <div id="bracket-content" style="display:none">
+    <div class="empty-state"><div class="spinner"></div><br>Cargando bracket...</div>
   </div>
 </div>
 
@@ -1009,7 +1038,8 @@ let allPotes         = {};     // {fase: texto_pote} cargado desde config
 let isAdmin       = false;
 let saveTimers    = {};
 // adminPin eliminado — verificación server-side via RPC verify_admin_pin
-let editingPartidoId = null; // null = crear nuevo, numero = editar existente
+let editingPartidoId = null;
+let currentGruposTab  = 'grupos'; // null = crear nuevo, numero = editar existente
 let currentPicksTab  = 'grupos';
 let currentTablaFase = 'general';
 let currentResTab   = 'grupos';
@@ -1439,7 +1469,7 @@ async function navigate(view) {
     renderPicks();
   }
   if (view === 'tabla')      loadLeaderboard();
-  if (view === 'grupos')     loadGruposView();
+  if (view === 'grupos')     { if (currentGruposTab === 'bracket') loadBracketView(); else loadGruposView(); }
   if (view === 'resultados') renderResultados();
 }
 
@@ -1718,6 +1748,133 @@ async function loadLeaderboard() {
 }
 
 // ── Ranking General: resumen de ganadores por fase + tabla acumulada ──
+
+
+// ?? Cambia entre sub-tabs Grupos / Bracket ??
+function switchGruposTab(tab, btn) {
+  currentGruposTab = tab;
+  document.querySelectorAll('#grupos-subtabs .tab-btn').forEach(b =>
+    b.classList.toggle('active', b === btn)
+  );
+  document.getElementById('grupos-content').style.display  = tab === 'grupos'  ? '' : 'none';
+  document.getElementById('bracket-content').style.display = tab === 'bracket' ? '' : 'none';
+  if (tab === 'grupos')  loadGruposView();
+  if (tab === 'bracket') loadBracketView();
+}
+
+// ????????????????????????????????????????????????????????????????
+// ?  M?DULO 6c ? BRACKET DE ELIMINATORIAS                       ?
+// ????????????????????????????????????????????????????????????????
+async function loadBracketView() {
+  const el = document.getElementById('bracket-content');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Cargando bracket...</div>';
+  try {
+    const { data: partidos, error } = await sb.from('partidos')
+      .select('id,numero,fase,equipo_local,equipo_visita,goles_local,goles_visita,estado,avanza_local')
+      .in('fase', ['r32','r16','cuartos','semis','tercer_lugar','final'])
+      .order('numero');
+
+    if (error) throw new Error(error.message);
+
+    const FASES_ELIM = [
+      { key: 'r32',          label: 'Ronda de 32', n: 16 },
+      { key: 'r16',          label: 'Octavos',     n:  8 },
+      { key: 'cuartos',      label: 'Cuartos',     n:  4 },
+      { key: 'semis',        label: 'Semis',       n:  2 },
+      { key: 'tercer_lugar', label: '3er Lugar',   n:  1 },
+      { key: 'final',        label: 'Final',       n:  1 },
+    ];
+
+    // Si no hay ninguna fase eliminatoria cargada
+    const hayPartidos = partidos && partidos.length > 0;
+    if (!hayPartidos) {
+      el.innerHTML = '<div class="empty-state" style="padding:32px">El bracket estar? disponible cuando terminen los grupos y se generen los cruces del R32.</div>';
+      return;
+    }
+
+    // Agrupar por fase
+    const porFase = {};
+    (partidos || []).forEach(p => {
+      if (!porFase[p.fase]) porFase[p.fase] = [];
+      porFase[p.fase].push(p);
+    });
+
+    // Renderizar columnas del bracket
+    let html = '<div class="bracket-wrap"><div class="bracket-rounds">';
+
+    FASES_ELIM.forEach(({ key, label, n }) => {
+      if (key === 'tercer_lugar' && !porFase[key]?.length) return; // skip si no hay 3er lugar
+      const matches = porFase[key] || [];
+      html += '<div class="bracket-col">';
+      html += '<div class="bracket-col-header">' + label + '</div>';
+
+      if (matches.length === 0) {
+        // Fase no generada a?n ? mostrar slots vac?os
+        for (let i = 0; i < n; i++) {
+          html += renderBracketMatchEmpty();
+        }
+      } else {
+        matches.forEach(p => {
+          html += renderBracketMatch(p);
+        });
+      }
+      html += '</div>';
+
+      // Conector visual entre columnas (excepto despu?s del final)
+      if (key !== 'final' && key !== 'tercer_lugar') {
+        html += '<div style="width:20px;flex-shrink:0"></div>';
+      }
+    });
+
+    html += '</div></div>';
+    html += '<div style="font-size:0.7rem;color:var(--gris);text-align:center;padding:8px 0">Desliza para ver el bracket completo</div>';
+    el.innerHTML = html;
+
+  } catch(err) {
+    console.error('loadBracketView error:', err);
+    el.innerHTML = '<div class="alert alert-error">Error al cargar bracket: ' + (err.message || 'Error') + '</div>';
+  }
+}
+
+function renderBracketMatch(p) {
+  const fin  = p.estado === 'finalizado';
+  const wL   = fin && (p.avanza_local === true  || (!fin && p.goles_local  > p.goles_visita));
+  const wV   = fin && (p.avanza_local === false || (!fin && p.goles_visita > p.goles_local));
+  const gL   = fin ? (p.goles_local  ?? '?') : '';
+  const gV   = fin ? (p.goles_visita ?? '?') : '';
+
+  // Determinar ganador real para fases KO
+  let ganadorLocal  = false;
+  let ganadorVisita = false;
+  if (fin) {
+    if (p.avanza_local === true)  ganadorLocal  = true;
+    else if (p.avanza_local === false) ganadorVisita = true;
+    else if (p.goles_local  > p.goles_visita) ganadorLocal  = true;
+    else if (p.goles_visita > p.goles_local)  ganadorVisita = true;
+  }
+
+  const clsL = ganadorLocal  ? 'winner' : (fin && !ganadorLocal  ? 'loser' : '');
+  const clsV = ganadorVisita ? 'winner' : (fin && !ganadorVisita ? 'loser' : '');
+
+  return '<div class="bracket-match">'
+    + '<div class="bracket-team ' + clsL + '">'
+    + '<span class="bracket-name">' + (p.equipo_local  || 'Por definir') + '</span>'
+    + (fin ? '<span class="bracket-score">' + gL + '</span>' : '')
+    + '</div>'
+    + '<div class="bracket-team ' + clsV + '">'
+    + '<span class="bracket-name">' + (p.equipo_visita || 'Por definir') + '</span>'
+    + (fin ? '<span class="bracket-score">' + gV + '</span>' : '')
+    + '</div>'
+    + '</div>';
+}
+
+function renderBracketMatchEmpty() {
+  return '<div class="bracket-match">'
+    + '<div class="bracket-team tbd"><span class="bracket-name">Por definir</span></div>'
+    + '<div class="bracket-team tbd"><span class="bracket-name">Por definir</span></div>'
+    + '</div>';
+}
 
 // ????????????????????????????????????????????????????????????????
 // ?  M?DULO 6b ? VISTA P?BLICA: GRUPOS MUNDIAL                  ?
