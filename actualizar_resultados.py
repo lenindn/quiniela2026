@@ -103,9 +103,16 @@ def parse_match(m: dict) -> dict | None:
     home        = m.get('homeTeam', {})
     away        = m.get('awayTeam', {})
     score       = m.get('score', {})
-    ft_score    = score.get('fullTime', {})
-    gl_real     = ft_score.get('home')
-    gv_real     = ft_score.get('away')
+
+    # ?? REGLA DE PUNTUACI?N: usar marcador de 90 MINUTOS (regularTime), NO fullTime.
+    # fullTime puede incluir goles de pr?rroga, lo cual cambiar?a el marcador que
+    # los usuarios pronosticaron. Los goles de pr?rroga y penales NO cuentan para
+    # el marcador ? solo definen qui?n avanza (campo avanza_local).
+    # Cuando se active este script en producci?n, verificar que la API devuelva
+    # regularTime correctamente (algunos endpoints usan fullTime para todo).
+    rt_score    = score.get('regularTime') or score.get('fullTime', {})
+    gl_real     = rt_score.get('home')
+    gv_real     = rt_score.get('away')
     winner      = score.get('winner')  # HOME_TEAM / AWAY_TEAM / DRAW / null
     group_raw   = m.get('group', '')
     grupo       = group_raw.replace('GROUP_', '').strip() if group_raw else None
