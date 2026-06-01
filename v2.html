@@ -2779,6 +2779,10 @@ const FECHAS_ELIM = {
   final:        ['2026-07-19T18:00'],
 };
 
+function ocultarElimBracket() {
+  document.getElementById('admin-elim-bracket').style.display = 'none';
+}
+
 async function generarSiguienteFase() {
   const sel       = document.getElementById('gen-fase-dest');
   const faseDest  = sel.value;
@@ -2858,7 +2862,7 @@ async function generarSiguienteFase() {
   html += '<div id="elim-msg" style="font-size:0.82rem;margin:8px 0"></div>';
   html += '<div style="display:flex;gap:8px">';
   html += '<button class="btn-primary" onclick="crearTodosElim(' + cruces.length + ',\'' + faseDest + '\')" style="flex:1">&#x2705; Crear ' + cruces.length + ' partidos de ' + FASES_LABELS[faseDest] + '</button>';
-  html += '<button class="btn-sm" onclick="document.getElementById('admin-elim-bracket').style.display='none'" style="flex-shrink:0">Cancelar</button>';
+  html += '<button class="btn-sm" onclick="ocultarElimBracket()" style="flex-shrink:0">Cancelar</button>';
   html += '</div>';
 
   bracketEl.innerHTML = html;
