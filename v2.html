@@ -1640,7 +1640,7 @@ function matchCard(p, editable) {
         <div>${footerRight}</div>
       </div>
       ${esKO && !locked ? `<div style="font-size:0.7rem;color:var(--gris);margin-top:4px;text-align:center">
-        Solo se permiten marcadores sin empate en eliminatorias</div>` : ''}
+        Empate = pronosticas que va a penales</div>` : ''}
     </div>`;
 }
 
@@ -1663,13 +1663,6 @@ async function autoSave(pid) {
 
   const gl = Math.max(0, Math.min(20, parseInt(liEl.value.replace(/[^0-9]/g, '')) || 0));
   const gv = Math.max(0, Math.min(20, parseInt(viEl.value.replace(/[^0-9]/g, '')) || 0));
-
-  // Validar no-empate en eliminatorias
-  const partido = allPartidos.find(p => p.id === pid);
-  if (partido && partido.fase !== 'grupos' && gl === gv) {
-    if (ssEl) { ssEl.textContent = '⚠️ Sin empate'; ssEl.className = 'save-status error'; }
-    return;
-  }
 
   const { error } = await sb.from('pronosticos').upsert({
     participante_id: currentUser.id,
