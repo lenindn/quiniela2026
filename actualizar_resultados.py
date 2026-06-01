@@ -205,6 +205,14 @@ def sync_matches(sb: Client, api_matches: list) -> list:
 # CÁLCULO DE PUNTOS
 # ============================================================
 def calcular_puntos(partido: dict, pronostico: dict) -> int:
+    """
+    Calcula puntos segun la regla de penales (Option A):
+    - Solo se usa el marcador de 90 minutos (regularTime)
+    - Exacto: marcador exacto al 90' (incluyendo empates como 2-2 que van a penales)
+    - Resultado KO: partido fue a penales (empate 90') -> cualquier empate cuenta
+                    partido se definio en 90' -> ganador correcto cuenta
+    Sincronizado con calcularPuntos() en v2.html
+    """
     fase = partido.get('fase', 'grupos')
     pts  = PUNTOS.get(fase, PUNTOS['grupos'])
     gl_r = partido.get('goles_local')
@@ -226,15 +234,23 @@ def calcular_puntos(partido: dict, pronostico: dict) -> int:
             return pts['resultado']
         return 0
     else:
+        # Eliminatorias - regla de penales
         avanza_local_real = partido.get('avanza_local')
         if avanza_local_real is None:
             return 0
-        avanza_local_pred = (gl_p or 0) > (gv_p or 0)
-        # Exacto: marcador al 90' no empatado y correcto
-        if gl_p == gl_r and gv_p == gv_r and gl_r != gv_r:
+
+        # Exacto: marcador de 90' exacto (incluyendo empates que van a penales)
+        if gl_p == gl_r and gv_p == gv_r:
             return pts['exacto']
-        if avanza_local_pred == avanza_local_real:
+
+        # Resultado: partido fue a penales (empate en 90') y usuario predijo empate
+        if gl_r == gv_r and gl_p == gv_p:
             return pts['resultado']
+
+        # Resultado: partido se definio en 90' y usuario acerto el ganador
+        if gl_r != gv_r and (gl_p > gv_p) == avanza_local_real:
+            return pts['resultado']
+
         return 0
 
 def actualizar_puntos_partido(sb: Client, partido: dict):
