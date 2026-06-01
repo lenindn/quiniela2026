@@ -3991,5 +3991,60 @@ function filtrarActividad(grupo, btn) {
   });
 }
 </script>
+
+  <!-- Service Worker: detecci?n de nuevas versiones -->
+  <script>
+    (function() {
+      if (!('serviceWorker' in navigator)) return;
+      let swReg;
+
+      navigator.serviceWorker.register('/quiniela2026/sw.js', { updateViaCache: 'none' })
+        .then(reg => {
+          swReg = reg;
+          reg.update(); // Buscar actualizaci?n en cada carga
+
+          reg.addEventListener('updatefound', () => {
+            const sw = reg.installing;
+            sw.addEventListener('statechange', () => {
+              if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateBanner(reg);
+              }
+            });
+          });
+        })
+        .catch(err => console.warn('SW no disponible:', err));
+
+      // Si el SW toma control (despu?s de activar), recargar suavemente
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (document.getElementById('update-banner')) window.location.reload();
+      });
+
+      function showUpdateBanner(reg) {
+        if (document.getElementById('update-banner')) return;
+        const div = document.createElement('div');
+        div.id = 'update-banner';
+        div.style.cssText = [
+          'position:fixed', 'top:0', 'left:0', 'right:0',
+          'background:#1a5c2a', 'color:#fff', 'padding:13px 16px',
+          'text-align:center', 'z-index:9999', 'font-size:0.9rem',
+          'font-weight:600', 'cursor:pointer',
+          'box-shadow:0 2px 8px rgba(0,0,0,.3)',
+          'display:flex', 'align-items:center', 'justify-content:center', 'gap:8px'
+        ].join(';');
+        div.innerHTML = '<span>?? Nueva versi?n disponible</span>'
+          + '<button style="background:#fff;color:#1a5c2a;border:none;border-radius:20px;'
+          + 'padding:4px 14px;font-size:0.82rem;font-weight:700;cursor:pointer">'
+          + 'Actualizar</button>';
+        div.querySelector('button').onclick = () => {
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          } else {
+            window.location.reload(true);
+          }
+        };
+        document.body.prepend(div);
+      }
+    })();
+  </script>
 </body>
 </html>
