@@ -3317,7 +3317,7 @@ async function loadAdminPanel() {
     const faseChips = FASES_ORDEN.map(f => {
       const activoEnFase = fa[f] !== false;
       const color = activoEnFase ? 'var(--exito)' : '#ccc';
-      return `<span onclick="toggleFaseParticipante(${p.id},'${f}',${activoEnFase},this)"
+      return `<span onclick="toggleFaseParticipante('${p.id}','${f}',${activoEnFase},this)"
         title="${activoEnFase ? 'Desactivar en '+FASES_LABELS[f] : 'Activar en '+FASES_LABELS[f]}"
         style="cursor:pointer;padding:2px 7px;border-radius:10px;background:${color};color:#fff;font-size:0.68rem;font-weight:700;white-space:nowrap">
         ${FASES_LABELS[f]}
@@ -3414,7 +3414,7 @@ async function toggleFaseParticipante(participanteId, fase, currentState, chipEl
   const color = nuevoEstado ? 'var(--exito)' : '#ccc';
   chipEl.style.background = color;
   chipEl.title = nuevoEstado ? `Desactivar en ${FASES_LABELS[fase]}` : `Activar en ${FASES_LABELS[fase]}`;
-  chipEl.setAttribute('onclick', `toggleFaseParticipante(${participanteId},'${fase}',${nuevoEstado},this)`);
+  chipEl.setAttribute('onclick', `toggleFaseParticipante('${participanteId}','${fase}',${nuevoEstado},this)`);
 }
 
 async function cambiarGrupoParticipante(whatsapp, nuevoGrupo, selEl) {
