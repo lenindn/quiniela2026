@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#x26BD;</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Quiniela Mundial 2026 — Por Fases</title>
@@ -810,6 +813,28 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
       </button>
       <div id="admin-r32-bracket" style="display:none;margin-bottom:14px"></div>
       <div id="admin-clasificados"></div>
+    </div>
+
+    <!-- Generar siguiente fase eliminatoria -->
+    <div class="card admin-section">
+      <h3>&#x23ED;&#xFE0F; Generar Fase Eliminatoria</h3>
+      <p style="font-size:0.82rem;color:var(--gris);margin-bottom:10px">
+        Genera los cruces de una fase bas?ndose en los ganadores de la fase anterior.
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <label style="font-size:0.82rem;font-weight:600;white-space:nowrap">Generar:</label>
+        <select id="gen-fase-dest" style="flex:1;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff">
+          <option value="r16"          data-from="r32">Octavos (R16) desde ganadores R32</option>
+          <option value="cuartos"      data-from="r16">Cuartos desde ganadores Octavos</option>
+          <option value="semis"        data-from="cuartos">Semis desde ganadores Cuartos</option>
+          <option value="tercer_lugar" data-from="semis">3er Lugar desde perdedores Semis</option>
+          <option value="final"        data-from="semis">Final desde ganadores Semis</option>
+        </select>
+        <button class="btn-primary" onclick="generarSiguienteFase()" style="white-space:nowrap;padding:8px 14px">
+          &#x1F3AF; Generar
+        </button>
+      </div>
+      <div id="admin-elim-bracket" style="display:none;margin-top:8px"></div>
     </div>
 
     <!-- Crear Partido -->
@@ -2740,6 +2765,146 @@ async function crearTodosR32(total) {
   msgEl.style.color = 'var(--exito)';
   msgEl.textContent = '\u2705 ' + total + ' partidos del R32 creados exitosamente.';
 
+  allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
+  setTimeout(() => loadAdminPanel(), 1500);
+}
+
+
+// ????????????????????????????????????????????????????????????????
+// ?  M?DULO 8e ? ADMIN: GENERADOR DE FASES ELIMINATORIAS        ?
+// ????????????????????????????????????????????????????????????????
+const FECHAS_ELIM = {
+  r16:          ['2026-07-04T18:00','2026-07-04T21:00','2026-07-05T18:00','2026-07-05T21:00',
+                 '2026-07-06T18:00','2026-07-06T21:00','2026-07-07T18:00','2026-07-07T21:00'],
+  cuartos:      ['2026-07-09T18:00','2026-07-09T21:00','2026-07-10T18:00','2026-07-10T21:00'],
+  semis:        ['2026-07-14T18:00','2026-07-15T18:00'],
+  tercer_lugar: ['2026-07-18T18:00'],
+  final:        ['2026-07-19T18:00'],
+};
+
+async function generarSiguienteFase() {
+  const sel       = document.getElementById('gen-fase-dest');
+  const faseDest  = sel.value;
+  const faseOrig  = sel.selectedOptions[0]?.dataset.from;
+  const bracketEl = document.getElementById('admin-elim-bracket');
+  bracketEl.style.display = 'block';
+  bracketEl.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Leyendo resultados...</div>';
+
+  if (!faseOrig || !faseDest) { bracketEl.innerHTML = '<div class="alert alert-error">Selecciona una fase.</div>'; return; }
+
+  // Leer partidos de la fase origen finalizados
+  const { data: partidos, error } = await sb.from('partidos')
+    .select('id,numero,equipo_local,equipo_visita,goles_local,goles_visita,avanza_local,estado')
+    .eq('fase', faseOrig).order('numero');
+
+  if (error || !partidos || partidos.length === 0) {
+    bracketEl.innerHTML = '<div class="alert alert-error">No hay partidos finalizados en la fase ' + faseOrig.toUpperCase() + '.</div>';
+    return;
+  }
+
+  const finalizados = partidos.filter(p => p.estado === 'finalizado');
+  if (finalizados.length === 0) {
+    bracketEl.innerHTML = '<div class="alert alert-error">No hay partidos finalizados en ' + faseOrig.toUpperCase() + ' a?n.</div>';
+    return;
+  }
+
+  // Extraer ganadores o perdedores seg?n la fase destino
+  const esLosers = faseDest === 'tercer_lugar';
+
+  const equipos = finalizados.map(p => {
+    let avanza;
+    if (p.avanza_local !== null && p.avanza_local !== undefined) {
+      avanza = p.avanza_local ? p.equipo_local : p.equipo_visita;
+    } else {
+      // Inferir por marcador (grupos)
+      if (p.goles_local > p.goles_visita)       avanza = p.equipo_local;
+      else if (p.goles_visita > p.goles_local)   avanza = p.equipo_visita;
+      else avanza = p.equipo_local; // empate: local por defecto
+    }
+    const pierde = avanza === p.equipo_local ? p.equipo_visita : p.equipo_local;
+    return esLosers ? pierde : avanza;
+  });
+
+  // Emparejar de a dos: [0vs1, 2vs3, 4vs5, ...]
+  const cruces = [];
+  for (let i = 0; i < equipos.length - 1; i += 2) {
+    cruces.push({ local: equipos[i], visita: equipos[i + 1] });
+  }
+
+  if (cruces.length === 0) {
+    bracketEl.innerHTML = '<div class="alert alert-error">No se pudieron determinar los cruces.</div>';
+    return;
+  }
+
+  const fechas  = FECHAS_ELIM[faseDest] || [];
+  const optsAll = [...new Set(equipos)].sort();
+  const optsHtml = optsAll.map(eq => '<option value="' + eq + '">' + eq + '</option>').join('');
+
+  let html = '<div style="font-weight:700;margin-bottom:8px;font-size:0.9rem">'
+    + FASES_LABELS[faseDest] + ' ? ' + cruces.length + ' partidos ? ajusta si es necesario</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 20px 1fr 150px 100px;gap:6px;font-size:0.72rem;font-weight:700;color:var(--gris);padding:0 0 4px;border-bottom:1px solid var(--borde);margin-bottom:6px">'
+    + '<div>Local</div><div></div><div>Visita</div><div>Fecha/hora</div><div>Ciudad</div></div>';
+
+  cruces.forEach((c, i) => {
+    const localOpts  = optsHtml.replace('value="' + c.local + '"',  'value="' + c.local + '" selected');
+    const visitaOpts = optsHtml.replace('value="' + c.visita + '"', 'value="' + c.visita + '" selected');
+    const fecha = fechas[i] || '';
+    html += '<div style="display:grid;grid-template-columns:1fr 20px 1fr 150px 100px;gap:6px;margin-bottom:6px;align-items:center">'
+      + '<select id="elim-local-'  + i + '" style="padding:6px;border:1px solid var(--borde);border-radius:6px;font-size:0.78rem;background:#fff">' + localOpts  + '</select>'
+      + '<div style="text-align:center;font-weight:700;color:var(--gris)">vs</div>'
+      + '<select id="elim-visita-' + i + '" style="padding:6px;border:1px solid var(--borde);border-radius:6px;font-size:0.78rem;background:#fff">' + visitaOpts + '</select>'
+      + '<input type="datetime-local" id="elim-fecha-' + i + '" value="' + fecha + '" style="padding:6px;border:1px solid var(--borde);border-radius:6px;font-size:0.78rem">'
+      + '<input type="text" id="elim-ciudad-' + i + '" placeholder="Ciudad" style="padding:6px;border:1px solid var(--borde);border-radius:6px;font-size:0.78rem">'
+      + '</div>';
+  });
+
+  html += '<div id="elim-msg" style="font-size:0.82rem;margin:8px 0"></div>';
+  html += '<div style="display:flex;gap:8px">';
+  html += '<button class="btn-primary" onclick="crearTodosElim(' + cruces.length + ',\'' + faseDest + '\')" style="flex:1">&#x2705; Crear ' + cruces.length + ' partidos de ' + FASES_LABELS[faseDest] + '</button>';
+  html += '<button class="btn-sm" onclick="document.getElementById('admin-elim-bracket').style.display='none'" style="flex-shrink:0">Cancelar</button>';
+  html += '</div>';
+
+  bracketEl.innerHTML = html;
+}
+
+async function crearTodosElim(total, faseDest) {
+  const msgEl = document.getElementById('elim-msg');
+  msgEl.textContent = '\u23F3 Verificando...';
+
+  const usados = [];
+  for (let i = 0; i < total; i++) {
+    const loc = document.getElementById('elim-local-'  + i)?.value;
+    const vis = document.getElementById('elim-visita-' + i)?.value;
+    if (!loc || !vis) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Partido '+(i+1)+': faltan equipos.'; return; }
+    if (loc === vis)  { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Partido '+(i+1)+': local y visita iguales.'; return; }
+    if (usados.includes(loc)) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c '+loc+' aparece dos veces.'; return; }
+    if (usados.includes(vis)) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c '+vis+' aparece dos veces.'; return; }
+    usados.push(loc, vis);
+  }
+
+  msgEl.style.color = 'var(--gris)';
+  msgEl.textContent = '\u23F3 Creando partidos...';
+
+  const { data: maxRow } = await sb.from('partidos')
+    .select('numero').order('numero', { ascending: false }).limit(1).maybeSingle();
+  let numero = (maxRow?.numero || 0) + 1;
+
+  const inserts = [];
+  for (let i = 0; i < total; i++) {
+    const loc    = document.getElementById('elim-local-'   + i).value;
+    const vis    = document.getElementById('elim-visita-'  + i).value;
+    const fecha  = document.getElementById('elim-fecha-'   + i).value;
+    const ciudad = document.getElementById('elim-ciudad-'  + i).value.trim();
+    inserts.push({ numero: numero++, fase: faseDest, equipo_local: loc, equipo_visita: vis,
+      fecha_partido: fecha ? new Date(fecha).toISOString() : null,
+      ciudad: ciudad || null, estado: 'pendiente' });
+  }
+
+  const { error } = await sb.from('partidos').insert(inserts);
+  if (error) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Error: '+error.message; return; }
+
+  msgEl.style.color = 'var(--exito)';
+  msgEl.textContent = '\u2705 ' + total + ' partidos creados para ' + FASES_LABELS[faseDest];
   allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
   setTimeout(() => loadAdminPanel(), 1500);
 }
