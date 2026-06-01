@@ -3855,15 +3855,20 @@ function calcularPuntos(partido, pronostico) {
     const res = (gl, gv) => gl > gv ? 'L' : gl < gv ? 'V' : 'E';
     if (glP === glR && gvP === gvR) return pts.exacto;
     if (res(glP, gvP) === res(glR, gvR)) return pts.resultado;
-    return 0;
   } else {
-    // Eliminatorias
+    // Eliminatorias - soporta partidos definidos en penales (Option A)
     const avanzaLocalReal = partido.avanza_local;
     if (avanzaLocalReal === null || avanzaLocalReal === undefined) return 0;
-    const avanzaLocalPred = glP > gvP;  // no se permiten empates
-    // Exacto: marcador al 90' exacto Y avance correcto (implícito si no hubo empate al 90')
-    if (glP === glR && gvP === gvR && glR !== gvR) return pts.exacto;
-    if (avanzaLocalPred === avanzaLocalReal) return pts.resultado;
+
+    // Exacto: marcador de 90 exacto (incluye empates a penales, ej. 2-2)
+    if (glP === glR && gvP === gvR) return pts.exacto;
+
+    // Resultado: partido fue a penales (empate en 90) y usuario predijo empate
+    if (glR === gvR && glP === gvP) return pts.resultado;
+
+    // Resultado: partido se definio en 90 y usuario acerto el ganador
+    if (glR !== gvR && (glP > gvP) === avanzaLocalReal) return pts.resultado;
+
     return 0;
   }
 }
