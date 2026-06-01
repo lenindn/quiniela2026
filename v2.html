@@ -563,19 +563,6 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   <div style="font-size:3rem;margin-bottom:12px">⚽</div>
   <h2 style="color:var(--verde);margin-bottom:8px">Quiniela Mundial 2026</h2>
   <p style="color:var(--texto2);margin-bottom:20px">Para unirte necesitas el link de tu grupo.<br>Pídelo al organizador de tu quiniela.</p>
-  <!-- Buscar mis grupos por WhatsApp -->
-  <div class="card" style="text-align:left;margin-bottom:12px">
-    <p style="font-size:0.9rem;font-weight:700;margin-bottom:4px">&#x1F50D; &#xBF;Ya est&#xE1;s registrado?</p>
-    <p style="font-size:0.82rem;color:var(--gris);margin-bottom:10px">Ingresa tu WhatsApp y te mostramos tus grupos.</p>
-    <div style="display:flex;gap:8px">
-      <input type="tel" id="ng-wa-buscar" placeholder="Ej: 584141234567" inputmode="numeric" autocomplete="off"
-        style="flex:1;padding:10px;border:1px solid var(--borde);border-radius:8px;font-size:0.9rem"
-        onkeydown="if(event.key==='Enter') buscarMisGrupos()">
-      <button class="btn-primary" onclick="buscarMisGrupos()" style="white-space:nowrap;padding:10px 16px">Buscar</button>
-    </div>
-    <div id="ng-grupos-resultado" style="margin-top:12px"></div>
-  </div>
-
   <div class="card" style="text-align:left">
     <p style="font-size:0.85rem;color:var(--gris);margin-bottom:8px">¿Eres el organizador? Accede al panel admin:</p>
     <input type="text" id="ng-url" placeholder="Pega aquí el link de tu grupo" style="width:100%;padding:10px;border:1px solid var(--borde);border-radius:8px;font-size:0.9rem;margin-bottom:8px">
