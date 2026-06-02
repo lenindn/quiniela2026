@@ -1,5 +1,26 @@
 # Pendientes — Quiniela Mundial 2026
 
+## 🚀 Antes de lanzar al grupo (fin de fase de prueba)
+
+### 1. Borrar TODA la data de prueba
+Ejecutar `limpiar_datos_prueba.sql` en Supabase (ver el archivo en el repo).
+Limpia: pronosticos, partidos de prueba, resultados, actividad, participantes
+de prueba. NO toca la estructura (tablas, RPCs, columnas) ni la config.
+
+### 2. Mejora visual (identidad Mundial 2026)
+- **Nivel 1 (facil, CSS):** paleta vibrante, header con degradado, tipografia
+  deportiva, emojis grandes, tarjetas mas vistosas.
+- **Nivel 2 (medio):** banderas reales via CDN (flag-icons), iconos de mejor
+  calidad. Da mucho color sin inflar el archivo.
+- **Nivel 3 (opcional):** imagen hero, confeti al ganar fase, micro-interacciones.
+- Recomendado: Nivel 1 + 2.
+- OJO copyright FIFA: NO usar logo oficial, mascota ni marca "FIFA World Cup".
+  Si usar colores/estetica generica, balon/trofeo, banderas (dominio publico),
+  y branding propio.
+
+---
+
+
 ## 🔴 Para activar la API automática (cuando empiece el torneo)
 
 La actualización automática de resultados está LISTA en código pero requiere
