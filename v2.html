@@ -2070,8 +2070,8 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
     const medals = ['🥇','🥈','🥉'];
     const chips  = ranking.slice(0, 3).map((p, i) => {
       const nEsc = p.nombre.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-      return `<span data-pid="${p.id}" data-nombre="${nEsc}"
-        onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, this)"
+      return `<span data-pid="${p.id}" data-nombre="${nEsc}" data-fase="${f}"
+        onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, false, this.dataset.fase)"
         style="display:inline-flex;align-items:center;gap:4px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:3px 8px;font-size:0.8rem;cursor:pointer;text-decoration:underline dotted">
         ${medals[i]} <strong>${p.nombre}</strong>
         <span style="color:var(--gris);font-size:0.7rem">${p.pts}pts</span>
@@ -2179,7 +2179,7 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
            style="grid-template-columns:${gridCols};${!p.elegible ? 'opacity:0.8' : ''}">
         <div class="rank">${rankHTML}</div>
         <div style="min-width:0">
-          <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',this)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
+          <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',false)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
           ${inelegibleBadge}
         </div>
         <div class="pts-cell" style="font-size:1rem;${!p.elegible ? 'color:var(--gris)' : ''}">${p.totalPts}</div>
@@ -2325,7 +2325,7 @@ function renderTablaRanking(ranking, fase, esResto = false, startPos = 1) {
     return `
       <div class="tabla-row ${!esResto && pos <= 3 ? 'top1' : ''} ${esMi ? 'me' : ''}">
         <div class="rank">${medal}</div>
-        <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',this)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
+        <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',false)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
         <div class="pts-cell">${p.pts}</div>
         <div class="exacto-cell">${p.exactos}</div>
         <div class="ok-cell">${p.aciertos}</div>
@@ -3948,7 +3948,7 @@ async function logActividad(accion, detalle) {
   try { await sb.from('actividad').insert({ participante_id: currentUser.id, nombre: currentUser.nombre, grupo: currentGrupo?.nombre || null, accion, detalle: detalle || null }); } catch(e) {}
 }
 
-async function verDetalleParticipante(participanteId, nombre, verTodo = false) {
+async function verDetalleParticipante(participanteId, nombre, verTodo = false, filtroFase = null) {
   const color  = getComputedStyle(document.documentElement).getPropertyValue('--verde').trim() || '#1a5c2a';
   const modal  = document.getElementById('modal-detalle');
   const header = document.getElementById('modal-header');
@@ -3967,13 +3967,19 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false) {
   if (!verTodo) query = query.eq('calculado', true);
   const { data: prons } = await query;
 
-  const allPicks  = prons || [];
+  // Filtrar por fase si viene del podio (filtroFase != null)
+  const partidosDeFase = filtroFase
+    ? allPartidos.filter(p => p.fase === filtroFase).map(p => p.id)
+    : null;
+  const allPicks  = (prons || []).filter(pr =>
+    !partidosDeFase || partidosDeFase.includes(pr.partido_id)
+  );
   const calculados = allPicks.filter(pr => pr.calculado);
   const totalPts   = calculados.reduce((s, pr) => s + (pr.puntos || 0), 0);
+  const faseLabel = filtroFase ? (FASES_LABELS[filtroFase] + ' · ') : '';
   document.getElementById('modal-total').textContent = verTodo
     ? `${totalPts} pts · ${calculados.length} calculados · ${allPicks.length - calculados.length} pendientes`
-    : `${totalPts} pts · ${calculados.length} partidos calculados`;
-
+    : `${faseLabel}${totalPts} pts · ${calculados.length} partidos`;
   if (allPicks.length === 0) {
     body.innerHTML = '<div style="color:#999;text-align:center;padding:20px">Sin pron\u00f3sticos registrados a\u00fan.</div>';
     return;
