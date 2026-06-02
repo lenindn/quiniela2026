@@ -860,6 +860,12 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
           <strong style="font-size:0.85rem">¿Quién avanzó?</strong>
           <label><input type="radio" name="avanza" value="local"> <span id="admin-lbl-local">Local</span></label>
           <label><input type="radio" name="avanza" value="visita"> <span id="admin-lbl-visita">Visita</span></label>
+          <div style="width:100%;margin-top:6px;display:flex;align-items:center;gap:6px;font-size:0.8rem">
+            <span style="color:var(--gris)">Penales (opcional, informativo):</span>
+            <input type="number" id="admin-pen-l" min="0" max="30" placeholder="L" style="width:48px;padding:4px;border:1px solid var(--borde);border-radius:6px;text-align:center">
+            <span>-</span>
+            <input type="number" id="admin-pen-v" min="0" max="30" placeholder="V" style="width:48px;padding:4px;border:1px solid var(--borde);border-radius:6px;text-align:center">
+          </div>
         </div>
         <button class="btn-primary" onclick="adminUpdateResult()">Guardar resultado y calcular puntos</button>
         <div id="admin-result-msg"></div>
@@ -1671,7 +1677,7 @@ function matchCard(p, editable) {
     footerRight = `<span class="result-badge">${p.goles_local ?? '?'} - ${p.goles_visita ?? '?'}</span>`;
     if (p.avanza_local !== null && p.avanza_local !== undefined && p.goles_local === p.goles_visita) {
       const avanzador = p.avanza_local ? p.equipo_local : p.equipo_visita;
-      footerRight += ` <span class="avanza-info">Avanzó: ${b(avanzador)} ${avanzador}</span>`;
+      footerRight += ` <span class="avanza-info">Avanzó: ${b(avanzador)} ${avanzador}${(p.penales_local !== null && p.penales_local !== undefined) ? ` (pen. ${p.penales_local}-${p.penales_visita})` : ''}</span>`;
     }
     if (pr && pr.calculado) {
       const pts = pr.puntos || 0;
@@ -2523,7 +2529,7 @@ async function renderResultados() {
       const scoreHtml = finalizado
         ? `<div class="resultado-score">${p.goles_local} - ${p.goles_visita}</div>
            ${p.avanza_local !== null && p.avanza_local !== undefined && p.goles_local === p.goles_visita
-             ? `<div class="avanza-info">Avanzó: ${p.avanza_local ? p.equipo_local : p.equipo_visita}</div>` : ''}
+             ? `<div class="avanza-info">🏆 Avanzó: ${p.avanza_local ? p.equipo_local : p.equipo_visita}${(p.penales_local !== null && p.penales_local !== undefined) ? ` <span style="color:var(--gris)">(penales ${p.penales_local}-${p.penales_visita})</span>` : ''}</div>` : ''}
            ${isAdmin ? `<button onclick="toggleEditResultado(${p.id})" title="Editar resultado"
              style="margin-top:5px;background:none;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:2px 7px;color:var(--gris)">✏️ editar</button>` : ''}`
         : `<div style="color:var(--gris);font-size:0.85rem">${p.fecha_partido ? formatDate(p.fecha_partido) : 'Por definir'}</div>`;
@@ -3515,6 +3521,8 @@ function onAdminPartidoChange() {
   // Limpiar siempre al cambiar de partido
   document.getElementById('admin-gl').value = '';
   document.getElementById('admin-gv').value = '';
+  document.getElementById('admin-pen-l').value = '';
+  document.getElementById('admin-pen-v').value = '';
   document.querySelectorAll('input[name="avanza"]').forEach(r => r.checked = false);
   document.getElementById('admin-result-msg').innerHTML = '';
 
@@ -3529,6 +3537,10 @@ function onAdminPartidoChange() {
       const val = p.avanza_local ? 'local' : 'visita';
       const radio = document.querySelector(`input[name="avanza"][value="${val}"]`);
       if (radio) radio.checked = true;
+    }
+    if (p.penales_local !== null && p.penales_local !== undefined) {
+      document.getElementById('admin-pen-l').value = p.penales_local;
+      document.getElementById('admin-pen-v').value = p.penales_visita;
     }
   }
 
@@ -3566,11 +3578,17 @@ async function adminUpdateResult() {
 
   msgEl.innerHTML = '<div class="alert">Actualizando...</div>';
 
+  // Penales (opcional, informativo - no afecta puntos)
+  const penL = parseInt(document.getElementById('admin-pen-l').value);
+  const penV = parseInt(document.getElementById('admin-pen-v').value);
+
   // 1. Actualizar partido
   await sb.from('partidos').update({
     goles_local: gl,
     goles_visita: gv,
     avanza_local: avanzaLocal,
+    penales_local:  isNaN(penL) ? null : penL,
+    penales_visita: isNaN(penV) ? null : penV,
     estado: 'finalizado',
     fuente: 'manual',
   }).eq('id', pid);
@@ -3585,7 +3603,7 @@ async function adminUpdateResult() {
   // 3. Actualizar estado local
   const idx = allPartidos.findIndex(p => p.id === pid);
   if (idx >= 0) {
-    allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, estado: 'finalizado' };
+    allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, penales_local: isNaN(penL)?null:penL, penales_visita: isNaN(penV)?null:penV, estado: 'finalizado' };
   }
 
   // Si es la Final, premiar al campeón
@@ -3638,7 +3656,7 @@ async function guardarEditResultado(pid) {
 
   const idx = allPartidos.findIndex(p => p.id === pid);
   if (idx >= 0) {
-    allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, estado: 'finalizado' };
+    allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, penales_local: isNaN(penL)?null:penL, penales_visita: isNaN(penV)?null:penV, estado: 'finalizado' };
   }
 
   // v2: sin premio campeón
