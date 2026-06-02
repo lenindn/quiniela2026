@@ -2129,13 +2129,26 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
     if (finalizados < totalPartidos) return null; // solo fases 100% completadas
 
     const partidoIds   = matchesFase.map(p => p.id);
-    const partsActivos = parts.filter(p => !p.fases_activas || p.fases_activas[f] !== false);
+    // MISMO filtro y desempate que renderLeaderboardFase (el tab), para que
+    // el podio del resumen y el del tab coincidan siempre.
+    const partsActivos = parts.filter(p => {
+      if (p.activo === false) return false;
+      if (p.fases_activas && p.fases_activas[f] === false) return false;
+      return true;
+    });
     const ranking = partsActivos.map(p => {
-      const myProns = prons.filter(pr => pr.participante_id === p.id && partidoIds.includes(pr.partido_id));
-      const pts     = myProns.reduce((s, pr) => s + (pr.puntos || 0), 0);
-      const exactos = myProns.filter(pr => pr.calculado && pr.puntos >= (PUNTOS[f]?.exacto || 5)).length;
-      return { ...p, pts, exactos };
-    }).sort((a, b) => b.pts - a.pts || b.exactos - a.exactos);
+      const myProns  = prons.filter(pr => pr.participante_id === p.id && partidoIds.includes(pr.partido_id));
+      const pts      = myProns.reduce((s, pr) => s + (pr.puntos || 0), 0);
+      const exactos  = myProns.filter(pr => pr.calculado && pr.puntos >= (PUNTOS[f]?.exacto || 5)).length;
+      const aciertos = myProns.filter(pr => pr.calculado && (pr.puntos || 0) > 0).length;
+      const llenos   = myProns.length;
+      return { ...p, pts, exactos, aciertos, llenos };
+    }).sort((a, b) => {
+      if (b.pts      !== a.pts)      return b.pts      - a.pts;
+      if (b.exactos  !== a.exactos)  return b.exactos  - a.exactos;
+      if (b.aciertos !== a.aciertos) return b.aciertos - a.aciertos;
+      return b.llenos - a.llenos;
+    });
 
     const medals = ['🥇','🥈','🥉'];
     const chips  = ranking.slice(0, 3).map((p, i) => {
