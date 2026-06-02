@@ -223,35 +223,19 @@ def calcular_puntos(partido: dict, pronostico: dict) -> int:
     if gl_r is None or gv_r is None:
         return 0
 
-    if fase == 'grupos':
-        def res(gl, gv):
-            if gl > gv: return 'L'
-            if gl < gv: return 'V'
-            return 'E'
-        if gl_p == gl_r and gv_p == gv_r:
-            return pts['exacto']
-        if res(gl_p, gv_p) == res(gl_r, gv_r):
-            return pts['resultado']
-        return 0
-    else:
-        # Eliminatorias - regla de penales
-        avanza_local_real = partido.get('avanza_local')
-        if avanza_local_real is None:
-            return 0
-
-        # Exacto: marcador de 90' exacto (incluyendo empates que van a penales)
-        if gl_p == gl_r and gv_p == gv_r:
-            return pts['exacto']
-
-        # Resultado: partido fue a penales (empate en 90') y usuario predijo empate
-        if gl_r == gv_r and gl_p == gv_p:
-            return pts['resultado']
-
-        # Resultado: partido se definio en 90' y usuario acerto el ganador
-        if gl_r != gv_r and (gl_p > gv_p) == avanza_local_real:
-            return pts['resultado']
-
-        return 0
+    # TODAS las fases usan la misma logica: marcador al final de los 90 minutos.
+    # Reglamento: prorroga y penales NO cuentan. Si va a penales, el resultado
+    # oficial es EMPATE (mismo trato que grupos). avanza_local solo se usa para
+    # el bracket/generar fases, NO para puntos.
+    def res(gl, gv):
+        if gl > gv: return 'L'
+        if gl < gv: return 'V'
+        return 'E'
+    if gl_p == gl_r and gv_p == gv_r:
+        return pts['exacto']
+    if res(gl_p, gv_p) == res(gl_r, gv_r):
+        return pts['resultado']
+    return 0
 
 def actualizar_puntos_partido(sb: Client, partido: dict):
     """Recalcula puntos de todos los pronósticos de un partido finalizado."""

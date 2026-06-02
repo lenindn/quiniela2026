@@ -1,6 +1,6 @@
 -- ============================================================
 -- Recalcula puntos de TODOS los pronósticos de partidos finalizados
--- Respeta el sistema de puntos por fase:
+-- Sistema de puntos por fase:
 --   grupos:       exacto=5,  resultado=2
 --   r32:          exacto=8,  resultado=3
 --   r16:          exacto=12, resultado=5
@@ -9,71 +9,40 @@
 --   tercer_lugar: exacto=25, resultado=10
 --   final:        exacto=35, resultado=15
 --
--- REGLA PENALES (fases KO):
---   Exacto  = marcador 90 exacto (incluye empates que van a penales)
---   Resultado = empate real + empate pred. (fue a penales)
---           O no-empate real + ganador correcto (avanza_local)
+-- REGLA UNIFICADA (reglamento oficial):
+--   Todas las fases se calculan IGUAL usando el marcador de 90 minutos.
+--   La prórroga y los penales NO cuentan. Si un partido se define en
+--   penales, el resultado oficial es EMPATE (mismo trato que grupos).
+--   El campo avanza_local solo sirve para el bracket, NO para puntos.
+--   - Marcador exacto  -> puntos de exacto
+--   - Misma dirección (gana local / gana visita / empate) -> puntos de resultado
 -- ============================================================
 
 UPDATE pronosticos pr
 SET
-  puntos = CASE pa.fase
-
-    WHEN 'grupos' THEN
-      CASE
-        WHEN pr.goles_local = pa.goles_local AND pr.goles_visita = pa.goles_visita THEN 5
-        WHEN SIGN(pr.goles_local - pr.goles_visita) = SIGN(pa.goles_local - pa.goles_visita) THEN 2
+  puntos = CASE
+    WHEN pr.goles_local = pa.goles_local AND pr.goles_visita = pa.goles_visita THEN
+      CASE pa.fase
+        WHEN 'grupos'       THEN 5
+        WHEN 'r32'          THEN 8
+        WHEN 'r16'          THEN 12
+        WHEN 'cuartos'      THEN 17
+        WHEN 'semis'        THEN 25
+        WHEN 'tercer_lugar' THEN 25
+        WHEN 'final'        THEN 35
         ELSE 0
       END
-
-    WHEN 'r32' THEN
-      CASE
-        WHEN pr.goles_local = pa.goles_local AND pr.goles_visita = pa.goles_visita THEN 8
-        WHEN pa.goles_local = pa.goles_visita AND pr.goles_local = pr.goles_visita THEN 3
-        WHEN pa.goles_local <> pa.goles_visita AND (pr.goles_local > pr.goles_visita) = pa.avanza_local THEN 3
+    WHEN SIGN(pr.goles_local - pr.goles_visita) = SIGN(pa.goles_local - pa.goles_visita) THEN
+      CASE pa.fase
+        WHEN 'grupos'       THEN 2
+        WHEN 'r32'          THEN 3
+        WHEN 'r16'          THEN 5
+        WHEN 'cuartos'      THEN 7
+        WHEN 'semis'        THEN 10
+        WHEN 'tercer_lugar' THEN 10
+        WHEN 'final'        THEN 15
         ELSE 0
       END
-
-    WHEN 'r16' THEN
-      CASE
-        WHEN pr.goles_local = pa.goles_local AND pr.goles_visita = pa.goles_visita THEN 12
-        WHEN pa.goles_local = pa.goles_visita AND pr.goles_local = pr.goles_visita THEN 5
-        WHEN pa.goles_local <> pa.goles_visita AND (pr.goles_local > pr.goles_visita) = pa.avanza_local THEN 5
-        ELSE 0
-      END
-
-    WHEN 'cuartos' THEN
-      CASE
-        WHEN pr.goles_local = pa.goles_local AND pr.goles_visita = pa.goles_visita THEN 17
-        WHEN pa.goles_local = pa.goles_visita AND pr.goles_local = pr.goles_visita THEN 7
-        WHEN pa.goles_local <> pa.goles_visita AND (pr.goles_local > pr.goles_visita) = pa.avanza_local THEN 7
-        ELSE 0
-      END
-
-    WHEN 'semis' THEN
-      CASE
-        WHEN pr.goles_local = pa.goles_local AND pr.goles_visita = pa.goles_visita THEN 25
-        WHEN pa.goles_local = pa.goles_visita AND pr.goles_local = pr.goles_visita THEN 10
-        WHEN pa.goles_local <> pa.goles_visita AND (pr.goles_local > pr.goles_visita) = pa.avanza_local THEN 10
-        ELSE 0
-      END
-
-    WHEN 'tercer_lugar' THEN
-      CASE
-        WHEN pr.goles_local = pa.goles_local AND pr.goles_visita = pa.goles_visita THEN 25
-        WHEN pa.goles_local = pa.goles_visita AND pr.goles_local = pr.goles_visita THEN 10
-        WHEN pa.goles_local <> pa.goles_visita AND (pr.goles_local > pr.goles_visita) = pa.avanza_local THEN 10
-        ELSE 0
-      END
-
-    WHEN 'final' THEN
-      CASE
-        WHEN pr.goles_local = pa.goles_local AND pr.goles_visita = pa.goles_visita THEN 35
-        WHEN pa.goles_local = pa.goles_visita AND pr.goles_local = pr.goles_visita THEN 15
-        WHEN pa.goles_local <> pa.goles_visita AND (pr.goles_local > pr.goles_visita) = pa.avanza_local THEN 15
-        ELSE 0
-      END
-
     ELSE 0
   END,
   calculado = true

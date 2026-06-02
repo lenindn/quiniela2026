@@ -674,20 +674,48 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     <hr class="sep">
     <div class="instruc-section">
       <h3>&#xBF;C&#xF3;mo funcionan los premios?</h3>
+      <p style="font-size:0.85rem;margin-bottom:8px">Cada fase tiene su propio bote (el dinero recaudado en esa fase). Se reparte as&#xED;:</p>
       <ul>
-        <li>&#x1F3C6; <strong>Premio por fase:</strong> El mejor pronosticador de cada fase (Grupos, R32, Octavos, Cuartos, Semis, 3er Lugar, Final) recibe el premio de esa fase. &#x1F947;&#x1F948;&#x1F949;</li>
-        <li>&#x1F31F; <strong>Premio General:</strong> Se suman los puntos de <strong>todas las fases</strong>. Quien acumule m&#xE1;s al final del torneo gana el premio general.</li>
-        <li>Para ser elegible al General debes haber participado en <strong>todas las fases activas</strong>.</li>
-        <li>El monto de los premios se anuncia antes de cada fase.</li>
+        <li>&#x1F947; <strong>1er lugar de la fase:</strong> 30% del bote de la fase.</li>
+        <li>&#x1F948; <strong>2do lugar de la fase:</strong> 20% del bote de la fase.</li>
+        <li>&#x1F949; <strong>3er lugar de la fase:</strong> 10% del bote de la fase.</li>
+        <li>&#x1F4B0; El <strong>40% restante</strong> se acumula para el <strong>Pozo General</strong>.</li>
+      </ul>
+      <p style="font-size:0.85rem;margin:10px 0 8px"><strong>&#x1F31F; Pozo General</strong> (40% de toda la recaudaci&#xF3;n), al terminar el torneo:</p>
+      <ul>
+        <li>Una parte premia al podio de la <strong>Gran Final</strong> (1ro 30% &middot; 2do 20% &middot; 3ro 10% del bloque correspondiente).</li>
+        <li>Y premia a la <strong>Puntuaci&#xF3;n General acumulada</strong>: 1ro 50% &middot; 2do 30% &middot; 3ro 20%.</li>
+        <li><strong>Requisito del General:</strong> haber jugado <strong>todas las fases</strong>.</li>
       </ul>
     </div>
     <hr class="sep">
     <div class="instruc-section">
       <h3>&#xBF;Cu&#xE1;ndo lleno mis pron&#xF3;sticos?</h3>
       <ul>
-        <li><strong>Fase de Grupos:</strong> Antes del inicio del torneo (11 jun). <strong>No se puede modificar despu&#xE9;s.</strong></li>
-        <li><strong>Fases eliminatorias (R32 en adelante):</strong> El admin abre cada fase con una ventana de tiempo. Los picks se cierran antes del primer partido de esa fase.</li>
+        <li>Cada fase se llena y se paga <strong>por separado</strong>.</li>
+        <li><strong>Cierre:</strong> estrictamente <strong>1 hora antes</strong> del primer partido de cada fase. Sin excepciones.</li>
+        <li>Una apuesta <strong>no pagada</strong> antes de la fecha l&#xED;mite queda anulada (0 puntos en esa ronda).</li>
+        <li>La Fase de Grupos cierra 1 hora antes del partido inaugural (11 jun) y no se puede modificar despu&#xE9;s.</li>
       </ul>
+    </div>
+    <hr class="sep">
+    <div class="instruc-section">
+      <h3>&#x1F4B5; Costo de participaci&#xF3;n</h3>
+      <p style="font-size:0.85rem;margin-bottom:8px">Se paga de forma independiente por cada fase:</p>
+      <table class="puntos-tabla">
+        <thead><tr><th>Fase</th><th>Costo</th></tr></thead>
+        <tbody>
+          <tr><td>Grupos</td><td>$5 USD</td></tr>
+          <tr><td>Dieciseisavos (R32)</td><td>$5 USD</td></tr>
+          <tr><td>Octavos</td><td>$5 USD</td></tr>
+          <tr><td>Cuartos</td><td>$5 USD</td></tr>
+          <tr><td>Semifinales</td><td>$5 USD</td></tr>
+          <tr><td>Tercer Puesto</td><td>$5 USD</td></tr>
+          <tr><td>Gran Final</td><td>$10 USD</td></tr>
+          <tr><td><strong>Total (todas)</strong></td><td><strong>$40 USD</strong></td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:8px;font-size:0.78rem;color:var(--gris)">Puedes pagar las 7 fases por adelantado ($40) o ir pagando fase por fase. El pago por adelantado no se devuelve si no completas los pron&#xF3;sticos a tiempo; ese dinero pasa al bote de la fase.</p>
     </div>
     <hr class="sep">
     <div class="instruc-section">
@@ -721,47 +749,59 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     <hr class="sep">
     <div class="instruc-section">
       <h3>Reglas en fases eliminatorias</h3>
-      <p>Pronostica el marcador al final de los <strong>90 minutos reglamentarios</strong>. La <strong>pr&#xF3;rroga y los penales NO cuentan</strong> para el marcador &mdash; solo definen qui&#xE9;n avanza. Ejemplo: si va 1&ndash;1 al 90&#x27; y luego cae un gol en la pr&#xF3;rroga, el marcador que cuenta sigue siendo 1&ndash;1.</p>
-      <p style="margin-top:6px;font-size:0.82rem"><strong>Fases que pueden ir a penales:</strong> Ronda de 32, Octavos, Cuartos, Semifinales, 3er Lugar y Final. En Grupos el empate es resultado normal (no hay penales).</p>
+      <p>Las eliminatorias se punt&#xFA;an <strong>igual que la fase de grupos</strong>, usando el marcador al final de los <strong>90 minutos</strong>. La pr&#xF3;rroga y los penales <strong>NO cuentan</strong>.</p>
+      <p style="margin-top:6px;font-size:0.82rem"><strong>Si un partido se define en penales, el resultado oficial es EMPATE.</strong> Es decir, un 1&ndash;1 que va a penales cuenta como empate para todos, sin importar qui&#xE9;n se clasifique.</p>
       <ul style="margin-top:8px">
-        <li><strong>Marcador exacto:</strong> acertaste el marcador al 90', incluyendo empates (ej. 2-2) que van a penales.</li>
-        <li><strong>Resultado correcto:</strong>
-          <ul style="margin-top:4px">
-            <li>Si el partido fue a <strong>penales</strong> (empate en 90'): cualquier empate pronosticado cuenta.</li>
-            <li>Si hubo <strong>ganador en 90'</strong>: acertaste el equipo ganador (aunque el marcador sea diferente).</li>
-            <li><strong>Importante:</strong> si predices empate pero hubo ganador en 90' (o viceversa), son <strong>0 pts</strong> &mdash; aunque hayas acertado qui&#xE9;n se clasific&#xF3;.</li>
-          </ul>
-        </li>
+        <li><strong>Marcador exacto:</strong> acertaste el marcador de los 90 minutos.</li>
+        <li><strong>Resultado correcto:</strong> acertaste si gan&#xF3; el local, gan&#xF3; el visitante o fue empate (aunque el marcador sea diferente).</li>
       </ul>
       <div class="ejemplo-box" style="margin-top:10px">
-        <strong>Ejemplo &mdash; Octavos de Final con penales:</strong><br>
-        Resultado real: M&#xE9;xico 1&ndash;1 Ecuador al 90&#x27; &nbsp;&#x2192;&nbsp; M&#xE9;xico avanza en penales 4&ndash;2<br>
-        <em style="font-size:0.78rem;color:var(--gris)">Los penales no cuentan para el marcador ni los puntos. Octavos: exacto = 12 pts &middot; resultado = 5 pts</em><br><br>
+        <strong>Ejemplo A &mdash; Octavos que va a penales:</strong><br>
+        Resultado real: M&#xE9;xico <strong>1&ndash;1</strong> Ecuador (se define en penales)<br>
+        <em style="font-size:0.78rem;color:var(--gris)">Cuenta como EMPATE. Octavos: exacto = 12 pts &middot; resultado = 5 pts</em><br><br>
         <table style="width:100%;font-size:0.82rem;border-collapse:collapse">
           <tr style="background:#f0fdf4">
-            <td style="padding:5px 8px">&#x1F947; Pronos: M&#xE9;xico <strong>1&ndash;1</strong> Ecuador</td>
+            <td style="padding:5px 8px">&#x1F947; M&#xE9;xico <strong>1&ndash;1</strong> Ecuador</td>
             <td style="padding:5px 8px"><strong>12 pts</strong></td>
-            <td style="padding:5px 8px;color:var(--gris)">Marcador exacto al 90&#x27;</td>
+            <td style="padding:5px 8px;color:var(--gris)">Marcador exacto</td>
           </tr>
           <tr style="background:#fffbeb">
-            <td style="padding:5px 8px">Pronos: M&#xE9;xico <strong>0&ndash;0</strong> Ecuador</td>
+            <td style="padding:5px 8px">M&#xE9;xico <strong>0&ndash;0</strong> Ecuador</td>
             <td style="padding:5px 8px"><strong>5 pts</strong></td>
-            <td style="padding:5px 8px;color:var(--gris)">Predijo empate &#x2192; sab&#xED;a que ir&#xED;a a penales (aunque no acert&#xF3; 1&ndash;1)</td>
+            <td style="padding:5px 8px;color:var(--gris)">Acert&#xF3; empate (marcador diferente)</td>
+          </tr>
+          <tr style="background:#fffbeb">
+            <td style="padding:5px 8px">M&#xE9;xico <strong>2&ndash;2</strong> Ecuador</td>
+            <td style="padding:5px 8px"><strong>5 pts</strong></td>
+            <td style="padding:5px 8px;color:var(--gris)">Acert&#xF3; empate (marcador diferente)</td>
           </tr>
           <tr>
-            <td style="padding:5px 8px">Pronos: M&#xE9;xico <strong>2&ndash;0</strong> Ecuador</td>
+            <td style="padding:5px 8px">M&#xE9;xico <strong>2&ndash;0</strong> Ecuador</td>
             <td style="padding:5px 8px"><strong>0 pts</strong></td>
-            <td style="padding:5px 8px;color:var(--gris)">Predijo victoria directa &mdash; el partido fue empate al 90&#x27; (aunque M&#xE9;xico avanz&#xF3;)</td>
-          </tr>
-          <tr>
-            <td style="padding:5px 8px">Pronos: Ecuador <strong>2&ndash;0</strong> M&#xE9;xico</td>
-            <td style="padding:5px 8px"><strong>0 pts</strong></td>
-            <td style="padding:5px 8px;color:var(--gris)">Predijo que Ecuador avanza &mdash; incorrecto</td>
+            <td style="padding:5px 8px;color:var(--gris)">Predijo que gana M&#xE9;xico, pero fue empate</td>
           </tr>
         </table>
-        <p style="margin-top:8px;font-size:0.78rem;color:var(--gris)">
-          &#x2139;&#xFE0F; Solo empates (X) dan puntos cuando el partido fue a penales. Predecir victoria directa (1 o 2) da 0 pts aunque hayas acertado el clasificado.
-        </p>
+        <br>
+        <strong>Ejemplo B &mdash; Cuartos con ganador en los 90:</strong><br>
+        Resultado real: Brasil <strong>0&ndash;2</strong> Francia (gana Francia en 90&#x27;)<br>
+        <em style="font-size:0.78rem;color:var(--gris)">Cuartos: exacto = 17 pts &middot; resultado = 7 pts</em><br><br>
+        <table style="width:100%;font-size:0.82rem;border-collapse:collapse">
+          <tr style="background:#f0fdf4">
+            <td style="padding:5px 8px">&#x1F947; Brasil <strong>0&ndash;2</strong> Francia</td>
+            <td style="padding:5px 8px"><strong>17 pts</strong></td>
+            <td style="padding:5px 8px;color:var(--gris)">Marcador exacto</td>
+          </tr>
+          <tr style="background:#fffbeb">
+            <td style="padding:5px 8px">Brasil <strong>1&ndash;3</strong> Francia</td>
+            <td style="padding:5px 8px"><strong>7 pts</strong></td>
+            <td style="padding:5px 8px;color:var(--gris)">Acert&#xF3; que gana Francia</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 8px">Brasil <strong>1&ndash;1</strong> Francia</td>
+            <td style="padding:5px 8px"><strong>0 pts</strong></td>
+            <td style="padding:5px 8px;color:var(--gris)">Predijo empate, pero gan&#xF3; Francia</td>
+          </tr>
+        </table>
       </div>
     </div>
     <hr class="sep">
@@ -775,20 +815,16 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     </div>
     <hr class="sep">
     <div class="instruc-section">
-      <h3>Desempate en el podio</h3>
-      <ul>
-        <li>Empate en puntos &#x2192; gana quien tenga m&#xE1;s <strong>marcadores exactos</strong>.</li>
-        <li>Persiste empate &#x2192; gana quien tenga m&#xE1;s <strong>resultados correctos</strong>.</li>
-        <li>Persiste empate &#x2192; gana quien haya llenado m&#xE1;s pron&#xF3;sticos en esa fase.</li>
-      </ul>
+      <h3>Desempate</h3>
+      <p style="font-size:0.85rem;margin-bottom:8px">El ranking ordena por: puntos &#x2192; m&#xE1;s marcadores exactos &#x2192; m&#xE1;s resultados correctos &#x2192; m&#xE1;s pron&#xF3;sticos llenados.</p>
+      <p style="font-size:0.85rem"><strong>Reparto del premio en caso de empate:</strong> si dos o m&#xE1;s personas quedan empatadas en un puesto premiado (en una fase o en el General), el dinero de ese puesto se <strong>divide en partes iguales</strong> entre ellas. Los dem&#xE1;s puestos cobran su porcentaje completo.</p>
+      <p style="font-size:0.78rem;color:var(--gris);margin-top:6px">Ejemplo: si dos empatan en el 1er lugar de una fase, el 30% se divide 15% y 15%; el 2do lugar conserva su 20% y el 3ro su 10%.</p>
     </div>
     <div class="instruc-section">
-      <h3>Desempate en el podio</h3>
-      <ul>
-        <li>Empate en puntos &#x2192; gana quien tenga m&#xE1;s <strong>marcadores exactos</strong>.</li>
-        <li>Persiste empate &#x2192; gana quien tenga m&#xE1;s <strong>resultados correctos</strong>.</li>
-        <li>Persiste empate &#x2192; gana quien haya llenado m&#xE1;s pron&#xF3;sticos en esa fase.</li>
-      </ul>
+      <h3>Desempate</h3>
+      <p style="font-size:0.85rem;margin-bottom:8px">El ranking ordena por: puntos &#x2192; m&#xE1;s marcadores exactos &#x2192; m&#xE1;s resultados correctos &#x2192; m&#xE1;s pron&#xF3;sticos llenados.</p>
+      <p style="font-size:0.85rem"><strong>Reparto del premio en caso de empate:</strong> si dos o m&#xE1;s personas quedan empatadas en un puesto premiado (en una fase o en el General), el dinero de ese puesto se <strong>divide en partes iguales</strong> entre ellas. Los dem&#xE1;s puestos cobran su porcentaje completo.</p>
+      <p style="font-size:0.78rem;color:var(--gris);margin-top:6px">Ejemplo: si dos empatan en el 1er lugar de una fase, el 30% se divide 15% y 15%; el 2do lugar conserva su 20% y el 3ro su 10%.</p>
     </div>
   </div>
 
@@ -3910,27 +3946,16 @@ function calcularPuntos(partido, pronostico) {
   const gvR = partido.goles_visita;
   const glP = pronostico.goles_local;
   const gvP = pronostico.goles_visita;
+  if (glR === null || glR === undefined || gvR === null || gvR === undefined) return 0;
 
-  if (fase === 'grupos') {
-    const res = (gl, gv) => gl > gv ? 'L' : gl < gv ? 'V' : 'E';
-    if (glP === glR && gvP === gvR) return pts.exacto;
-    if (res(glP, gvP) === res(glR, gvR)) return pts.resultado;
-  } else {
-    // Eliminatorias - soporta partidos definidos en penales (Option A)
-    const avanzaLocalReal = partido.avanza_local;
-    if (avanzaLocalReal === null || avanzaLocalReal === undefined) return 0;
-
-    // Exacto: marcador de 90 exacto (incluye empates a penales, ej. 2-2)
-    if (glP === glR && gvP === gvR) return pts.exacto;
-
-    // Resultado: partido fue a penales (empate en 90) y usuario predijo empate
-    if (glR === gvR && glP === gvP) return pts.resultado;
-
-    // Resultado: partido se definio en 90 y usuario acerto el ganador
-    if (glR !== gvR && (glP > gvP) === avanzaLocalReal) return pts.resultado;
-
-    return 0;
-  }
+  // TODAS las fases usan la misma logica: marcador al final de los 90 minutos.
+  // Reglamento: la prorroga y los penales NO cuentan. Si un partido se define en
+  // penales, el resultado oficial para la quiniela es EMPATE (mismo trato que grupos).
+  // El campo avanza_local solo se usa para el bracket/generar fases, NO para puntos.
+  const res = (gl, gv) => gl > gv ? 'L' : gl < gv ? 'V' : 'E';
+  if (glP === glR && gvP === gvR) return pts.exacto;
+  if (res(glP, gvP) === res(glR, gvR)) return pts.resultado;
+  return 0;
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
