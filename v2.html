@@ -871,13 +871,11 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
       <p style="font-size:0.82rem;color:var(--gris);margin-bottom:10px">
         Genera los cruces de una fase bas&#xE1;ndose en los ganadores de la fase anterior.
       </p>
-      <button class="btn-sm" onclick="generarCrucesR32()" style="width:100%;margin-bottom:10px;background:var(--verde);color:#fff">
-        &#x1F3AF; Generar cruces R32 (desde clasificados de grupos)
-      </button>
       <div id="admin-r32-bracket" style="display:none;margin-bottom:14px"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
         <label style="font-size:0.82rem;font-weight:600;white-space:nowrap">Generar:</label>
         <select id="gen-fase-dest" style="flex:1;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff">
+          <option value="r32"          data-from="grupos">Ronda de 32 (desde clasificados de grupos)</option>
           <option value="r16"          data-from="r32">Octavos (R16) desde ganadores R32</option>
           <option value="cuartos"      data-from="r16">Cuartos desde ganadores Octavos</option>
           <option value="semis"        data-from="cuartos">Semis desde ganadores Cuartos</option>
@@ -2860,6 +2858,8 @@ async function generarSiguienteFase() {
   const sel       = document.getElementById('gen-fase-dest');
   const faseDest  = sel.value;
   const faseOrig  = sel.selectedOptions[0]?.dataset.from;
+  // R32 tiene logica propia (desde standings de grupos, no desde ganadores)
+  if (faseDest === 'r32') { generarCrucesR32(); return; }
   const bracketEl = document.getElementById('admin-elim-bracket');
   bracketEl.style.display = 'block';
   bracketEl.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Leyendo resultados...</div>';
