@@ -216,13 +216,11 @@ body {
 /* PHASE TABS */
 .phase-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
   padding-bottom: 4px;
   margin-bottom: 16px;
-  scrollbar-width: none;
 }
-.phase-tabs::-webkit-scrollbar { display: none; }
 .tab-btn {
   white-space: nowrap;
   background: white;
@@ -2163,7 +2161,7 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
 
     return `
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--borde)">
-        <span style="min-width:72px;font-size:0.78rem;font-weight:700;color:var(--texto);flex-shrink:0">${FASES_LABELS[f]}</span>
+        <span style="width:95px;min-width:95px;font-size:0.78rem;font-weight:700;color:var(--texto);flex-shrink:0">${FASES_LABELS[f]}</span>
         <div style="display:flex;flex-wrap:wrap;gap:5px">${chips}</div>
       </div>`;
   }).filter(Boolean);
