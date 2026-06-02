@@ -3661,12 +3661,8 @@ async function adminUpdateResult() {
     allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, penales_local: isNaN(penL)?null:penL, penales_visita: isNaN(penV)?null:penV, estado: 'finalizado' };
   }
 
-  // Si es la Final, premiar al campeón
-  if (partido.fase === 'final' && avanzaLocal !== null) {
-    await premiarCampeon(partido.equipo_local, partido.equipo_visita, avanzaLocal);
-  }
 
-  msgEl.innerHTML = `<div class="alert alert-ok">✅ Resultado guardado. ${(prons||[]).length} pronósticos calculados.${partido.fase === 'final' ? ' 🏆 Campeón premiado.' : ''}</div>`;
+  msgEl.innerHTML = `<div class="alert alert-ok">✅ Resultado guardado. ${(prons||[]).length} pronósticos calculados.</div>`;
   loadAdminPanel();
 }
 
