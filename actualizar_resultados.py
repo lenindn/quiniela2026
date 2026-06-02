@@ -114,6 +114,12 @@ def parse_match(m: dict) -> dict | None:
     gl_real     = rt_score.get('home')
     gv_real     = rt_score.get('away')
     winner      = score.get('winner')  # HOME_TEAM / AWAY_TEAM / DRAW / null
+
+    # Penales (informativo, no afecta puntos). La API los da en score.penalties.
+    pen_score   = score.get('penalties') or {}
+    pen_local   = pen_score.get('home')
+    pen_visita  = pen_score.get('away')
+
     group_raw   = m.get('group', '')
     grupo       = group_raw.replace('GROUP_', '').strip() if group_raw else None
 
@@ -136,6 +142,8 @@ def parse_match(m: dict) -> dict | None:
         'goles_local':    gl_real,
         'goles_visita':   gv_real,
         'avanza_local':   avanza_local,
+        'penales_local':  pen_local,
+        'penales_visita': pen_visita,
         'estado':         estado,
         'fuente':         'automatico' if estado == 'finalizado' else 'pendiente',
     }
@@ -176,6 +184,8 @@ def sync_matches(sb: Client, api_matches: list) -> list:
                     'goles_local':    parsed['goles_local'],
                     'goles_visita':   parsed['goles_visita'],
                     'avanza_local':   parsed['avanza_local'],
+                    'penales_local':  parsed['penales_local'],
+                    'penales_visita': parsed['penales_visita'],
                     'estado':         parsed['estado'],
                     'fuente':         parsed['fuente'],
                     'fecha_partido':  parsed['fecha_partido'],
