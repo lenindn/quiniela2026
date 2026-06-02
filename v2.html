@@ -2772,6 +2772,15 @@ async function generarCrucesR32() {
 
 async function crearTodosR32(total) {
   const msgEl = document.getElementById('r32-msg');
+  // Prevenir duplicados: si R32 ya tiene partidos, pedir confirmacion
+  const yaExisten = allPartidos.filter(p => p.fase === 'r32').length;
+  if (yaExisten > 0) {
+    if (!confirm('\u26A0\uFE0F La Ronda de 32 ya tiene ' + yaExisten + ' partidos creados.\n\nSi continuas se DUPLICARAN. Para regenerar, primero elimina los existentes.\n\n\u00bfCrear de todas formas?')) {
+      msgEl.style.color = 'var(--gris)';
+      msgEl.textContent = 'Cancelado.';
+      return;
+    }
+  }
   msgEl.textContent = '\u23F3 Verificando datos...';
   msgEl.style.color = 'var(--gris)';
 
@@ -2954,6 +2963,16 @@ async function generarSiguienteFase() {
 
 async function crearTodosElim(total, faseDest) {
   const msgEl = document.getElementById('elim-msg');
+  // Prevenir duplicados: si la fase ya tiene partidos, pedir confirmacion
+  const yaExisten = allPartidos.filter(p => p.fase === faseDest).length;
+  if (yaExisten > 0) {
+    if (!confirm('\u26A0\uFE0F La fase ' + (FASES_LABELS[faseDest] || faseDest) + ' ya tiene ' + yaExisten + ' partidos creados.\n\nSi continuas se DUPLICARAN. Para regenerar, primero elimina los existentes.\n\n\u00bfCrear de todas formas?')) {
+      msgEl.style.color = 'var(--gris)';
+      msgEl.textContent = 'Cancelado.';
+      return;
+    }
+  }
+  msgEl.style.color = 'var(--gris)';
   msgEl.textContent = '\u23F3 Verificando...';
 
   const usados = [];
