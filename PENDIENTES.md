@@ -1,0 +1,56 @@
+# Pendientes — Quiniela Mundial 2026
+
+## 🔴 Para activar la API automática (cuando empiece el torneo)
+
+La actualización automática de resultados está LISTA en código pero requiere
+configurar 3 secrets en GitHub para funcionar:
+
+1. Ir a: repo `quiniela2026` → **Settings → Secrets and variables → Actions**
+2. Crear estos 3 secrets:
+   - `SUPABASE_URL` → la URL del proyecto Supabase
+   - `SUPABASE_SERVICE_KEY` → la service_role key de Supabase (NO la anon)
+   - `FOOTBALL_API_KEY` → la key de football-data.org
+
+3. **Verificar el código de competición** del Mundial 2026 en football-data.org.
+   En `actualizar_resultados.py` está como `COMPETITION_CODE = 'WC'`. Confirmar
+   que ese código y `SEASON = 2026` son correctos cuando la API publique el torneo.
+
+4. **Ajustar el cron si hace falta.** En `.github/workflows/actualizar.yml` corre
+   cada 2h en la franja 16:00–06:00 UTC (jun-jul). Si el fixture oficial usa otras
+   horas, ajustar las horas del cron.
+
+> Mientras tanto, los resultados se cargan MANUALMENTE desde el panel admin.
+> El botón `workflow_dispatch` permite ejecutar la API a mano desde GitHub Actions.
+
+---
+
+## ✅ Ya configurado en Supabase (no repetir)
+
+- RPC `verify_admin_pin` (PIN admin server-side)
+- RPC `set_config_valor` (guardar potes/textos de premio)
+- RPC `get_actividad` (log de actividad solo para admin)
+- Tabla `actividad` (registro de acciones de usuarios)
+- Columna `participantes.fases_activas` (activar/desactivar por fase)
+- Columnas `partidos.penales_local` y `penales_visita` (penales informativos)
+- Config: textos de potes por fase (`pote_grupos`, `pote_r32`, etc.)
+
+---
+
+## 📋 Reglas de negocio confirmadas (reglamento Liceo San José)
+
+- **Puntos:** todas las fases por marcador de **90 minutos**.
+- **Penales/prórroga:** NO cuentan para puntos. Si va a penales = EMPATE oficial.
+  Los penales solo se muestran de forma **informativa**.
+- **`avanza_local`:** solo sirve para el bracket / generar siguiente fase, NO para puntos.
+- **Tercer Puesto:** 10 pts resultado / 25 exacto (igual que Semis).
+- **Premio General:** suma de todas las fases; elegible solo quien jugó todas.
+- **Dinero:** la app NO maneja dinero; es opcional e interno de cada grupo.
+- **recalcular_puntos.sql:** ya ejecutado con la lógica corregida (sin el bug
+  del empate-visitante). Re-ejecutar si se recalcula manualmente.
+
+---
+
+## 💡 Ideas / mejoras futuras (no urgente)
+
+- Bracket visual de eliminatorias (actualmente columnas simples).
+- Migración a Supabase Auth + RLS real (cuando el sistema esté 100% estable).
