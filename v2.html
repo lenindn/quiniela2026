@@ -410,7 +410,7 @@ body {
   letter-spacing:.5px; padding:4px 8px; background:var(--fondo); border-bottom:2px solid var(--verde);
   margin-bottom:8px; text-align:center; position:sticky; top:0; z-index:1; }
 .bracket-spacer { flex:1; }
-.bracket-match { border:1.5px solid var(--borde); border-radius:8px; overflow:hidden;
+.bracket-match { border:1.5px solid var(--borde); border-radius:8px;
   margin:0; background:#fff; font-size:0.8rem; flex-shrink:0; }
 /* Lineas conectoras del bracket (horizontales) */
 .bracket-match { position:relative; }
@@ -428,7 +428,8 @@ body {
 .bracket-col.col-aparte .bracket-match::after { display:none; }
 .bracket-team { display:flex; align-items:center; justify-content:space-between;
   padding:7px 10px; border-bottom:1px solid var(--borde); gap:6px; }
-.bracket-team:last-child { border-bottom:none; }
+.bracket-team:last-child { border-bottom:none; border-radius:0 0 7px 7px; }
+.bracket-team:first-child { border-radius:7px 7px 0 0; }
 .bracket-arrow { color: var(--exito); font-size: 0.7rem; }
 .bracket-team.winner { background:#f0fdf4; font-weight:700; color:var(--verde); }
 .bracket-team.loser  { color:var(--gris); }
