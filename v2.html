@@ -405,12 +405,13 @@ body {
 .bracket-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:12px; }
 .bracket-rounds { display:flex; gap:0; min-width:max-content; }
 .bracket-col { display:flex; flex-direction:column; min-width:150px; }
+.bracket-col-body { flex:1; display:flex; flex-direction:column; justify-content:space-around; gap:10px; min-height:0; }
 .bracket-col-header { font-size:0.7rem; font-weight:800; color:var(--verde); text-transform:uppercase;
   letter-spacing:.5px; padding:4px 8px; background:var(--fondo); border-bottom:2px solid var(--verde);
   margin-bottom:8px; text-align:center; position:sticky; top:0; z-index:1; }
 .bracket-spacer { flex:1; }
 .bracket-match { border:1.5px solid var(--borde); border-radius:8px; overflow:hidden;
-  margin-bottom:16px; background:#fff; font-size:0.8rem; }
+  margin:0; background:#fff; font-size:0.8rem; flex-shrink:0; }
 .bracket-team { display:flex; align-items:center; justify-content:space-between;
   padding:7px 10px; border-bottom:1px solid var(--borde); gap:6px; }
 .bracket-team:last-child { border-bottom:none; }
@@ -1892,6 +1893,7 @@ async function loadBracketView() {
       const matches = porFase[key] || [];
       html += '<div class="bracket-col">';
       html += '<div class="bracket-col-header">' + label + '</div>';
+      html += '<div class="bracket-col-body">';
 
       if (matches.length === 0) {
         // Fase no generada a?n ? mostrar slots vac?os
@@ -1903,6 +1905,7 @@ async function loadBracketView() {
           html += renderBracketMatch(p);
         });
       }
+      html += '</div>';
       html += '</div>';
 
       // Conector visual entre columnas (excepto despu?s del final)
@@ -2069,6 +2072,7 @@ async function loadGruposView() {
             + '</div>';
         });
       }
+      html += '</div>';
       html += '</div>';
     });
     html += '<div style="font-size:0.7rem;color:var(--gris);text-align:center;padding:8px">Desempate FIFA: Pts / DG / GF</div>';
