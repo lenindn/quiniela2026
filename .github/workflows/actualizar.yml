@@ -2,8 +2,12 @@ name: Actualizar Resultados Mundial 2026
 
 on:
   schedule:
-    # Cada 2 horas durante el torneo (11 jun - 19 jul 2026)
-    - cron: '0 */2 * * *'
+    # Solo durante el torneo (junio-julio) y en la ventana de partidos.
+    # Mundial 2026 en Norteamerica: partidos ~12:00-22:00 hora local
+    # = aprox 16:00-06:00 UTC. Corre cada 2h SOLO en esa franja.
+    # Horas UTC: 16,18,20,22,00,02,04,06. Meses: 6 (jun) y 7 (jul).
+    # Ajustar si el fixture oficial usa otras franjas horarias.
+    - cron: '0 16,18,20,22,0,2,4,6 * 6,7 *'
   workflow_dispatch:
     # Permite ejecutar manualmente desde GitHub Actions
 
