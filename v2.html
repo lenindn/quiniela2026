@@ -412,6 +412,20 @@ body {
 .bracket-spacer { flex:1; }
 .bracket-match { border:1.5px solid var(--borde); border-radius:8px; overflow:hidden;
   margin:0; background:#fff; font-size:0.8rem; flex-shrink:0; }
+/* Lineas conectoras del bracket (horizontales) */
+.bracket-match { position:relative; }
+.bracket-match::after {
+  content:''; position:absolute; top:50%; right:-11px;
+  width:11px; height:2px; background:var(--borde); transform:translateY(-50%);
+}
+.bracket-match::before {
+  content:''; position:absolute; top:50%; left:-11px;
+  width:11px; height:2px; background:var(--borde); transform:translateY(-50%);
+}
+.bracket-col.col-first .bracket-match::before { display:none; }
+.bracket-col.col-last  .bracket-match::after  { display:none; }
+.bracket-col.col-aparte .bracket-match::before,
+.bracket-col.col-aparte .bracket-match::after { display:none; }
 .bracket-team { display:flex; align-items:center; justify-content:space-between;
   padding:7px 10px; border-bottom:1px solid var(--borde); gap:6px; }
 .bracket-team:last-child { border-bottom:none; }
@@ -1891,7 +1905,8 @@ async function loadBracketView() {
     FASES_ELIM.forEach(({ key, label, n }) => {
       if (key === 'tercer_lugar' && !porFase[key]?.length) return; // skip si no hay 3er lugar
       const matches = porFase[key] || [];
-      html += '<div class="bracket-col">';
+      const colCls = (key === 'r32' ? ' col-first' : '') + (key === 'final' ? ' col-last' : '') + (key === 'tercer_lugar' ? ' col-aparte' : '');
+      html += '<div class="bracket-col' + colCls + '">';
       html += '<div class="bracket-col-header">' + label + '</div>';
       html += '<div class="bracket-col-body">';
 
@@ -1910,7 +1925,7 @@ async function loadBracketView() {
 
       // Conector visual entre columnas (excepto despu?s del final)
       if (key !== 'final' && key !== 'tercer_lugar') {
-        html += '<div style="width:20px;flex-shrink:0"></div>';
+        html += '<div style="width:22px;flex-shrink:0"></div>';
       }
     });
 
