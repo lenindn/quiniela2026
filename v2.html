@@ -721,7 +721,7 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     <hr class="sep">
     <div class="instruc-section">
       <h3>Reglas en fases eliminatorias</h3>
-      <p>Pronostica el marcador al final de los <strong>90 minutos reglamentarios</strong>. Los penales <strong>no se suman al marcador</strong> &mdash; solo definen qui&#xE9;n avanza.</p>
+      <p>Pronostica el marcador al final de los <strong>90 minutos reglamentarios</strong>. La <strong>pr&#xF3;rroga y los penales NO cuentan</strong> para el marcador &mdash; solo definen qui&#xE9;n avanza. Ejemplo: si va 1&ndash;1 al 90&#x27; y luego cae un gol en la pr&#xF3;rroga, el marcador que cuenta sigue siendo 1&ndash;1.</p>
       <p style="margin-top:6px;font-size:0.82rem"><strong>Fases que pueden ir a penales:</strong> Ronda de 32, Octavos, Cuartos, Semifinales, 3er Lugar y Final. En Grupos el empate es resultado normal (no hay penales).</p>
       <ul style="margin-top:8px">
         <li><strong>Marcador exacto:</strong> acertaste el marcador al 90', incluyendo empates (ej. 2-2) que van a penales.</li>
@@ -729,6 +729,7 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
           <ul style="margin-top:4px">
             <li>Si el partido fue a <strong>penales</strong> (empate en 90'): cualquier empate pronosticado cuenta.</li>
             <li>Si hubo <strong>ganador en 90'</strong>: acertaste el equipo ganador (aunque el marcador sea diferente).</li>
+            <li><strong>Importante:</strong> si predices empate pero hubo ganador en 90' (o viceversa), son <strong>0 pts</strong> &mdash; aunque hayas acertado qui&#xE9;n se clasific&#xF3;.</li>
           </ul>
         </li>
       </ul>
@@ -765,6 +766,15 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     </div>
     <hr class="sep">
     <div class="instruc-section">
+      <h3>Participaci&#xF3;n por fase</h3>
+      <ul>
+        <li>El administrador puede activar o desactivar a un participante <strong>en una fase espec&#xED;fica</strong>.</li>
+        <li>Si est&#xE1;s <strong>desactivado en una fase</strong>: no puedes cargar pron&#xF3;sticos de esa fase, no sumas sus puntos y no apareces en su ranking. Las dem&#xE1;s fases no se ven afectadas.</li>
+        <li>Para competir por el <strong>Premio General</strong> debes estar activo en todas las fases que se hayan jugado.</li>
+      </ul>
+    </div>
+    <hr class="sep">
+    <div class="instruc-section">
       <h3>Desempate en el podio</h3>
       <ul>
         <li>Empate en puntos &#x2192; gana quien tenga m&#xE1;s <strong>marcadores exactos</strong>.</li>
@@ -781,8 +791,6 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
       </ul>
     </div>
   </div>
-  </div>
-</div>
 
 <!-- VISTA ADMIN -->
 <div id="view-admin" class="view">
