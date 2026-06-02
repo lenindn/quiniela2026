@@ -415,12 +415,12 @@ body {
 /* Lineas conectoras del bracket (horizontales) */
 .bracket-match { position:relative; }
 .bracket-match::after {
-  content:''; position:absolute; top:50%; right:-11px;
-  width:11px; height:2px; background:var(--borde); transform:translateY(-50%);
+  content:''; position:absolute; top:50%; right:-12px;
+  width:12px; height:2px; background:#9aa5b1; transform:translateY(-50%); z-index:0;
 }
 .bracket-match::before {
-  content:''; position:absolute; top:50%; left:-11px;
-  width:11px; height:2px; background:var(--borde); transform:translateY(-50%);
+  content:''; position:absolute; top:50%; left:-12px;
+  width:12px; height:2px; background:#9aa5b1; transform:translateY(-50%); z-index:0;
 }
 .bracket-col.col-first .bracket-match::before { display:none; }
 .bracket-col.col-last  .bracket-match::after  { display:none; }
