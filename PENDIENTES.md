@@ -18,6 +18,18 @@ de prueba. NO toca la estructura (tablas, RPCs, columnas) ni la config.
   Si usar colores/estetica generica, balon/trofeo, banderas (dominio publico),
   y branding propio.
 
+### 3. Foto/selfie de cada participante (dificultad media)
+Avatar junto al nombre en ranking, podio y detalle.
+- Base ya existe: subida a Supabase Storage (ver funcion uploadLogo de grupos).
+- Falta: columna participantes.foto_url; input selfie en movil
+  (<input type="file" accept="image/*" capture="user"> abre camara frontal);
+  redimensionar a ~200x200 en cliente antes de subir; mostrar avatar redondo;
+  placeholder con inicial si no hay foto.
+- Opcional (no obligar). ~30KB por foto, free tier sobra.
+- Hacerlo junto con la mejora visual (ambos tocan presentacion).
+
+> Demo de referencia: demo_visual.html en el repo (header, banderas, podio).
+
 ---
 
 
