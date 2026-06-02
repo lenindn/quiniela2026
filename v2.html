@@ -2227,7 +2227,7 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
 
   // Grid dinámico según cuántas fases tienen datos
   const colsFases = fasesConDatos.map(() => '38px').join(' ');
-  const gridCols  = `32px 1fr 55px ${colsFases} 38px`;
+  const gridCols  = `30px minmax(130px,1fr) 46px ${colsFases} 34px`;
   const medals    = ['🥇','🥈','🥉'];
 
   const headerFases = fasesConDatos.map(f =>
@@ -2269,8 +2269,11 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
       </div>`;
   }).join('');
 
+  // Ancho minimo: 30(rank)+130(nombre)+46(total)+N*36(fases)+34(exactos)
+  const minW = 30 + 130 + 46 + (fasesConDatos.length * 36) + 34;
   const tablaHTML = `
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card" style="padding:0;overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <div style="min-width:${minW}px">
       <div class="tabla-header" style="grid-template-columns:${gridCols}">
         <div style="text-align:center">#</div>
         <div>Participante</div>
@@ -2279,9 +2282,10 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
         <div style="text-align:center">⭐</div>
       </div>
       ${rows}
+      </div>
     </div>
     <div style="font-size:0.7rem;color:var(--gris);text-align:center;margin-top:6px">
-      ⭐ = Total exactos · columnas = pts por fase · ✗ = no participó
+      ⭐ = Total exactos · columnas = pts por fase · ✗ = no participó · desliza ➡ para ver fases
     </div>`;
 
   cont.innerHTML = grupoTxt + ganadoresHTML + tablaHTML;
