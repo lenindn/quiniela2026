@@ -414,6 +414,7 @@ body {
 .bracket-team { display:flex; align-items:center; justify-content:space-between;
   padding:7px 10px; border-bottom:1px solid var(--borde); gap:6px; }
 .bracket-team:last-child { border-bottom:none; }
+.bracket-arrow { color: var(--exito); font-size: 0.7rem; }
 .bracket-team.winner { background:#f0fdf4; font-weight:700; color:var(--verde); }
 .bracket-team.loser  { color:var(--gris); }
 .bracket-team.tbd    { color:var(--gris); font-style:italic; font-size:0.72rem; }
@@ -1940,13 +1941,17 @@ function renderBracketMatch(p) {
   const clsL = ganadorLocal  ? 'winner' : (fin && !ganadorLocal  ? 'loser' : '');
   const clsV = ganadorVisita ? 'winner' : (fin && !ganadorVisita ? 'loser' : '');
 
+  // Flecha de avance: indica visualmente qué equipo pasa a la siguiente ronda
+  const flechaL = ganadorLocal  ? '<span class="bracket-arrow" title="Avanza">\u25B6</span> ' : '';
+  const flechaV = ganadorVisita ? '<span class="bracket-arrow" title="Avanza">\u25B6</span> ' : '';
+
   return '<div class="bracket-match">'
     + '<div class="bracket-team ' + clsL + '">'
-    + '<span class="bracket-name">' + (p.equipo_local  || 'Por definir') + '</span>'
+    + '<span class="bracket-name">' + flechaL + (p.equipo_local  || 'Por definir') + '</span>'
     + (fin ? '<span class="bracket-score">' + gL + '</span>' : '')
     + '</div>'
     + '<div class="bracket-team ' + clsV + '">'
-    + '<span class="bracket-name">' + (p.equipo_visita || 'Por definir') + '</span>'
+    + '<span class="bracket-name">' + flechaV + (p.equipo_visita || 'Por definir') + '</span>'
     + (fin ? '<span class="bracket-score">' + gV + '</span>' : '')
     + '</div>'
     + '</div>';
