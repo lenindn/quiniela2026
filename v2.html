@@ -3470,8 +3470,27 @@ function onAdminPartidoChange() {
   const sel = document.getElementById('admin-partido-sel');
   const pid = parseInt(sel.value);
   const avanzaRow = document.getElementById('admin-avanza-row');
+
+  // Limpiar siempre al cambiar de partido
+  document.getElementById('admin-gl').value = '';
+  document.getElementById('admin-gv').value = '';
+  document.querySelectorAll('input[name="avanza"]').forEach(r => r.checked = false);
+  document.getElementById('admin-result-msg').innerHTML = '';
+
   if (!pid) { avanzaRow.style.display = 'none'; return; }
   const p = allPartidos.find(x => x.id === pid);
+
+  // Pre-rellenar si ya tiene resultado guardado
+  if (p && p.goles_local !== null && p.goles_local !== undefined) {
+    document.getElementById('admin-gl').value = p.goles_local;
+    document.getElementById('admin-gv').value = p.goles_visita;
+    if (p.avanza_local !== null && p.avanza_local !== undefined) {
+      const val = p.avanza_local ? 'local' : 'visita';
+      const radio = document.querySelector(`input[name="avanza"][value="${val}"]`);
+      if (radio) radio.checked = true;
+    }
+  }
+
   if (p && p.fase !== 'grupos') {
     avanzaRow.style.display = 'flex';
     document.getElementById('admin-lbl-local').textContent = p.equipo_local;
