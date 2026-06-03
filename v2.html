@@ -2176,15 +2176,19 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
     });
 
     const medals = ['🥇','🥈','🥉'];
-    const chips  = ranking.slice(0, 3).map((p, i) => {
-      const nEsc = p.nombre.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-      return `<span data-pid="${p.id}" data-nombre="${nEsc}" data-fase="${f}"
-        onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, false, this.dataset.fase)"
-        style="display:inline-flex;align-items:center;gap:4px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:3px 8px;font-size:0.8rem;cursor:pointer;text-decoration:underline dotted">
-        ${medals[i]} <strong>${p.nombre}</strong>
-        <span style="color:var(--gris);font-size:0.7rem">${p.pts}pts</span>
-      </span>`;
-    }).join('');
+    // Solo son ganadores quienes tienen pts > 0. Si nadie puntuo, no hay podio.
+    const conPts = ranking.filter(p => p.pts > 0).slice(0, 3);
+    const chips  = conPts.length === 0
+      ? '<span style="color:var(--gris);font-size:0.78rem;font-style:italic">Sin ganadores (nadie puntu&#xF3;)</span>'
+      : conPts.map((p, i) => {
+          const nEsc = p.nombre.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+          return `<span data-pid="${p.id}" data-nombre="${nEsc}" data-fase="${f}"
+            onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, false, this.dataset.fase)"
+            style="display:inline-flex;align-items:center;gap:4px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:3px 8px;font-size:0.8rem;cursor:pointer;text-decoration:underline dotted">
+            ${medals[i]} <strong>${p.nombre}</strong>
+            <span style="color:var(--gris);font-size:0.7rem">${p.pts}pts</span>
+          </span>`;
+        }).join('');
 
     return `
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--borde)">
@@ -2393,10 +2397,14 @@ function renderLeaderboardFase(fase, parts, prons, partidos) {
 function renderPodio(fase, ranking, finalizados, totalPartidos) {
   const medals = ['🥇','🥈','🥉'];
   const colores = ['#c9a023','#9ca3af','#b87333'];
-  const podio   = ranking.slice(0, 3);
-  const resto   = ranking.slice(3);
+  // Solo son podio quienes tienen pts > 0. Los demas van al desplegable.
+  const podio    = ranking.filter(p => p.pts > 0).slice(0, 3);
+  const podioIds = new Set(podio.map(p => p.id));
+  const resto    = ranking.filter(p => !podioIds.has(p.id));
 
-  const podioHTML = podio.map((p, i) => {
+  const podioHTML = podio.length === 0
+    ? '<div style="text-align:center;color:var(--gris);font-style:italic;padding:16px">Nadie puntuó en esta fase aún.</div>'
+    : podio.map((p, i) => {
     const esMi = currentUser && p.id === currentUser.id;
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:${esMi ? '#f0f9f0' : '#fff'};border-left:4px solid ${colores[i]};margin-bottom:6px;border-radius:0 8px 8px 0">
