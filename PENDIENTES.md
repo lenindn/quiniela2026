@@ -1,8 +1,13 @@
 # Pendientes — Quiniela Mundial 2026
 
-## ✅ PROXIMA SESION: Auditoria global + pruebas internas
+## ✅ AUDITORIA GLOBAL — COMPLETADA (ver REPORTE_AUDITORIA.md)
 
-PRIORIDAD. Antes de seguir con nuevas features, auditar TODO el sistema:
+74 verificaciones OK, 0 fallos reales. Correccion aplicada: BOM eliminado.
+Pendiente cosmetico (no afecta app): comentarios decorativos corruptos.
+
+<details><summary>Detalle de las 9 areas auditadas</summary>
+
+Antes de seguir con nuevas features, auditar TODO el sistema:
 
 1. **Sintaxis y estructura:** node --check del JS, balance de divs,
    sin funciones huerfanas (revisar referencias rotas tipo premiarCampeon).
@@ -24,6 +29,7 @@ PRIORIDAD. Antes de seguir con nuevas features, auditar TODO el sistema:
 
 Objetivo: garantizar funcionamiento optimo end-to-end antes de mejoras
 visuales y lanzamiento.
+</details>
 
 ---
 
