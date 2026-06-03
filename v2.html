@@ -656,8 +656,8 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
 <!-- VISTA GRUPOS MUNDIAL -->
 <div id="view-grupos" class="view">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-    <div class="section-title" style="margin-bottom:0">?? Fase de Grupos</div>
-    <button onclick="loadGruposView()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--gris);padding:4px 8px" title="Actualizar">??</button>
+    <div class="section-title" style="margin-bottom:0">🌍 Fase de Grupos</div>
+    <button onclick="loadGruposView()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--gris);padding:4px 8px" title="Actualizar">🔄</button>
   </div>
   <!-- Sub-tabs: Grupos | Bracket -->
   <div class="phase-tabs" id="grupos-subtabs" style="margin-bottom:12px">
@@ -2076,7 +2076,7 @@ async function loadGruposView() {
           : i === 2
           ? ' <span style="font-size:0.6rem;background:#f59e0b;color:#fff;border-radius:4px;padding:1px 4px">3ro</span>'
           : '';
-        const medal   = i === 0 ? '?? ' : i === 1 ? '?? ' : '';
+        const medal   = i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : '';
         html += '<tr style="border-bottom:1px solid var(--borde);background:' + bgs[Math.min(i,3)] + '">'
           + '<td style="padding:8px 6px;font-weight:' + (avanza?'700':'500') + '">' + medal + t.eq + badge + '</td>'
           + '<td style="text-align:center;padding:8px 3px">' + t.pj + '</td>'
