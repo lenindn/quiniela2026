@@ -1,5 +1,33 @@
 # Pendientes — Quiniela Mundial 2026
 
+## ✅ PROXIMA SESION: Auditoria global + pruebas internas
+
+PRIORIDAD. Antes de seguir con nuevas features, auditar TODO el sistema:
+
+1. **Sintaxis y estructura:** node --check del JS, balance de divs,
+   sin funciones huerfanas (revisar referencias rotas tipo premiarCampeon).
+2. **Calculo de puntos:** bateria de tests (grupos, KO con/sin penales,
+   bug empate-visitante) en JS, Python y SQL = mismos resultados.
+3. **Consistencia entre vistas:** podio del tab vs resumen General
+   (mismo filtro y desempate); penales informativos en Resultados, Picks,
+   Bracket y modal detalle.
+4. **Reglas de negocio:** fases_activas (activar/desactivar por fase),
+   elegibilidad General, ganadores solo con pts>0.
+5. **Generador de fases:** R32 desde grupos, siguientes fases desde
+   ganadores, anti-duplicados (confirmacion al crear).
+6. **Bracket:** centrado, lineas conectoras, flechas, campeon, penales.
+7. **Movil:** tabla General con scroll, tabs sin truncar, inputs de goles.
+8. **Flujos:** login por grupo, cambio de grupo, bloqueo por fase,
+   no duplicar participante (nombre+whatsapp por grupo).
+9. **Admin:** crear/editar partido, cargar resultado (limpia form),
+   ver picks de participantes, actividad.
+
+Objetivo: garantizar funcionamiento optimo end-to-end antes de mejoras
+visuales y lanzamiento.
+
+---
+
+
 ## 🚀 Antes de lanzar al grupo (fin de fase de prueba)
 
 ### 1. Borrar TODA la data de prueba
