@@ -4126,9 +4126,12 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
       : pts > 0
         ? `<span style="background:${esExacto ? 'var(--oro)' : '#e8f5e9'};color:${esExacto ? '#000' : '#1a5c2a'};padding:2px 7px;border-radius:10px;font-size:0.75rem;font-weight:700">+${pts}${esExacto ? ' ⭐' : ''}</span>`
         : '<span style="color:#bbb;font-size:0.75rem">0 pts</span>';
+    const hayPen = !pendiente && partido.penales_local !== null && partido.penales_local !== undefined
+                   && partido.penales_visita !== null && partido.penales_visita !== undefined;
+    const penStr = hayPen ? ` <span style="color:#94a3b8">(pen. ${partido.penales_local}-${partido.penales_visita})</span>` : '';
     const realStr = pendiente
       ? '<span style="color:#aaa">A\u00fan no jugado</span>'
-      : `Real: <strong>${partido.goles_local}-${partido.goles_visita}</strong>`;
+      : `Real: <strong>${partido.goles_local}-${partido.goles_visita}</strong>${penStr}`;
     return `
       <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem;${pendiente ? 'opacity:0.7' : ''}">
         <div style="flex:1;min-width:0">
