@@ -646,6 +646,7 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
 <!-- VISTA TABLA (v2 — ranking por fase) -->
 <div id="view-tabla" class="view">
   <div class="section-title">🏆 Ranking por Fase</div>
+  <div id="tabla-resumen"></div>
   <div class="phase-tabs" id="tabla-fase-tabs"></div>
   <div id="tabla-content">
     <div class="empty-state"><div class="spinner"></div></div>
@@ -1799,6 +1800,69 @@ function updateProgressBar() {
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 6 — RANKING POR FASE                                ║
 // ╚══════════════════════════════════════════════════════════════╝
+// ── Una fase está "cerrada" (picks ajenos visibles) si no está abierta o ya pasó su cierre ──
+function faseEstaCerrada(fase) {
+  const fd = allFases[fase];
+  if (!fd) return false;
+  if (!fd.abierta) return true;
+  if (fd.fecha_cierre && new Date(fd.fecha_cierre) <= new Date()) return true;
+  return false;
+}
+
+// ── Devuelve la fase abierta actual (abierta y sin cierre vencido), o null ──
+function faseAbiertaActual() {
+  const ahora = new Date();
+  return FASES_ORDEN.find(f => {
+    const fd = allFases[f];
+    return fd && fd.abierta && (!fd.fecha_cierre || new Date(fd.fecha_cierre) > ahora);
+  }) || null;
+}
+
+// ── Panel resumen del grupo: inscritos / listos / incompletos / sin picks de la fase abierta ──
+function renderResumenGrupo(parts, prons, partidos) {
+  const cont = document.getElementById('tabla-resumen');
+  if (!cont) return;
+  const fase = faseAbiertaActual();
+  if (!fase) { cont.innerHTML = ''; return; }
+  const idsFase = new Set(partidos.filter(p => p.fase === fase).map(p => p.id));
+  const total = idsFase.size;
+  if (total === 0) { cont.innerHTML = ''; return; }
+
+  // Picks distintos por participante dentro de la fase
+  const conteo = {};
+  (prons || []).forEach(pr => {
+    if (idsFase.has(pr.partido_id)) {
+      (conteo[pr.participante_id] = conteo[pr.participante_id] || new Set()).add(pr.partido_id);
+    }
+  });
+
+  const inscritos = parts.length;
+  let listos = 0, incompletos = 0, sinPicks = 0;
+  parts.forEach(p => {
+    const n = conteo[p.id] ? conteo[p.id].size : 0;
+    if (n === 0) sinPicks++;
+    else if (n >= total) listos++;
+    else incompletos++;
+  });
+
+  const chipIncompletos = incompletos > 0
+    ? `<span style="background:#fef3c7;color:#b45309;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700">⚠️ ${incompletos} incompletos</span>` : '';
+  const chipSinPicks = sinPicks > 0
+    ? `<span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700">✕ ${sinPicks} sin picks</span>` : '';
+
+  cont.innerHTML = `
+    <div style="background:#fff;border:1px solid var(--borde);border-radius:12px;padding:11px 14px;margin-bottom:12px">
+      <div style="font-size:0.7rem;font-weight:800;letter-spacing:1px;color:#94a3b8;text-transform:uppercase;margin-bottom:7px">Jugadores · ${FASES_LABELS[fase] || fase}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px 12px;align-items:center">
+        <span style="font-size:1.02rem;font-weight:800;color:#1f2d3d">${inscritos} inscritos</span>
+        <span style="color:#cbd5e1">|</span>
+        <span style="font-size:1.02rem;font-weight:800;color:var(--exito)">✅ ${listos}/${inscritos} listos</span>
+        ${chipIncompletos}
+        ${chipSinPicks}
+      </div>
+    </div>`;
+}
+
 // ── Carga inicial del ranking — construye tabs y renderiza la fase activa ──
 async function loadLeaderboard() {
   const cont   = document.getElementById('tabla-content');
@@ -1819,6 +1883,9 @@ async function loadLeaderboard() {
   const parts    = partRes.data   || [];
   const prons    = prRes.data     || [];
   const partidos = pardosRes.data || [];
+
+  // Panel resumen del grupo (inscritos / listos / incompletos / sin picks) de la fase abierta
+  renderResumenGrupo(parts, prons, partidos);
 
   // ── Construir tabs: General primero, luego cada fase ──
   tabsEl.innerHTML = '';
@@ -4101,21 +4168,28 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
   body.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
   modal.style.display = 'block';
 
-  // Cargar picks: verTodo=true (admin) trae todos; false solo calculados
-  let query = sb.from('pronosticos')
+  // Visibilidad: admin (verTodo) y uno mismo ven todo; el resto solo fases ya cerradas
+  const esPropio = currentUser && participanteId === currentUser.id;
+  const verCompleto = verTodo || esPropio;
+  const { data: prons } = await sb.from('pronosticos')
     .select('partido_id,goles_local,goles_visita,puntos,calculado')
     .eq('participante_id', participanteId)
     .order('partido_id');
-  if (!verTodo) query = query.eq('calculado', true);
-  const { data: prons } = await query;
 
   // Filtrar por fase si viene del podio (filtroFase != null)
   const partidosDeFase = filtroFase
     ? allPartidos.filter(p => p.fase === filtroFase).map(p => p.id)
     : null;
-  const allPicks  = (prons || []).filter(pr =>
+  let allPicks  = (prons || []).filter(pr =>
     !partidosDeFase || partidosDeFase.includes(pr.partido_id)
   );
+  // Candado anti-trampa: en vista pública solo se ven picks de fases ya cerradas
+  if (!verCompleto) {
+    allPicks = allPicks.filter(pr => {
+      const partido = allPartidos.find(p => p.id === pr.partido_id);
+      return partido && faseEstaCerrada(partido.fase);
+    });
+  }
   const calculados = allPicks.filter(pr => pr.calculado);
   const totalPts   = calculados.reduce((s, pr) => s + (pr.puntos || 0), 0);
   const faseLabel = filtroFase ? (FASES_LABELS[filtroFase] + ' · ') : '';
@@ -4123,7 +4197,10 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
     ? `${totalPts} pts · ${calculados.length} calculados · ${allPicks.length - calculados.length} pendientes`
     : `${faseLabel}${totalPts} pts · ${calculados.length} partidos`;
   if (allPicks.length === 0) {
-    body.innerHTML = '<div style="color:#999;text-align:center;padding:20px">Sin pron\u00f3sticos registrados a\u00fan.</div>';
+    const faseAb = !verCompleto ? faseAbiertaActual() : null;
+    body.innerHTML = faseAb
+      ? `<div style="color:#888;text-align:center;padding:24px;line-height:1.6">\ud83d\udd12<br>Los pron\u00f3sticos de <strong>${FASES_LABELS[faseAb] || faseAb}</strong> se mostrar\u00e1n cuando <strong>cierre la fase</strong>.</div>`
+      : '<div style="color:#999;text-align:center;padding:20px">Sin pron\u00f3sticos registrados a\u00fan.</div>';
     return;
   }
 
