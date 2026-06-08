@@ -873,6 +873,16 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
       <button class="btn-sm" onclick="verVistaAdmin('grupos')">&#x1F30D; Ver Grupos / Bracket</button>
       <button class="btn-sm" onclick="cerrarSesionAdmin()" style="background:#b91c1c;margin-left:auto">&#x1F511; Cerrar sesi&oacute;n</button>
     </div>
+    <!-- Cambiar contrasena admin -->
+    <div class="card admin-section" id="admin-cambiar-pass" style="display:none">
+      <h3>&#x1F511; Cambiar contrase&ntilde;a</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="password" id="admin-new-pass" placeholder="Nueva contrase&ntilde;a" autocomplete="new-password"
+          style="flex:1;min-width:180px;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.9rem">
+        <button class="btn-sm" onclick="cambiarPasswordAdmin()">Guardar</button>
+      </div>
+      <div id="admin-pass-msg" style="font-size:0.82rem;margin-top:6px"></div>
+    </div>
     <!-- Actualizar resultado -->
     <div class="card admin-section">
       <h3>📝 Actualizar Resultado</h3>
@@ -2784,6 +2794,19 @@ async function loginAdminAuth() {
   await activarPanelAdmin();
 }
 
+// Cambia la contraseña del admin autenticado
+async function cambiarPasswordAdmin() {
+  const pass = document.getElementById('admin-new-pass').value;
+  const msg  = document.getElementById('admin-pass-msg');
+  msg.textContent = '';
+  if (!pass || pass.length < 8) { msg.style.color = 'var(--error)'; msg.textContent = 'Mínimo 8 caracteres.'; return; }
+  const { error } = await sb.auth.updateUser({ password: pass });
+  if (error) { msg.style.color = 'var(--error)'; msg.textContent = 'Error: ' + error.message; return; }
+  msg.style.color = 'var(--exito)';
+  msg.textContent = '✅ Contraseña actualizada. Ya puedes iniciar sesión con email + contraseña.';
+  document.getElementById('admin-new-pass').value = '';
+}
+
 // Cierra la sesión admin de Supabase Auth
 async function cerrarSesionAdmin() {
   await sb.auth.signOut();
@@ -2796,6 +2819,12 @@ async function activarPanelAdmin() {
   isAdmin = true;
   document.getElementById('admin-login-section').style.display = 'none';
   document.getElementById('admin-panel').style.display = 'block';
+  // Mostrar "Cambiar contraseña" solo si hay sesión Auth activa
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const el = document.getElementById('admin-cambiar-pass');
+    if (el) el.style.display = session ? 'block' : 'none';
+  } catch(e) {}
   if (Object.keys(allFases).length === 0) {
     const [fRes, pRes] = await Promise.all([
       sb.from('fases').select('*'),
