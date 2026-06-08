@@ -852,18 +852,26 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   <div id="admin-login-section">
     <div class="admin-login-box">
       <h2>🔐 Admin</h2>
-      <p>Ingresa el PIN para acceder</p>
-      <input type="password" class="admin-pin-input" id="admin-pin" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter') verifyAdmin()">
-      <button class="btn-primary" onclick="verifyAdmin()">Entrar</button>
-      <div id="admin-pin-error" style="color:var(--error);font-size:0.82rem;margin-top:8px"></div>
+      <p>Inicia sesi&oacute;n con tu cuenta</p>
+      <input type="email" class="admin-pin-input" id="admin-email" placeholder="email" autocomplete="username" style="text-align:left;letter-spacing:normal;margin-bottom:8px">
+      <input type="password" class="admin-pin-input" id="admin-pass" placeholder="contrase&ntilde;a" autocomplete="current-password" onkeydown="if(event.key==='Enter') loginAdminAuth()" style="text-align:left;letter-spacing:normal;margin-bottom:8px">
+      <button class="btn-primary" onclick="loginAdminAuth()">Entrar</button>
+      <div id="admin-auth-error" style="color:var(--error);font-size:0.82rem;margin-top:8px"></div>
+      <details style="margin-top:14px;text-align:left">
+        <summary style="font-size:0.78rem;color:var(--gris);cursor:pointer">Acceso por PIN (respaldo)</summary>
+        <input type="password" class="admin-pin-input" id="admin-pin" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter') verifyAdmin()" style="margin-top:8px;margin-bottom:8px">
+        <button class="btn-secondary" onclick="verifyAdmin()">Entrar con PIN</button>
+        <div id="admin-pin-error" style="color:var(--error);font-size:0.82rem;margin-top:8px"></div>
+      </details>
     </div>
   </div>
   <div id="admin-panel" style="display:none">
     <!-- Accesos rápidos admin -->
-    <div class="card admin-section" style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="card admin-section" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn-sm" onclick="verVistaAdmin('instructivo')">&#x1F4D6; Ver Reglas</button>
       <button class="btn-sm" onclick="verVistaAdmin('resultados')">&#x1F4CB; Ver Resultados</button>
       <button class="btn-sm" onclick="verVistaAdmin('grupos')">&#x1F30D; Ver Grupos / Bracket</button>
+      <button class="btn-sm" onclick="cerrarSesionAdmin()" style="background:#b91c1c;margin-left:auto">&#x1F511; Cerrar sesi&oacute;n</button>
     </div>
     <!-- Actualizar resultado -->
     <div class="card admin-section">
@@ -1165,6 +1173,12 @@ let currentGrupoKey = '';  // valor del ?g=... en la URL, clave de localStorage
 // ╚══════════════════════════════════════════════════════════════╝
 document.addEventListener('DOMContentLoaded', async () => {
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Restaurar sesión admin si el navegador la recuerda (Supabase Auth)
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) isAdmin = true;
+  } catch (e) { /* sin sesión */ }
 
   const urlParams = new URLSearchParams(window.location.search);
   const grupoParam = urlParams.get('g');
@@ -1585,6 +1599,7 @@ async function navigate(view) {
   if (view === 'tabla')      loadLeaderboard();
   if (view === 'grupos')     { if (currentGruposTab === 'bracket') loadBracketView(); else loadGruposView(); }
   if (view === 'resultados') renderResultados();
+  if (view === 'admin' && isAdmin) activarPanelAdmin();
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -2753,11 +2768,34 @@ async function verifyAdmin() {
 
   localStorage.removeItem(intentosKey);
   localStorage.removeItem(bloqueoKey);
+  await activarPanelAdmin();
+}
+
+// Login admin con Supabase Auth (email + contraseña). La sesión la recuerda el navegador.
+async function loginAdminAuth() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pass  = document.getElementById('admin-pass').value;
+  const errEl = document.getElementById('admin-auth-error');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Ingresa email y contraseña.'; return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { errEl.textContent = 'No se pudo iniciar sesión. Revisa tus datos.'; return; }
+  document.getElementById('admin-pass').value = '';
+  await activarPanelAdmin();
+}
+
+// Cierra la sesión admin de Supabase Auth
+async function cerrarSesionAdmin() {
+  await sb.auth.signOut();
+  isAdmin = false;
+  location.reload();
+}
+
+// Muestra el panel admin y carga sus datos (compartido por Auth y PIN de respaldo)
+async function activarPanelAdmin() {
   isAdmin = true;
   document.getElementById('admin-login-section').style.display = 'none';
   document.getElementById('admin-panel').style.display = 'block';
-
-  // Cargar datos si el admin entro sin pasar por loadApp (login directo)
   if (Object.keys(allFases).length === 0) {
     const [fRes, pRes] = await Promise.all([
       sb.from('fases').select('*'),
@@ -2766,7 +2804,6 @@ async function verifyAdmin() {
     (fRes.data || []).forEach(f => allFases[f.id] = f);
     allPartidos = pRes.data || [];
   }
-
   loadAdminPanel();
 }
 
