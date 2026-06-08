@@ -857,6 +857,10 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
       <input type="password" class="admin-pin-input" id="admin-pass" placeholder="contrase&ntilde;a" autocomplete="current-password" onkeydown="if(event.key==='Enter') loginAdminAuth()" style="text-align:left;letter-spacing:normal;margin-bottom:8px">
       <button class="btn-primary" onclick="loginAdminAuth()">Entrar</button>
       <div id="admin-auth-error" style="color:var(--error);font-size:0.82rem;margin-top:8px"></div>
+      <div style="text-align:center;margin-top:10px">
+        <button type="button" onclick="solicitarMagicLink()" style="background:none;border:none;color:var(--verde);font-size:0.82rem;cursor:pointer;text-decoration:underline">&#x1F517; Enviarme link de acceso por correo</button>
+        <div id="admin-magic-msg" style="font-size:0.78rem;margin-top:4px"></div>
+      </div>
       <details style="margin-top:14px;text-align:left">
         <summary style="font-size:0.78rem;color:var(--gris);cursor:pointer">Acceso por PIN (respaldo)</summary>
         <input type="password" class="admin-pin-input" id="admin-pin" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter') verifyAdmin()" style="margin-top:8px;margin-bottom:8px">
@@ -1183,6 +1187,21 @@ let currentGrupoKey = '';  // valor del ?g=... en la URL, clave de localStorage
 // ╚══════════════════════════════════════════════════════════════╝
 document.addEventListener('DOMContentLoaded', async () => {
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Escuchar cambios de sesión Auth (captura magic link desde URL hash)
+  sb.auth.onAuthStateChange((event, session) => {
+    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+      isAdmin = true;
+      // Si el panel admin está visible, activarlo automáticamente
+      const viewAdmin = document.getElementById('view-admin');
+      if (viewAdmin && viewAdmin.classList.contains('active')) activarPanelAdmin();
+      // Limpiar el hash de la URL (quitar el access_token visible)
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+    if (event === 'SIGNED_OUT') isAdmin = false;
+  });
 
   // Restaurar sesión admin si el navegador la recuerda (Supabase Auth)
   try {
@@ -2779,6 +2798,24 @@ async function verifyAdmin() {
   localStorage.removeItem(intentosKey);
   localStorage.removeItem(bloqueoKey);
   await activarPanelAdmin();
+}
+
+// Solicita magic link al email admin (sin ir al dashboard de Supabase)
+async function solicitarMagicLink() {
+  const msg = document.getElementById('admin-magic-msg');
+  msg.style.color = 'var(--gris)';
+  msg.textContent = 'Enviando...';
+  const { error } = await sb.auth.signInWithOtp({
+    email: 'lenindn@gmail.com',
+    options: { shouldCreateUser: false }
+  });
+  if (error) {
+    msg.style.color = 'var(--error)';
+    msg.textContent = 'Error: ' + error.message;
+  } else {
+    msg.style.color = 'var(--exito)';
+    msg.textContent = '✅ Link enviado a lenindn@gmail.com — úsalo en menos de 1 hora.';
+  }
 }
 
 // Login admin con Supabase Auth (email + contraseña). La sesión la recuerda el navegador.
