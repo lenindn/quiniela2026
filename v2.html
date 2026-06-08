@@ -114,12 +114,12 @@ body {
   margin: -32px -24px 20px;
 }
 .grupo-logo-img {
-  width: 90px; height: 90px;
+  width: 96px; height: 96px;
   border-radius: 16px;
   object-fit: cover;
   margin-bottom: 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  border: 3px solid rgba(255,255,255,0.3);
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 4px var(--oro), 0 0 0 6px var(--oro-claro), 0 6px 20px rgba(0,0,0,0.38);
 }
 .grupo-icono { font-size: 3.5rem; margin-bottom: 6px; line-height: 1; }
 .grupo-nombre { font-size: 1.15rem; font-weight: 800; margin-bottom: 2px; }
@@ -3847,7 +3847,7 @@ async function crearGrupoQuiniela() {
   const icono  = document.getElementById('gq-icono').value.trim() || '⚽';
   const color  = document.getElementById('gq-color').value || '#1a5c2a';
   if (!slug || !nombre) { alert('Ingresa código y nombre del grupo.'); return; }
-  const { error } = await sb.from('grupos_quiniela').insert({ slug, nombre, icono, color });
+  const { error } = await sb.from('grupos_quiniela').insert({ id: slug, slug, nombre, icono, color });
   if (error) { alert('Error: ' + (error.message || '¿El código ya existe?')); return; }
   document.getElementById('gq-id').value     = '';
   document.getElementById('gq-nombre').value = '';
