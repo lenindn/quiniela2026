@@ -893,7 +893,12 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
         <div style="font-size:0.72rem;color:var(--gris);text-transform:uppercase;letter-spacing:.5px">&#x1F1F2;&#x1F1FD; M&eacute;xico</div>
         <div id="reloj-mexico" style="font-size:1.3rem;font-weight:700">--:--:--</div>
       </div>
+      <div>
+        <div id="reloj-local-label" style="font-size:0.72rem;color:var(--gris);text-transform:uppercase;letter-spacing:.5px">&#x1F4CD; Tu hora</div>
+        <div id="reloj-local" style="font-size:1.3rem;font-weight:700">--:--:--</div>
+      </div>
     </div>
+    <p style="font-size:0.72rem;color:var(--gris);text-align:center;margin:-6px 0 0">El campo &#x201C;Cierre&#x201D; de cada fase se guarda usando <strong>tu hora local</strong> (la de este dispositivo).</p>
     <!-- Accesos rápidos admin -->
     <div class="card admin-section" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn-sm" onclick="verVistaAdmin('instructivo')">&#x1F4D6; Ver Reglas</button>
@@ -3547,15 +3552,24 @@ function cancelarEdicionPartido() {
   if (msgEl) msgEl.textContent = '';
 }
 
-// Reloj España / México en el panel admin (referencia para coordinar cierres de fase)
+// Reloj España / México / local en el panel admin (referencia para coordinar cierres de fase)
 function actualizarRelojesAdmin() {
-  const elEsp = document.getElementById('reloj-espana');
-  const elMex = document.getElementById('reloj-mexico');
-  if (!elEsp && !elMex) return;
+  const elEsp   = document.getElementById('reloj-espana');
+  const elMex   = document.getElementById('reloj-mexico');
+  const elLocal = document.getElementById('reloj-local');
+  if (!elEsp && !elMex && !elLocal) return;
   const ahora = new Date();
   const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
   if (elEsp) elEsp.textContent = ahora.toLocaleTimeString('es-ES', { ...opts, timeZone: 'Europe/Madrid' });
   if (elMex) elMex.textContent = ahora.toLocaleTimeString('es-MX', { ...opts, timeZone: 'America/Mexico_City' });
+  if (elLocal) {
+    elLocal.textContent = ahora.toLocaleTimeString('es-ES', opts);
+    const elLabel = document.getElementById('reloj-local-label');
+    if (elLabel) {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      elLabel.textContent = '\u{1F4CD} Tu hora' + (tz ? ' (' + tz + ')' : '');
+    }
+  }
 }
 
 function filtrarPartidosAdmin(fase) {
