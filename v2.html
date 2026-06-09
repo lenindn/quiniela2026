@@ -1006,7 +1006,10 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     </div>
     <!-- Participantes -->
     <div class="card admin-section">
-      <h3>👥 Participantes</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="margin:0">👥 Participantes</h3>
+        <button class="btn-sm" onclick="refreshAdminParticipantes()" title="Actualizar lista" style="font-size:0.8rem;padding:4px 10px">&#x1F504; Actualizar</button>
+      </div>
       <div id="admin-participantes"></div>
     </div>
     <!-- Gestión de grupos de quiniela -->
@@ -3552,6 +3555,98 @@ function renderListaPartidosAdmin(faseFiltro) {
   }).join('');
 }
 
+// Renderiza la lista de participantes en el panel admin (standalone, reutilizable)
+async function renderAdminParticipantes() {
+  const pDiv = document.getElementById('admin-participantes');
+  if (!pDiv) return;
+
+  const [{ data: parts }, { data: grupos }] = await Promise.all([
+    sb.from('participantes').select('id,nombre,whatsapp,grupo_quiniela,fecha_registro,activo,fases_activas').order('fecha_registro'),
+    sb.from('grupos_quiniela').select('id,nombre').order('nombre'),
+  ]);
+  const allParts = parts || [];
+  const allGrupos = grupos || [];
+
+  const renderPart = p => {
+    const opts   = allGrupos.map(g => `<option value="${g.id}" ${g.id === p.grupo_quiniela ? 'selected' : ''}>${g.nombre}</option>`).join('');
+    const activo = p.activo !== false;
+    const fa     = p.fases_activas || {};
+
+    // Chips de fase — un toggle por cada fase
+    const faseChips = FASES_ORDEN.map(f => {
+      const activoEnFase = fa[f] !== false;
+      const color = activoEnFase ? 'var(--exito)' : '#ccc';
+      return `<span onclick="toggleFaseParticipante('${p.id}','${f}',${activoEnFase},this)"
+        title="${activoEnFase ? 'Desactivar en '+FASES_LABELS[f] : 'Activar en '+FASES_LABELS[f]}"
+        style="cursor:pointer;padding:2px 7px;border-radius:10px;background:${color};color:#fff;font-size:0.68rem;font-weight:700;white-space:nowrap">
+        ${FASES_LABELS[f]}
+      </span>`;
+    }).join('');
+
+    return `
+      <div id="part-row-${p.id}" style="font-size:0.82rem;padding:8px 0;border-bottom:1px solid var(--borde);opacity:${activo ? 1 : 0.5}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="flex:1;min-width:120px;font-weight:600">${p.nombre}
+            <span style="color:var(--gris);font-weight:400">· ${p.whatsapp}</span>
+          </span>
+          <select onchange="cambiarGrupoParticipante('${p.whatsapp}', this.value, this)" style="font-size:0.78rem;padding:2px 6px;border:1px solid var(--borde);border-radius:4px">
+            <option value="">Sin grupo</option>${opts}
+          </select>
+          <label title="${activo ? 'Desactivar usuario' : 'Activar usuario'}" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.75rem;color:${activo ? 'var(--exito)' : 'var(--error)'}">
+            <div onclick="toggleActivoParticipante('${p.id}', ${activo}, document.getElementById('part-row-${p.id}'))"
+              style="width:34px;height:18px;border-radius:9px;background:${activo ? 'var(--exito)' : '#ccc'};position:relative;cursor:pointer;transition:background .2s">
+              <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${activo ? 'right:2px' : 'left:2px'};transition:all .2s"></div>
+            </div>
+            ${activo ? 'Activo' : 'Inactivo'}
+          </label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span style="font-size:0.68rem;color:var(--gris);padding-top:3px">Fases:</span>
+            ${faseChips}
+          </div>
+          <button data-pid="${p.id}" data-nombre="${p.nombre.replace(/"/g,'&quot;')}"
+            onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, true)"
+            style="font-size:0.72rem;padding:3px 8px;border:1px solid var(--borde);border-radius:6px;background:#fff;cursor:pointer;white-space:nowrap;color:var(--gris)"
+            title="Ver todos los picks">&#x1F441; Picks</button>
+        </div>
+      </div>`;
+  };
+
+  let html = `<p style="font-size:0.82rem;color:var(--gris);margin-bottom:12px">Total registrados: <strong>${allParts.length}</strong></p>`;
+
+  // Participantes por grupo
+  allGrupos.forEach(g => {
+    const miembros = allParts.filter(p => p.grupo_quiniela === g.id);
+    if (miembros.length === 0) return;
+    html += `<div style="margin-bottom:12px">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--verde);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;border-bottom:2px solid var(--verde)">${g.nombre}</div>
+      ${miembros.map(renderPart).join('')}
+      <div style="font-size:0.75rem;color:var(--gris);text-align:right;padding-top:4px">👤 ${miembros.length} participante${miembros.length !== 1 ? 's' : ''}</div>
+    </div>`;
+  });
+
+  // Sin grupo
+  const sinGrupo = allParts.filter(p => !p.grupo_quiniela);
+  if (sinGrupo.length > 0) {
+    html += `<div style="margin-bottom:12px">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;border-bottom:2px solid var(--borde)">Sin grupo asignado</div>
+      ${sinGrupo.map(renderPart).join('')}
+      <div style="font-size:0.75rem;color:var(--gris);text-align:right;padding-top:4px">👤 ${sinGrupo.length} participante${sinGrupo.length !== 1 ? 's' : ''}</div>
+    </div>`;
+  }
+
+  pDiv.innerHTML = html;
+}
+
+// Refresca solo la sección de participantes sin recargar todo el panel
+async function refreshAdminParticipantes() {
+  const btn = document.querySelector('[onclick="refreshAdminParticipantes()"]');
+  if (btn) { btn.innerHTML = '&#x23F3;'; btn.disabled = true; }
+  await renderAdminParticipantes();
+  if (btn) { btn.innerHTML = '&#x1F504; Actualizar'; btn.disabled = false; }
+}
+
 async function loadAdminPanel() {
   // Actividad se carga al expandir (toggleActividad)
   renderListaPartidosAdmin('');
@@ -3645,86 +3740,7 @@ async function loadAdminPanel() {
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 10 — ADMIN: PARTICIPANTES                           ║
 // ╚══════════════════════════════════════════════════════════════╝
-  // Participantes — incluye fases_activas para gestión por fase
-  const [{ data: parts }, { data: grupos }] = await Promise.all([
-    sb.from('participantes').select('id,nombre,whatsapp,grupo_quiniela,fecha_registro,activo,fases_activas').order('fecha_registro'),
-    sb.from('grupos_quiniela').select('id,nombre').order('nombre'),
-  ]);
-  const pDiv = document.getElementById('admin-participantes');
-  const allParts = parts || [];
-  const allGrupos = grupos || [];
-  const opts0 = allGrupos.map(g => `<option value="${g.id}">${g.nombre}</option>`).join('');
-
-  const renderPart = p => {
-    const opts   = allGrupos.map(g => `<option value="${g.id}" ${g.id === p.grupo_quiniela ? 'selected' : ''}>${g.nombre}</option>`).join('');
-    const activo = p.activo !== false;
-    const fa     = p.fases_activas || {};
-
-    // Chips de fase — un toggle por cada fase
-    const faseChips = FASES_ORDEN.map(f => {
-      const activoEnFase = fa[f] !== false;
-      const color = activoEnFase ? 'var(--exito)' : '#ccc';
-      return `<span onclick="toggleFaseParticipante('${p.id}','${f}',${activoEnFase},this)"
-        title="${activoEnFase ? 'Desactivar en '+FASES_LABELS[f] : 'Activar en '+FASES_LABELS[f]}"
-        style="cursor:pointer;padding:2px 7px;border-radius:10px;background:${color};color:#fff;font-size:0.68rem;font-weight:700;white-space:nowrap">
-        ${FASES_LABELS[f]}
-      </span>`;
-    }).join('');
-
-    return `
-      <div id="part-row-${p.id}" style="font-size:0.82rem;padding:8px 0;border-bottom:1px solid var(--borde);opacity:${activo ? 1 : 0.5}">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="flex:1;min-width:120px;font-weight:600">${p.nombre}
-            <span style="color:var(--gris);font-weight:400">· ${p.whatsapp}</span>
-          </span>
-          <select onchange="cambiarGrupoParticipante('${p.whatsapp}', this.value, this)" style="font-size:0.78rem;padding:2px 6px;border:1px solid var(--borde);border-radius:4px">
-            <option value="">Sin grupo</option>${opts}
-          </select>
-          <label title="${activo ? 'Desactivar usuario' : 'Activar usuario'}" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.75rem;color:${activo ? 'var(--exito)' : 'var(--error)'}">
-            <div onclick="toggleActivoParticipante('${p.id}', ${activo}, document.getElementById('part-row-${p.id}'))"
-              style="width:34px;height:18px;border-radius:9px;background:${activo ? 'var(--exito)' : '#ccc'};position:relative;cursor:pointer;transition:background .2s">
-              <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${activo ? 'right:2px' : 'left:2px'};transition:all .2s"></div>
-            </div>
-            ${activo ? 'Activo' : 'Inactivo'}
-          </label>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-          <div style="display:flex;gap:4px;flex-wrap:wrap">
-            <span style="font-size:0.68rem;color:var(--gris);padding-top:3px">Fases:</span>
-            ${faseChips}
-          </div>
-          <button data-pid="${p.id}" data-nombre="${p.nombre.replace(/"/g,'&quot;')}"
-            onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, true)"
-            style="font-size:0.72rem;padding:3px 8px;border:1px solid var(--borde);border-radius:6px;background:#fff;cursor:pointer;white-space:nowrap;color:var(--gris)"
-            title="Ver todos los picks">&#x1F441; Picks</button>
-        </div>
-      </div>`;
-  };
-
-  let html = `<p style="font-size:0.82rem;color:var(--gris);margin-bottom:12px">Total registrados: <strong>${allParts.length}</strong></p>`;
-
-  // Participantes por grupo
-  allGrupos.forEach(g => {
-    const miembros = allParts.filter(p => p.grupo_quiniela === g.id);
-    if (miembros.length === 0) return;
-    html += `<div style="margin-bottom:12px">
-      <div style="font-size:0.78rem;font-weight:700;color:var(--verde);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;border-bottom:2px solid var(--verde)">${g.nombre}</div>
-      ${miembros.map(renderPart).join('')}
-      <div style="font-size:0.75rem;color:var(--gris);text-align:right;padding-top:4px">👤 ${miembros.length} participante${miembros.length !== 1 ? 's' : ''}</div>
-    </div>`;
-  });
-
-  // Sin grupo
-  const sinGrupo = allParts.filter(p => !p.grupo_quiniela);
-  if (sinGrupo.length > 0) {
-    html += `<div style="margin-bottom:12px">
-      <div style="font-size:0.78rem;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;border-bottom:2px solid var(--borde)">Sin grupo asignado</div>
-      ${sinGrupo.map(renderPart).join('')}
-      <div style="font-size:0.75rem;color:var(--gris);text-align:right;padding-top:4px">👤 ${sinGrupo.length} participante${sinGrupo.length !== 1 ? 's' : ''}</div>
-    </div>`;
-  }
-
-  pDiv.innerHTML = html;
+  await renderAdminParticipantes();
 }
 
 async function toggleActivoParticipante(participanteId, currentActivo, rowEl) {
