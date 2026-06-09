@@ -883,6 +883,17 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     </div>
   </div>
   <div id="admin-panel" style="display:none">
+    <!-- Reloj España / México -->
+    <div class="card admin-section" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:center;text-align:center">
+      <div>
+        <div style="font-size:0.72rem;color:var(--gris);text-transform:uppercase;letter-spacing:.5px">&#x1F1EA;&#x1F1F8; Espa&ntilde;a</div>
+        <div id="reloj-espana" style="font-size:1.3rem;font-weight:700">--:--:--</div>
+      </div>
+      <div>
+        <div style="font-size:0.72rem;color:var(--gris);text-transform:uppercase;letter-spacing:.5px">&#x1F1F2;&#x1F1FD; M&eacute;xico</div>
+        <div id="reloj-mexico" style="font-size:1.3rem;font-weight:700">--:--:--</div>
+      </div>
+    </div>
     <!-- Accesos rápidos admin -->
     <div class="card admin-section" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn-sm" onclick="verVistaAdmin('instructivo')">&#x1F4D6; Ver Reglas</button>
@@ -1203,6 +1214,10 @@ let currentGrupoKey = '';  // valor del ?g=... en la URL, clave de localStorage
 // ╚══════════════════════════════════════════════════════════════╝
 document.addEventListener('DOMContentLoaded', async () => {
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Reloj España / México en panel admin (no-op si los elementos no existen aún)
+  actualizarRelojesAdmin();
+  setInterval(actualizarRelojesAdmin, 1000);
 
   // Escuchar cambios de sesión Auth (captura magic link desde URL hash)
   sb.auth.onAuthStateChange((event, session) => {
@@ -3530,6 +3545,17 @@ function cancelarEdicionPartido() {
   if (cancelBtn) cancelBtn.style.display = 'none';
   const msgEl = document.getElementById('np-msg');
   if (msgEl) msgEl.textContent = '';
+}
+
+// Reloj España / México en el panel admin (referencia para coordinar cierres de fase)
+function actualizarRelojesAdmin() {
+  const elEsp = document.getElementById('reloj-espana');
+  const elMex = document.getElementById('reloj-mexico');
+  if (!elEsp && !elMex) return;
+  const ahora = new Date();
+  const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+  if (elEsp) elEsp.textContent = ahora.toLocaleTimeString('es-ES', { ...opts, timeZone: 'Europe/Madrid' });
+  if (elMex) elMex.textContent = ahora.toLocaleTimeString('es-MX', { ...opts, timeZone: 'America/Mexico_City' });
 }
 
 function filtrarPartidosAdmin(fase) {
