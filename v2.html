@@ -3715,8 +3715,24 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, avísame ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
   }
 
+  // Copiamos el mensaje al portapapeles y abrimos el chat (sin texto en la URL,
+  // para evitar que los emojis se corrompan en el redireccionamiento de wa.me)
+  try {
+    await navigator.clipboard.writeText(mensaje);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = mensaje;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  alert('📋 Mensaje copiado al portapapeles.\n\nSe abrirá el chat de WhatsApp: pega el mensaje (Ctrl+V) y envíalo.');
+
   const tel = (whatsapp || '').replace(/\D/g, '');
-  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`, '_blank');
+  window.open(`https://wa.me/${tel}`, '_blank');
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
