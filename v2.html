@@ -3598,6 +3598,14 @@ async function generarMensajeWhatsApp() {
     return;
   }
 
+  // Frases con artículo/género correctos para usar en el mensaje (ej: "la Fase de Grupos", "los Octavos de Final")
+  const FASES_FRASE = {
+    grupos: 'la Fase de Grupos', r32: 'la Ronda de 32', r16: 'los Octavos de Final',
+    cuartos: 'los Cuartos de Final', semis: 'las Semifinales',
+    tercer_lugar: 'el Tercer Puesto', final: 'la Gran Final'
+  };
+  const fraseFase = FASES_FRASE[fase] || FASES_LABELS[fase];
+
   const [{ data: parts }, { data: prons }, { data: partidos }] = await Promise.all([
     sb.from('participantes').select('id').eq('grupo_quiniela', currentGrupo.id),
     sb.from('pronosticos').select('participante_id,partido_id'),
@@ -3632,17 +3640,17 @@ async function generarMensajeWhatsApp() {
     const fechaMex = fc.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', timeZone: 'America/Mexico_City' });
     const horaEsp  = fc.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Madrid' });
     const horaMex  = fc.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Mexico_City' });
-    cierreTxt = `\n\n⏰ *Recordatorio importante:*\nEl cierre de la ${FASES_LABELS[fase]} es el ${fechaMex} a las ${horaEsp} (hora España) / ${horaMex} (hora México).`;
+    cierreTxt = `\n\n⏰ *Recordatorio importante:*\nEl cierre de ${fraseFase} es el ${fechaMex} a las ${horaEsp} (hora España) / ${horaMex} (hora México).`;
   }
 
   const link = `https://lenindn.github.io/quiniela2026/v2.html?g=${currentGrupoKey}`;
 
   ta.value =
-`📢 *¡Hola Quiniela ${currentGrupo.nombre}!* ⚽🏆
+`📢 *¡Hola ${currentGrupo.nombre}!* ⚽🏆
 
 Antes que nada, *¡muchas gracias a todos los que ya se inscribieron y llenaron sus pronósticos!* 🙌 El entusiasmo se siente, y eso es lo que hace divertida esta quiniela.
 
-📊 *Estado actual de la ${FASES_LABELS[fase]}:*
+📊 *Estado actual de ${fraseFase}:*
 - ✅ Inscritos: *${inscritos}*
 - 🟢 Listos (picks completos): *${listos}*
 - 🟡 Incompletos: *${incompletos}*
