@@ -1189,6 +1189,12 @@ const FASES_LABELS = {
   grupos: 'Grupos', r32: 'Ronda de 32', r16: 'Octavos',
   cuartos: 'Cuartos', semis: 'Semis', tercer_lugar: '3er Lugar', final: 'Final'
 };
+// Nombres completos de cada fase para mensajes ("la fase X")
+const FASES_NOMBRE = {
+  grupos: 'Grupos', r32: 'Ronda de 32', r16: 'Octavos de Final',
+  cuartos: 'Cuartos de Final', semis: 'Semifinales',
+  tercer_lugar: 'Tercer Puesto', final: 'Gran Final'
+};
 const FASES_ORDEN = ['grupos','r32','r16','cuartos','semis','tercer_lugar','final'];
 
 // Fechas de inicio oficiales FIFA 2026 (primer partido de cada fase, UTC)
@@ -3598,12 +3604,6 @@ async function generarMensajeWhatsApp() {
     return;
   }
 
-  // Nombres completos de cada fase para mostrar en el mensaje (sin artículo, "la fase X")
-  const FASES_NOMBRE = {
-    grupos: 'Grupos', r32: 'Ronda de 32', r16: 'Octavos de Final',
-    cuartos: 'Cuartos de Final', semis: 'Semifinales',
-    tercer_lugar: 'Tercer Puesto', final: 'Gran Final'
-  };
   const nombreFase = FASES_NOMBRE[fase] || FASES_LABELS[fase];
 
   const [{ data: parts }, { data: prons }, { data: partidos }] = await Promise.all([
@@ -3681,6 +3681,48 @@ async function copiarMensajeWhatsApp() {
   }
 }
 
+// ── Genera y abre por WhatsApp el comprobante de picks de un participante (fase abierta) ──
+async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
+  const fase = faseAbiertaActual();
+  if (!fase) { alert('No hay ninguna fase abierta actualmente.'); return; }
+
+  const nombreFase = FASES_NOMBRE[fase] || FASES_LABELS[fase];
+  const link = `https://lenindn.github.io/quiniela2026/v2.html?g=${currentGrupoKey}`;
+
+  const [{ data: partidos }, { data: prons }, { data: partActual }] = await Promise.all([
+    sb.from('partidos').select('id,numero,equipo_local,equipo_visita').eq('fase', fase).order('numero'),
+    sb.from('pronosticos').select('partido_id,goles_local,goles_visita').eq('participante_id', participanteId),
+    sb.from('participantes').select('comprobantes_enviados').eq('id', participanteId).maybeSingle(),
+  ]);
+
+  const pronMap = {};
+  (prons || []).forEach(pr => { pronMap[pr.partido_id] = pr; });
+
+  let lineas = '';
+  let count = 0;
+  (partidos || []).forEach(pa => {
+    const pr = pronMap[pa.id];
+    if (pr) {
+      lineas += `\n⚽ ${pa.equipo_local} vs ${pa.equipo_visita}: *${pr.goles_local}-${pr.goles_visita}*`;
+      count++;
+    }
+  });
+
+  let mensaje;
+  if (count === 0) {
+    mensaje = `Hola ${nombre}! 👋\n\nVemos que aún no has registrado tus pronósticos para *la fase ${nombreFase}*. ¡Hazlo cuanto antes, antes de que cierre la fase! 🔒\n\n👉 Entra aquí: ${link}`;
+  } else {
+    mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, avísame ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
+  }
+
+  const tel = (whatsapp || '').replace(/\D/g, '');
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`, '_blank');
+
+  const actuales = (partActual && partActual.comprobantes_enviados) || {};
+  await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
+  await renderAdminParticipantes();
+}
+
 function filtrarPartidosAdmin(fase) {
   // Resaltar bot?n activo
   document.querySelectorAll('#np-fase-filtro .btn-sm').forEach(b => {
@@ -3723,11 +3765,12 @@ async function renderAdminParticipantes() {
   if (!pDiv) return;
 
   const [{ data: parts }, { data: grupos }] = await Promise.all([
-    sb.from('participantes').select('id,nombre,whatsapp,grupo_quiniela,fecha_registro,activo,fases_activas').order('fecha_registro'),
+    sb.from('participantes').select('id,nombre,whatsapp,grupo_quiniela,fecha_registro,activo,fases_activas,comprobantes_enviados').order('fecha_registro'),
     sb.from('grupos_quiniela').select('id,nombre').order('nombre'),
   ]);
   const allParts = parts || [];
   const allGrupos = grupos || [];
+  const faseAbierta = faseAbiertaActual();
 
   const renderPart = p => {
     const opts   = allGrupos.map(g => `<option value="${g.id}" ${g.id === p.grupo_quiniela ? 'selected' : ''}>${g.nombre}</option>`).join('');
@@ -3771,6 +3814,13 @@ async function renderAdminParticipantes() {
             onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, true)"
             style="font-size:0.72rem;padding:3px 8px;border:1px solid var(--borde);border-radius:6px;background:#fff;cursor:pointer;white-space:nowrap;color:var(--gris)"
             title="Ver todos los picks">&#x1F441; Picks</button>
+          ${faseAbierta ? (() => {
+            const enviado = !!(p.comprobantes_enviados && p.comprobantes_enviados[faseAbierta]);
+            return `<button data-pid="${p.id}" data-wa="${p.whatsapp}" data-nombre="${p.nombre.replace(/"/g,'&quot;')}"
+              onclick="enviarComprobantePicks(this.dataset.pid, this.dataset.wa, this.dataset.nombre)"
+              style="font-size:0.72rem;padding:3px 8px;border:1px solid var(--borde);border-radius:6px;background:${enviado ? '#f0fdf4' : '#fff'};cursor:pointer;white-space:nowrap;color:${enviado ? 'var(--exito)' : 'var(--gris)'}"
+              title="${enviado ? 'Ya se envió el comprobante de esta fase · clic para reenviar' : 'Enviar comprobante de picks por WhatsApp'}">${enviado ? '&#x2705; Enviado' : '&#x1F4F2; Comprobante'}</button>`;
+          })() : ''}
         </div>
       </div>`;
   };
