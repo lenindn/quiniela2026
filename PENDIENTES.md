@@ -121,3 +121,7 @@ configurar 3 secrets en GitHub para funcionar:
 
 - Bracket visual de eliminatorias (actualmente columnas simples).
 - Migración a Supabase Auth + RLS real (cuando el sistema esté 100% estable).
+- **Mensaje diario de WhatsApp con el ranking** (estilo divertido/picante): agregar
+  al módulo "📲 Mensajes para WhatsApp" del panel admin un botón que genere un
+  mensaje diario mostrando el ranking actual (top puestos, quién subió/bajó,
+  líder del pozo, etc.) con tono ameno para mandar al grupo cada día.
