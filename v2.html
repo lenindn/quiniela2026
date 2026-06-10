@@ -906,6 +906,16 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
       <button class="btn-sm" onclick="verVistaAdmin('grupos')">&#x1F30D; Ver Grupos / Bracket</button>
       <button class="btn-sm" onclick="cerrarSesionAdmin()" style="background:#b91c1c;margin-left:auto">&#x1F511; Cerrar sesi&oacute;n</button>
     </div>
+    <!-- Mensajes para WhatsApp -->
+    <div class="card admin-section">
+      <h3>&#x1F4F2; Mensajes para WhatsApp</h3>
+      <p style="font-size:0.82rem;color:var(--gris);margin-bottom:8px">Genera un mensaje con el estado de los pron&oacute;sticos de la fase abierta, listo para copiar y pegar.</p>
+      <button class="btn-sm" onclick="generarMensajeWhatsApp()">&#x1F504; Generar mensaje</button>
+      <textarea id="mensaje-whatsapp-texto" readonly
+        style="width:100%;min-height:240px;margin-top:10px;padding:10px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;resize:vertical"></textarea>
+      <button class="btn-sm" onclick="copiarMensajeWhatsApp()" style="margin-top:8px">&#x1F4CB; Copiar mensaje</button>
+      <span id="mensaje-whatsapp-msg" style="font-size:0.8rem;margin-left:8px"></span>
+    </div>
     <!-- Cambiar contrasena admin -->
     <div class="card admin-section" id="admin-cambiar-pass" style="display:none">
       <h3>&#x1F511; Cambiar contrase&ntilde;a</h3>
@@ -3569,6 +3579,97 @@ function actualizarRelojesAdmin() {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
       elLabel.textContent = '\u{1F4CD} Tu hora' + (tz ? ' (' + tz + ')' : '');
     }
+  }
+}
+
+// ── Genera el mensaje de WhatsApp con el estado de picks de la fase abierta ──
+async function generarMensajeWhatsApp() {
+  const ta  = document.getElementById('mensaje-whatsapp-texto');
+  const msg = document.getElementById('mensaje-whatsapp-msg');
+  if (!ta) return;
+  if (msg) { msg.textContent = ''; }
+  ta.value = 'Generando...';
+
+  if (!currentGrupo) { ta.value = 'No hay grupo seleccionado.'; return; }
+
+  const fase = faseAbiertaActual();
+  if (!fase) {
+    ta.value = 'No hay ninguna fase abierta actualmente. Abre una fase desde "Control de Fases" para generar el mensaje.';
+    return;
+  }
+
+  const [{ data: parts }, { data: prons }, { data: partidos }] = await Promise.all([
+    sb.from('participantes').select('id').eq('grupo_quiniela', currentGrupo.id),
+    sb.from('pronosticos').select('participante_id,partido_id'),
+    sb.from('partidos').select('id,fase'),
+  ]);
+
+  const idsFase = new Set((partidos || []).filter(p => p.fase === fase).map(p => p.id));
+  const total = idsFase.size;
+
+  const conteo = {};
+  (prons || []).forEach(pr => {
+    if (idsFase.has(pr.partido_id)) {
+      (conteo[pr.participante_id] = conteo[pr.participante_id] || new Set()).add(pr.partido_id);
+    }
+  });
+
+  const allParts = parts || [];
+  const inscritos = allParts.length;
+  let listos = 0, incompletos = 0, sinPicks = 0;
+  allParts.forEach(p => {
+    const n = conteo[p.id] ? conteo[p.id].size : 0;
+    if (n === 0) sinPicks++;
+    else if (total > 0 && n >= total) listos++;
+    else incompletos++;
+  });
+
+  // Fecha/hora de cierre en España y México
+  let cierreTxt = '';
+  const fd = allFases[fase];
+  if (fd && fd.fecha_cierre) {
+    const fc = new Date(fd.fecha_cierre);
+    const fechaMex = fc.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', timeZone: 'America/Mexico_City' });
+    const horaEsp  = fc.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Madrid' });
+    const horaMex  = fc.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Mexico_City' });
+    cierreTxt = `\n\n⏰ *Recordatorio importante:*\nEl cierre de la ${FASES_LABELS[fase]} es el ${fechaMex} a las ${horaEsp} (hora España) / ${horaMex} (hora México).`;
+  }
+
+  const link = `https://lenindn.github.io/quiniela2026/v2.html?g=${currentGrupoKey}`;
+
+  ta.value =
+`📢 *¡Hola Quiniela ${currentGrupo.nombre}!* ⚽🏆
+
+Antes que nada, *¡muchas gracias a todos los que ya se inscribieron y llenaron sus pronósticos!* 🙌 El entusiasmo se siente, y eso es lo que hace divertida esta quiniela.
+
+📊 *Estado actual de la ${FASES_LABELS[fase]}:*
+- ✅ Inscritos: *${inscritos}*
+- 🟢 Listos (picks completos): *${listos}*
+- 🟡 Incompletos: *${incompletos}*
+- 🔴 Sin picks aún: *${sinPicks}*${cierreTxt}
+
+Si aún no te has registrado o no completaste tus pronósticos, ¡este es el momento! Una vez cerrada la fase, *no se podrán modificar ni agregar picks*. 🔒
+
+👉 Entra aquí: ${link}
+
+¡Mucha suerte a todos y que gane el mejor pronosticador! 🍀⚽`;
+}
+
+// ── Copia el mensaje generado al portapapeles ──
+async function copiarMensajeWhatsApp() {
+  const ta  = document.getElementById('mensaje-whatsapp-texto');
+  const msg = document.getElementById('mensaje-whatsapp-msg');
+  if (!ta || !ta.value) return;
+  try {
+    await navigator.clipboard.writeText(ta.value);
+  } catch (e) {
+    ta.select();
+    document.execCommand('copy');
+  }
+  if (msg) {
+    msg.style.color = 'var(--exito)';
+    msg.textContent = '✅ Copiado';
+    setTimeout(() => { msg.textContent = ''; }, 3000);
   }
 }
 
