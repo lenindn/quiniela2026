@@ -3598,13 +3598,13 @@ async function generarMensajeWhatsApp() {
     return;
   }
 
-  // Frases con artículo/género correctos para usar en el mensaje (ej: "la Fase de Grupos", "los Octavos de Final")
-  const FASES_FRASE = {
-    grupos: 'la Fase de Grupos', r32: 'la Ronda de 32', r16: 'los Octavos de Final',
-    cuartos: 'los Cuartos de Final', semis: 'las Semifinales',
-    tercer_lugar: 'el Tercer Puesto', final: 'la Gran Final'
+  // Nombres completos de cada fase para mostrar en el mensaje (sin artículo, "la fase X")
+  const FASES_NOMBRE = {
+    grupos: 'Grupos', r32: 'Ronda de 32', r16: 'Octavos de Final',
+    cuartos: 'Cuartos de Final', semis: 'Semifinales',
+    tercer_lugar: 'Tercer Puesto', final: 'Gran Final'
   };
-  const fraseFase = FASES_FRASE[fase] || FASES_LABELS[fase];
+  const nombreFase = FASES_NOMBRE[fase] || FASES_LABELS[fase];
 
   const [{ data: parts }, { data: prons }, { data: partidos }] = await Promise.all([
     sb.from('participantes').select('id').eq('grupo_quiniela', currentGrupo.id),
@@ -3640,7 +3640,7 @@ async function generarMensajeWhatsApp() {
     const fechaMex = fc.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', timeZone: 'America/Mexico_City' });
     const horaEsp  = fc.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Madrid' });
     const horaMex  = fc.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Mexico_City' });
-    cierreTxt = `\n\n⏰ *Recordatorio importante:*\nEl cierre de ${fraseFase} es el ${fechaMex} a las ${horaEsp} (hora España) / ${horaMex} (hora México).`;
+    cierreTxt = `\n\n⏰ *Recordatorio importante:*\nEl cierre de la fase *${nombreFase}* es el ${fechaMex} a las ${horaEsp} (hora España) / ${horaMex} (hora México).`;
   }
 
   const link = `https://lenindn.github.io/quiniela2026/v2.html?g=${currentGrupoKey}`;
@@ -3650,7 +3650,7 @@ async function generarMensajeWhatsApp() {
 
 Antes que nada, *¡muchas gracias a todos los que ya se inscribieron y llenaron sus pronósticos!* 🙌 El entusiasmo se siente, y eso es lo que hace divertida esta quiniela.
 
-📊 *Estado actual de ${fraseFase}:*
+📊 *Estado actual de la fase ${nombreFase}:*
 - ✅ Inscritos: *${inscritos}*
 - 🟢 Listos (picks completos): *${listos}*
 - 🟡 Incompletos: *${incompletos}*
