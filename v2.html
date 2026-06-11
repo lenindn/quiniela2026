@@ -3733,7 +3733,8 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     document.body.removeChild(ta);
   }
 
-  const tel = (whatsapp || '').replace(/\D/g, '');
+  let tel = (whatsapp || '').replace(/\D/g, '');
+  if (tel.startsWith('00')) tel = tel.slice(2); // "00" = prefijo de marcado internacional, wa.me no lo acepta
   const waUrl = `https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`;
   if (winWA) {
     winWA.location.href = waUrl;
