@@ -3715,7 +3715,7 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, modifícalo ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
   }
 
-  // Copiamos el mensaje como respaldo (por si el texto no llega completo a WhatsApp Web)
+  // Copiamos el mensaje como respaldo (por si el cuadro de texto llega vacío)
   try {
     await navigator.clipboard.writeText(mensaje);
   } catch (e) {
@@ -3729,11 +3729,11 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     document.body.removeChild(ta);
   }
 
-  // Abre directo el chat en WhatsApp Web con el mensaje ya escrito.
-  // Reutiliza siempre la misma pestaña: WhatsApp Web solo permite una
-  // sesion activa, asi que abrir una nueva por cada envio "expulsa" la anterior.
+  // Pestaña nueva con el chat y el mensaje ya escrito (solo falta dar Enter).
+  // Sirve aunque el numero no este en los contactos. La pestaña anterior
+  // queda en gris (sesion expulsada) - se puede cerrar sin problema.
   const tel = (whatsapp || '').replace(/\D/g, '');
-  window.open(`https://web.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(mensaje)}`, 'whatsapp_comprobante');
+  window.open(`https://web.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(mensaje)}`, '_blank');
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
