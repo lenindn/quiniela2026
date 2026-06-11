@@ -3731,8 +3731,10 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
   }
   alert('📋 Mensaje copiado al portapapeles.\n\nSe abrirá el chat de WhatsApp: pega el mensaje (Ctrl+V) y envíalo.');
 
+  // Misma pestaña/ventana para todos los envíos: en vez de abrir una nueva
+  // cada vez, reutiliza la que ya está abierta y solo cambia de chat.
   const tel = (whatsapp || '').replace(/\D/g, '');
-  window.open(`https://wa.me/${tel}`, '_blank');
+  window.open(`https://wa.me/${tel}`, 'whatsapp_comprobante');
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
