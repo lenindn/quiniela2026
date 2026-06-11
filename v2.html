@@ -3715,10 +3715,23 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, modifícalo ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
   }
 
-  // Enlace directo a la app de WhatsApp Desktop (protocolo whatsapp://),
-  // evita por completo web.whatsapp.com y sus problemas de sesion/pestañas grises.
+  // Copiamos el mensaje al portapapeles y abrimos directo el chat de la persona
+  // (sin texto en la URL, para evitar que los emojis se corrompan). Solo falta Ctrl+V.
+  try {
+    await navigator.clipboard.writeText(mensaje);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = mensaje;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
   const tel = (whatsapp || '').replace(/\D/g, '');
-  window.location.href = `whatsapp://send?phone=${tel}&text=${encodeURIComponent(mensaje)}`;
+  window.open(`https://web.whatsapp.com/send?phone=${tel}`, '_blank');
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
