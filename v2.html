@@ -3715,8 +3715,10 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, modifícalo ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
   }
 
+  // Enlace directo a la app de WhatsApp Desktop (protocolo whatsapp://),
+  // evita por completo web.whatsapp.com y sus problemas de sesion/pestañas grises.
   const tel = (whatsapp || '').replace(/\D/g, '');
-  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`, '_blank');
+  window.location.href = `whatsapp://send?phone=${tel}&text=${encodeURIComponent(mensaje)}`;
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
