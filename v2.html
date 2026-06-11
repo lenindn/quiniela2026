@@ -673,6 +673,14 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   </div>
 </div>
 
+<!-- VISTA PROXIMOS ENCUENTROS (picks de todos por partido, fases ya cerradas) -->
+<div id="view-proximos" class="view">
+  <div class="section-title">📅 Próximos Encuentros</div>
+  <div id="proximos-content">
+    <div class="empty-state"><div class="spinner"></div><br>Cargando...</div>
+  </div>
+</div>
+
 <div id="view-resultados" class="view">
   <div class="section-title">📊 Resultados</div>
   <div style="padding:0 16px 8px;position:relative">
@@ -1134,6 +1142,9 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   <button class="nav-btn" onclick="navigate('grupos')" data-view="grupos">
     <span class="icon">🌍</span>Grupos
   </button>
+  </button>
+  <button class="nav-btn" onclick="navigate('proximos')" data-view="proximos">
+    <span class="icon">📅</span>Próximos
   </button>
   <button class="nav-btn" onclick="navigate('resultados')" data-view="resultados">
     <span class="icon">📊</span>Resultados
@@ -1678,6 +1689,7 @@ async function navigate(view) {
     renderPicks();
   }
   if (view === 'tabla')      loadLeaderboard();
+  if (view === 'proximos')   loadProximosEncuentros();
   if (view === 'grupos')     { if (currentGruposTab === 'bracket') loadBracketView(); else loadGruposView(); }
   if (view === 'resultados') renderResultados();
   if (view === 'admin' && isAdmin) activarPanelAdmin();
@@ -1919,6 +1931,82 @@ function faseEstaCerrada(fase) {
   if (!fd.abierta) return true;
   if (fd.fecha_cierre && new Date(fd.fecha_cierre) <= new Date()) return true;
   return false;
+}
+
+// ── Vista "Próximos Encuentros": lista de partidos pendientes; al abrir uno
+// se muestran los picks de todos los participantes del grupo (solo si la
+// fase de ese partido ya está cerrada, mismo candado que verDetalleParticipante) ──
+let proximosPartsCache = null;
+
+async function loadProximosEncuentros() {
+  const cont = document.getElementById('proximos-content');
+  cont.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Cargando...</div>';
+  proximosPartsCache = null;
+
+  const partidos = allPartidos
+    .filter(p => p.estado === 'pendiente')
+    .sort((a, b) => new Date(a.fecha_partido || 0) - new Date(b.fecha_partido || 0));
+
+  if (partidos.length === 0) {
+    cont.innerHTML = '<div class="empty-state">No hay próximos encuentros pendientes.</div>';
+    return;
+  }
+
+  cont.innerHTML = partidos.map(p => {
+    const cerrada = faseEstaCerrada(p.fase);
+    const fecha = p.fecha_partido
+      ? new Date(p.fecha_partido).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : 'Fecha por confirmar';
+    return `
+      <div class="match-card" data-pid="${p.id}">
+        <div class="match-row">
+          <div class="team-local">${p.equipo_local}</div>
+          <div style="text-align:center;font-size:0.7rem;color:var(--gris);white-space:nowrap">${fecha}</div>
+          <div class="team-visita">${p.equipo_visita}</div>
+        </div>
+        <div class="match-footer">
+          <span>${FASES_LABELS[p.fase] || p.fase}</span>
+          ${cerrada
+            ? `<button onclick="togglePicksPartido(${p.id})" style="background:none;border:1px solid var(--borde);border-radius:14px;padding:3px 10px;font-size:0.72rem;cursor:pointer;color:var(--texto)">👀 Ver picks</button>`
+            : `<span>🔒 Picks ocultos hasta el cierre de fase</span>`}
+        </div>
+        <div id="picks-partido-${p.id}" style="display:none;margin-top:8px;border-top:1px solid var(--borde);padding-top:8px"></div>
+      </div>`;
+  }).join('');
+}
+
+async function togglePicksPartido(partidoId) {
+  const box = document.getElementById('picks-partido-' + partidoId);
+  if (!box) return;
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  if (box.dataset.loaded === '1') return;
+  box.innerHTML = '<div style="text-align:center;padding:8px"><div class="spinner"></div></div>';
+
+  if (!proximosPartsCache) {
+    let partQuery = sb.from('participantes').select('id,nombre,activo');
+    if (currentGrupo) partQuery = partQuery.eq('grupo_quiniela', currentGrupo.id);
+    const { data } = await partQuery;
+    proximosPartsCache = (data || []).filter(p => p.activo !== false);
+  }
+  const parts = proximosPartsCache;
+  const ids   = parts.map(p => p.id);
+
+  const { data: prons } = ids.length > 0
+    ? await sb.from('pronosticos').select('participante_id,goles_local,goles_visita').eq('partido_id', partidoId).in('participante_id', ids)
+    : { data: [] };
+
+  const pronMap = {};
+  (prons || []).forEach(pr => { pronMap[pr.participante_id] = pr; });
+
+  box.innerHTML = parts.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p => {
+    const pr = pronMap[p.id];
+    const pick = pr ? `${pr.goles_local} - ${pr.goles_visita}` : '<span style="color:var(--gris)">sin pick</span>';
+    return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem">
+      <span>${p.nombre}</span><span style="font-weight:700">${pick}</span>
+    </div>`;
+  }).join('');
+  box.dataset.loaded = '1';
 }
 
 // ── Devuelve la fase abierta actual (abierta y sin cierre vencido), o null ──
