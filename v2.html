@@ -1986,13 +1986,20 @@ async function loadLeaderboard() {
   let partQuery = sb.from('participantes').select('id,nombre,grupo_quiniela,activo,fases_activas');
   if (currentGrupo) partQuery = partQuery.eq('grupo_quiniela', currentGrupo.id);
 
-  const [partRes, prRes, pardosRes] = await Promise.all([
-    partQuery,
-    sb.from('pronosticos').select('participante_id,puntos,calculado,partido_id'),
+  const partRes = await partQuery;
+  const parts   = partRes.data || [];
+
+  // Filtramos pronosticos solo de los participantes de este grupo: la consulta
+  // sin filtro trae TODOS los pronosticos de la app (2800+) y Supabase corta
+  // en 1000 filas por defecto, dejando fuera a participantes al azar.
+  const partIds = parts.map(p => p.id);
+  const [prRes, pardosRes] = await Promise.all([
+    partIds.length > 0
+      ? sb.from('pronosticos').select('participante_id,puntos,calculado,partido_id').in('participante_id', partIds)
+      : Promise.resolve({ data: [] }),
     sb.from('partidos').select('id,fase,estado'),
   ]);
 
-  const parts    = partRes.data   || [];
   const prons    = prRes.data     || [];
   const partidos = pardosRes.data || [];
 
