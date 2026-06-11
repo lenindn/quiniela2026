@@ -1854,6 +1854,22 @@ async function autoSave(pid) {
   const ssEl = document.getElementById('ss-' + pid);
   if (!liEl || !viEl) return;
 
+  // Re-verificar que la fase siga abierta (la pestaña pudo quedar abierta desde antes del cierre)
+  const pInfo   = allPartidos.find(p => p.id === pid);
+  const faseData = pInfo && allFases[pInfo.fase];
+  const faseAbierta = faseData && faseData.abierta &&
+    (!faseData.fecha_cierre || new Date(faseData.fecha_cierre) > new Date());
+  if (!faseAbierta) {
+    liEl.disabled = true;
+    viEl.disabled = true;
+    if (ssEl) {
+      ssEl.textContent = '🔒 Cerrado';
+      ssEl.className = 'save-status error';
+      ssEl.title = 'La fase ya cerró, este cambio no se guardó.';
+    }
+    return;
+  }
+
   const gl = Math.max(0, Math.min(20, parseInt(liEl.value.replace(/[^0-9]/g, '')) || 0));
   const gv = Math.max(0, Math.min(20, parseInt(viEl.value.replace(/[^0-9]/g, '')) || 0));
 
