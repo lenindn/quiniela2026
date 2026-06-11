@@ -3707,16 +3707,16 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
   (partidos || []).forEach(pa => {
     const pr = pronMap[pa.id];
     if (pr) {
-      lineas += `\n⚽ ${pa.equipo_local} vs ${pa.equipo_visita}: *${pr.goles_local}-${pr.goles_visita}*`;
+      lineas += `\n- ${pa.equipo_local} vs ${pa.equipo_visita}: *${pr.goles_local}-${pr.goles_visita}*`;
       count++;
     }
   });
 
   let mensaje;
   if (count === 0) {
-    mensaje = `Hola ${nombre}! 👋\n\nVemos que aún no has registrado tus pronósticos para *la fase ${nombreFase}*. ¡Hazlo cuanto antes, antes de que cierre la fase! 🔒\n\n👉 Entra aquí: ${link}`;
+    mensaje = `Hola ${nombre}!\n\nVemos que aún no has registrado tus pronósticos para *la fase ${nombreFase}*. ¡Hazlo cuanto antes, antes de que cierre la fase!\n\nEntra aquí: ${link}`;
   } else {
-    mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, modifícalo ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
+    mensaje = `Hola ${nombre}!\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, modifícalo ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*.`;
   }
 
   // Copiamos el mensaje por si el texto no llega bien via URL (emojis).
