@@ -3686,6 +3686,10 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
   const fase = faseAbiertaActual();
   if (!fase) { alert('No hay ninguna fase abierta actualmente.'); return; }
 
+  // Abrimos la pestaña YA, dentro del clic del usuario (sin await previo),
+  // para que el navegador no la trate como popup bloqueado/degradado.
+  const winWA = window.open('about:blank', '_blank');
+
   const nombreFase = FASES_NOMBRE[fase] || FASES_LABELS[fase];
   const link = `https://lenindn.github.io/quiniela2026/v2.html?g=${currentGrupoKey}`;
 
@@ -3715,8 +3719,7 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, modifícalo ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
   }
 
-  // Copiamos el mensaje al portapapeles y abrimos directo el chat de la persona
-  // (sin texto en la URL, para evitar que los emojis se corrompan). Solo falta Ctrl+V.
+  // Copiamos el mensaje por si el texto no llega bien via URL (emojis).
   try {
     await navigator.clipboard.writeText(mensaje);
   } catch (e) {
@@ -3731,7 +3734,12 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
   }
 
   const tel = (whatsapp || '').replace(/\D/g, '');
-  window.open(`https://web.whatsapp.com/send?phone=${tel}`, '_blank');
+  const waUrl = `https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`;
+  if (winWA) {
+    winWA.location.href = waUrl;
+  } else {
+    window.open(waUrl, '_blank');
+  }
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
