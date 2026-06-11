@@ -3715,8 +3715,7 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, modifícalo ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
   }
 
-  // Solo copiamos el mensaje al portapapeles. No abrimos WhatsApp: el admin
-  // ya tiene su WhatsApp (Desktop o Web) abierto y solo pega el mensaje ahí.
+  // Copiamos el mensaje como respaldo (por si el texto no llega completo a WhatsApp Web)
   try {
     await navigator.clipboard.writeText(mensaje);
   } catch (e) {
@@ -3729,7 +3728,11 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     document.execCommand('copy');
     document.body.removeChild(ta);
   }
-  alert(`📋 Mensaje copiado al portapapeles.\n\nAbre el chat de ${nombre} (${whatsapp}) en tu WhatsApp y pégalo (Ctrl+V).`);
+
+  // Abre directo el chat en WhatsApp Web con el mensaje ya escrito
+  // (requiere tener WhatsApp Web ya iniciado sesión en este navegador)
+  const tel = (whatsapp || '').replace(/\D/g, '');
+  window.open(`https://web.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(mensaje)}`, '_blank');
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
