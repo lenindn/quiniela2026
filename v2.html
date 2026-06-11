@@ -3729,10 +3729,11 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     document.body.removeChild(ta);
   }
 
-  // Abre directo el chat en WhatsApp Web con el mensaje ya escrito
-  // (requiere tener WhatsApp Web ya iniciado sesión en este navegador)
+  // Abre directo el chat en WhatsApp Web con el mensaje ya escrito.
+  // Reutiliza siempre la misma pestaña: WhatsApp Web solo permite una
+  // sesion activa, asi que abrir una nueva por cada envio "expulsa" la anterior.
   const tel = (whatsapp || '').replace(/\D/g, '');
-  window.open(`https://web.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(mensaje)}`, '_blank');
+  window.open(`https://web.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(mensaje)}`, 'whatsapp_comprobante');
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
