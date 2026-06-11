@@ -3715,25 +3715,8 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
     mensaje = `Hola ${nombre}! 👋\n\nAquí está tu *comprobante de pronósticos* — fase ${nombreFase}:\n${lineas}\n\nSi ves algún error, modifícalo ANTES del cierre de la fase. Una vez cerrada, *no se podrán modificar*. 🔒`;
   }
 
-  // Copiamos el mensaje como respaldo (por si el cuadro de texto llega vacío)
-  try {
-    await navigator.clipboard.writeText(mensaje);
-  } catch (e) {
-    const ta = document.createElement('textarea');
-    ta.value = mensaje;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-  }
-
-  // Pestaña nueva con el chat y el mensaje ya escrito (solo falta dar Enter).
-  // Sirve aunque el numero no este en los contactos. La pestaña anterior
-  // queda en gris (sesion expulsada) - se puede cerrar sin problema.
   const tel = (whatsapp || '').replace(/\D/g, '');
-  window.open(`https://web.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(mensaje)}`, '_blank');
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`, '_blank');
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
   await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
