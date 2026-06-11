@@ -3742,7 +3742,13 @@ async function enviarComprobantePicks(participanteId, whatsapp, nombre) {
   }
 
   const actuales = (partActual && partActual.comprobantes_enviados) || {};
-  await sb.from('participantes').update({ comprobantes_enviados: { ...actuales, [fase]: true } }).eq('id', participanteId);
+  const { error: errUpdate } = await sb.from('participantes')
+    .update({ comprobantes_enviados: { ...actuales, [fase]: true } })
+    .eq('id', participanteId);
+  if (errUpdate) {
+    console.error('Error marcando comprobante como enviado:', errUpdate);
+    alert('El mensaje se abrió, pero no se pudo marcar como enviado: ' + errUpdate.message);
+  }
   await renderAdminParticipantes();
 }
 
