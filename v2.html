@@ -1469,6 +1469,10 @@ async function adminSinGrupoLogin() {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-admin').classList.add('active');
   document.getElementById('app-header').style.display = 'flex';
+  document.getElementById('bottom-nav').style.display = 'flex';
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === 'admin');
+  });
   document.getElementById('user-nombre-chip').textContent = 'Admin';
   document.getElementById('admin-login-section').style.display = 'none';
   document.getElementById('admin-panel').style.display = 'block';
