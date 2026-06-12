@@ -4306,7 +4306,7 @@ async function guardarEditResultado(pid) {
 
   const idx = allPartidos.findIndex(p => p.id === pid);
   if (idx >= 0) {
-    allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, penales_local: isNaN(penL)?null:penL, penales_visita: isNaN(penV)?null:penV, estado: 'finalizado' };
+    allPartidos[idx] = { ...allPartidos[idx], goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, estado: 'finalizado' };
   }
 
   // v2: sin premio campeón
