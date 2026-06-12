@@ -2558,7 +2558,7 @@ async function loadGruposView() {
       const proximos = gPartidos.filter(p => p.estado === 'pendiente' && p.fecha_partido)
         .sort((a,b) => new Date(a.fecha_partido)-new Date(b.fecha_partido)).slice(0,2);
       if (proximos.length > 0) {
-        html += '<div style="font-size:0.72rem;color:var(--gris);font-weight:600;margin-top:8px;margin-bottom:4px">Pr?ximos</div>';
+        html += '<div style="font-size:0.72rem;color:var(--gris);font-weight:600;margin-top:8px;margin-bottom:4px">Próximos</div>';
         proximos.forEach(p => {
           const fecha = new Date(p.fecha_partido).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
           html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--borde);font-size:0.79rem">'
