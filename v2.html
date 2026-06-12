@@ -4806,6 +4806,79 @@ async function logActividad(accion, detalle) {
   try { await sb.from('actividad').insert({ participante_id: currentUser.id, nombre: currentUser.nombre, grupo: currentGrupo?.nombre || null, accion, detalle: detalle || null }); } catch(e) {}
 }
 
+// ── Mini-gráfica: evolución de puntos (tú vs top 3 vs rango del resto del grupo) ──
+async function buildEvolucionHTML(participanteId) {
+  if (!currentGrupo) return '';
+
+  const finalizados = allPartidos
+    .filter(p => p.estado === 'finalizado' && p.fecha_partido)
+    .sort((a, b) => new Date(a.fecha_partido) - new Date(b.fecha_partido));
+  const n = finalizados.length;
+  if (n < 2) return ''; // muy pronto para mostrar una tendencia
+
+  const { data: parts } = await sb.from('participantes')
+    .select('id,nombre').eq('grupo_quiniela', currentGrupo.id);
+  const partIds = (parts || []).map(p => p.id);
+  if (!partIds.includes(participanteId) || partIds.length < 2) return '';
+
+  const prons = await fetchPronosticosDe(partIds, 'participante_id,puntos,calculado,partido_id');
+
+  const idxDePartido = new Map(finalizados.map((p, i) => [p.id, i]));
+  const series = {};
+  partIds.forEach(id => series[id] = new Array(n).fill(0));
+  prons.forEach(pr => {
+    if (!pr.calculado) return;
+    const idx = idxDePartido.get(pr.partido_id);
+    if (idx === undefined) return;
+    series[pr.participante_id][idx] += (pr.puntos || 0);
+  });
+  partIds.forEach(id => {
+    const s = series[id];
+    for (let i = 1; i < n; i++) s[i] += s[i - 1];
+  });
+
+  const ranking = partIds
+    .map(id => ({ id, pts: series[id][n - 1] }))
+    .sort((a, b) => b.pts - a.pts);
+
+  const top3 = ranking.filter(r => r.id !== participanteId).slice(0, 3);
+  const top3Ids = new Set(top3.map(t => t.id));
+  const restoIds = partIds.filter(id => id !== participanteId && !top3Ids.has(id));
+
+  const restoMax = restoIds.length ? finalizados.map((_, i) => Math.max(...restoIds.map(id => series[id][i]))) : null;
+  const restoMin = restoIds.length ? finalizados.map((_, i) => Math.min(...restoIds.map(id => series[id][i]))) : null;
+
+  const allVals = [...series[participanteId], ...top3.flatMap(t => series[t.id]), ...(restoMax || []), ...(restoMin || [])];
+  const maxY = Math.max(1, ...allVals);
+
+  const W = 280, H = 110, padX = 6, padTop = 10, padBottom = 10;
+  const xAt = i => padX + (i * (W - padX * 2)) / (n - 1);
+  const yAt = v => H - padBottom - (v / maxY) * (H - padTop - padBottom);
+  const pathOf = arr => arr.map((v, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ');
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:120px;display:block;margin:6px 0 8px">`;
+  if (restoMax && restoMin) {
+    const arriba = restoMax.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
+    const abajo  = restoMin.slice().reverse().map((v, i) => `${xAt(n - 1 - i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
+    svg += `<path d="M${arriba} L${abajo} Z" fill="var(--gris)" opacity="0.18"/>`;
+  }
+  const colores = ['#c9a023', '#9ca3af', '#b87333']; // oro, plata, bronce
+  top3.forEach((t, i) => {
+    svg += `<path d="${pathOf(series[t.id])}" fill="none" stroke="${colores[i]}" stroke-width="2"/>`;
+  });
+  svg += `<path d="${pathOf(series[participanteId])}" fill="none" stroke="var(--verde)" stroke-width="3"/>`;
+  svg += '</svg>';
+
+  const nombreDe = id => ((parts.find(p => p.id === id) || {}).nombre || '').split(' ')[0];
+  const leyenda = `<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:0.7rem;color:var(--gris);padding:0 2px 8px">
+      <span><span style="display:inline-block;width:9px;height:9px;background:var(--verde);border-radius:50%;margin-right:3px"></span>Tú</span>
+      ${top3.map((t, i) => `<span><span style="display:inline-block;width:9px;height:9px;background:${colores[i]};border-radius:50%;margin-right:3px"></span>${nombreDe(t.id)}</span>`).join('')}
+      ${restoIds.length ? `<span><span style="display:inline-block;width:9px;height:9px;background:var(--gris);opacity:0.4;border-radius:50%;margin-right:3px"></span>Resto del grupo</span>` : ''}
+    </div>`;
+
+  return `<div style="font-size:0.72rem;color:var(--gris);font-weight:600;padding:2px 2px 0">📈 Evolución de puntos</div>${svg}${leyenda}`;
+}
+
 async function verDetalleParticipante(participanteId, nombre, verTodo = false, filtroFase = null) {
   const color  = getComputedStyle(document.documentElement).getPropertyValue('--verde').trim() || '#1a5c2a';
   const modal  = document.getElementById('modal-detalle');
@@ -4893,7 +4966,9 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
       </div>`;
   }).join('');
 
-  body.innerHTML = rows || '<div style="color:#999;text-align:center;padding:20px">Sin datos.</div>';
+  const evoHTML = await buildEvolucionHTML(participanteId);
+
+  body.innerHTML = evoHTML + (rows || '<div style="color:#999;text-align:center;padding:20px">Sin datos.</div>');
 
 }
 function cerrarModal() {
