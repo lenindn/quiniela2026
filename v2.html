@@ -1251,6 +1251,7 @@ let currentTablaFase = 'general';
 let currentResTab   = 'grupos';
 let filtroEquipo    = '';
 let currentGrupoKey = '';  // valor del ?g=... en la URL, clave de localStorage
+let leaderboardPollInterval = null; // auto-refresh de la tabla de posiciones mientras esa vista esta activa
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 3 — INICIALIZACIÓN Y AUTENTICACIÓN                  ║
@@ -1704,6 +1705,18 @@ async function navigate(view) {
     renderPicks();
   }
   if (view === 'tabla')      loadLeaderboard();
+
+  // Auto-refresh de posiciones cada 60s mientras esa vista esté activa y la pestaña visible
+  if (leaderboardPollInterval) { clearInterval(leaderboardPollInterval); leaderboardPollInterval = null; }
+  if (view === 'tabla') {
+    leaderboardPollInterval = setInterval(() => {
+      const tablaView = document.getElementById('view-tabla');
+      if (!document.hidden && tablaView && tablaView.classList.contains('active')) {
+        loadLeaderboard();
+      }
+    }, 60000);
+  }
+
   if (view === 'proximos')   loadProximosEncuentros();
   if (view === 'proyeccion') loadProyeccion();
   if (view === 'grupos')     { if (currentGruposTab === 'bracket') loadBracketView(); else loadGruposView(); }
