@@ -681,6 +681,14 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   </div>
 </div>
 
+<!-- VISTA PROYECCION (probabilidad estimada de ganar la quiniela) -->
+<div id="view-proyeccion" class="view">
+  <div class="section-title">🎲 Proyección de Ganador</div>
+  <div id="proyeccion-content">
+    <div class="empty-state"><div class="spinner"></div><br>Calculando...</div>
+  </div>
+</div>
+
 <div id="view-resultados" class="view">
   <div class="section-title">📊 Resultados</div>
   <div style="padding:0 16px 8px;position:relative">
@@ -1145,6 +1153,9 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   </button>
   <button class="nav-btn" onclick="navigate('proximos')" data-view="proximos">
     <span class="icon">📅</span>Próximos
+  </button>
+  <button class="nav-btn" onclick="navigate('proyeccion')" data-view="proyeccion">
+    <span class="icon">🎲</span>Proyección
   </button>
   <button class="nav-btn" onclick="navigate('resultados')" data-view="resultados">
     <span class="icon">📊</span>Resultados
@@ -1694,6 +1705,7 @@ async function navigate(view) {
   }
   if (view === 'tabla')      loadLeaderboard();
   if (view === 'proximos')   loadProximosEncuentros();
+  if (view === 'proyeccion') loadProyeccion();
   if (view === 'grupos')     { if (currentGruposTab === 'bracket') loadBracketView(); else loadGruposView(); }
   if (view === 'resultados') renderResultados();
   if (view === 'admin' && isAdmin) activarPanelAdmin();
@@ -2013,6 +2025,115 @@ async function togglePicksPartido(partidoId) {
   box.dataset.loaded = '1';
 }
 
+// ── Proyección probabilística de ganador (simulación de partidos pendientes) ──
+async function loadProyeccion() {
+  const cont = document.getElementById('proyeccion-content');
+  cont.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Calculando...</div>';
+
+  let partQuery = sb.from('participantes').select('id,nombre,activo');
+  if (currentGrupo) partQuery = partQuery.eq('grupo_quiniela', currentGrupo.id);
+  const { data: partsData } = await partQuery;
+  const parts = (partsData || []).filter(p => p.activo !== false);
+
+  if (parts.length === 0) {
+    cont.innerHTML = '<div class="empty-state">No hay participantes para calcular.</div>';
+    return;
+  }
+
+  const partIds = parts.map(p => p.id);
+  const prons = await fetchPronosticosDe(partIds, 'participante_id,partido_id,goles_local,goles_visita,puntos,calculado');
+
+  const puntosActuales = {};
+  parts.forEach(p => puntosActuales[p.id] = 0);
+
+  const picksPendientesPorPartido = {};
+  prons.forEach(pr => {
+    if (pr.calculado) {
+      puntosActuales[pr.participante_id] = (puntosActuales[pr.participante_id] || 0) + (pr.puntos || 0);
+    } else if (pr.goles_local !== null && pr.goles_visita !== null) {
+      (picksPendientesPorPartido[pr.partido_id] || (picksPendientesPorPartido[pr.partido_id] = [])).push(pr);
+    }
+  });
+
+  const pendientes = allPartidos.filter(p => p.estado === 'pendiente');
+  const winCount = {};
+  parts.forEach(p => winCount[p.id] = 0);
+
+  if (pendientes.length === 0) {
+    let max = -Infinity;
+    parts.forEach(p => { if (puntosActuales[p.id] > max) max = puntosActuales[p.id]; });
+    parts.filter(p => puntosActuales[p.id] === max).forEach(p => winCount[p.id] = 1);
+    renderProyeccion(cont, parts, puntosActuales, winCount, 1, 0);
+    return;
+  }
+
+  // Simulación tipo Monte Carlo: marcadores al azar (distribución aproximada de goles 0-4)
+  const PESOS_GOLES = [0.25, 0.35, 0.22, 0.12, 0.06];
+  function golAleatorio() {
+    const r = Math.random();
+    let acc = 0;
+    for (let i = 0; i < PESOS_GOLES.length; i++) {
+      acc += PESOS_GOLES[i];
+      if (r < acc) return i;
+    }
+    return PESOS_GOLES.length - 1;
+  }
+
+  const N_SIM = 1000;
+  const simPartido = {};
+  for (let sim = 0; sim < N_SIM; sim++) {
+    const totales = {};
+    parts.forEach(p => totales[p.id] = puntosActuales[p.id]);
+
+    pendientes.forEach(partido => {
+      simPartido.fase = partido.fase;
+      simPartido.goles_local = golAleatorio();
+      simPartido.goles_visita = golAleatorio();
+      const picks = picksPendientesPorPartido[partido.id];
+      if (!picks) return;
+      picks.forEach(pr => { totales[pr.participante_id] += calcularPuntos(simPartido, pr); });
+    });
+
+    let max = -Infinity;
+    parts.forEach(p => { if (totales[p.id] > max) max = totales[p.id]; });
+    const ganadores = parts.filter(p => totales[p.id] === max);
+    const share = 1 / ganadores.length;
+    ganadores.forEach(p => winCount[p.id] += share);
+  }
+
+  renderProyeccion(cont, parts, puntosActuales, winCount, N_SIM, pendientes.length);
+}
+
+function renderProyeccion(cont, parts, puntosActuales, winCount, nSim, numPendientes) {
+  const filas = parts.map(p => ({
+    nombre: p.nombre,
+    puntos: puntosActuales[p.id] || 0,
+    prob: (winCount[p.id] / nSim) * 100,
+  })).sort((a, b) => b.prob - a.prob || b.puntos - a.puntos);
+
+  const aviso = `<div class="alert" style="background:#eef3ff;border:1px solid #c8d6f7;color:#374151;font-size:0.78rem;padding:10px 12px;border-radius:10px;margin:0 16px 12px">
+    🎲 Estimación basada en ${nSim.toLocaleString('es')} simulaciones${numPendientes ? ' de los ' + numPendientes + ' partidos pendientes (marcadores al azar)' : ''}.
+    Es un cálculo orientativo y de entretenimiento — no considera la fuerza real de los equipos.
+    Vuelve a entrar a esta vista para recalcular.
+  </div>`;
+
+  const filasHtml = filas.map((f, i) => {
+    const pct = f.prob.toFixed(1);
+    const color = i === 0 ? 'var(--exito)' : i === 1 ? 'var(--oro)' : i === 2 ? 'var(--amarillo)' : 'var(--verde)';
+    return `<div style="margin:0 16px 10px">
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:3px">
+        <span><strong>${i+1}.</strong> ${f.nombre}</span>
+        <span style="color:var(--gris)">${f.puntos} pts · <strong>${pct}%</strong></span>
+      </div>
+      <div style="background:#eee;border-radius:6px;height:10px;overflow:hidden">
+        <div style="background:${color};width:${Math.max(Number(pct), 1)}%;height:100%"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = aviso + filasHtml;
+}
+
 // ── Devuelve la fase abierta actual (abierta y sin cierre vencido), o null ──
 function faseAbiertaActual() {
   const ahora = new Date();
@@ -2070,13 +2191,13 @@ function renderResumenGrupo(parts, prons, partidos) {
 // Trae TODOS los pronosticos de una lista de participantes, paginando de 1000
 // en 1000 (limite por defecto de Supabase REST) para no perder filas en
 // grupos grandes (ej. San Jose: 37 participantes x 63 picks = 2303 filas).
-async function fetchPronosticosDe(partIds) {
+async function fetchPronosticosDe(partIds, selectFields) {
   const PAGE = 1000;
   let all = [];
   let from = 0;
   while (true) {
     const { data, error } = await sb.from('pronosticos')
-      .select('participante_id,puntos,calculado,partido_id')
+      .select(selectFields || 'participante_id,puntos,calculado,partido_id')
       .in('participante_id', partIds)
       .range(from, from + PAGE - 1);
     if (error) { console.error('Error cargando pronosticos:', error); break; }
