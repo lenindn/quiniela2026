@@ -4851,15 +4851,31 @@ async function buildEvolucionHTML(participanteId) {
   const allVals = [...series[participanteId], ...top3.flatMap(t => series[t.id]), ...(restoMax || []), ...(restoMin || [])];
   const maxY = Math.max(1, ...allVals);
 
-  const pxPer = 38, padX = 16, padTop = 10, plotH = 90, padBottom = 6, labelH = 28;
-  const W = Math.max(264, padX * 2 + (n - 1) * pxPer);
+  const pxPer = 38, padLeft = 24, padRight = 6, padTop = 10, plotH = 90, padBottom = 6, labelH = 28;
+  const W = Math.max(264, padLeft + padRight + (n - 1) * pxPer);
   const H = padTop + plotH + padBottom + labelH;
-  const xAt = i => padX + i * pxPer;
+  const xAt = i => padLeft + i * pxPer;
   const yAt = v => padTop + plotH - (v / maxY) * plotH;
   const pathOf = arr => arr.map((v, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ');
 
+  // Lineas guia horizontales con valor de puntos (3-4 niveles, numeros "redondos")
+  const niceStep = max => {
+    for (const s of [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500]) {
+      if (max / s <= 4) return s;
+    }
+    return Math.ceil(max / 4);
+  };
+  const step = niceStep(maxY);
+  const yTicks = [];
+  for (let v = 0; v <= maxY; v += step) yTicks.push(v);
+
   let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;background:#fff">`;
   svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#fff"/>`;
+  yTicks.forEach(v => {
+    const ly = yAt(v);
+    svg += `<line x1="${padLeft}" y1="${ly.toFixed(1)}" x2="${W - padRight}" y2="${ly.toFixed(1)}" stroke="var(--borde)" stroke-width="1"/>`;
+    svg += `<text x="${padLeft - 4}" y="${(ly + 3).toFixed(1)}" font-size="9" fill="var(--gris)" text-anchor="end">${v}</text>`;
+  });
   if (restoMax && restoMin) {
     const arriba = restoMax.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
     const abajo  = restoMin.slice().reverse().map((v, i) => `${xAt(n - 1 - i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
