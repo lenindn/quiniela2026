@@ -4862,7 +4862,7 @@ async function buildEvolucionHTML(participanteId) {
     const abajo  = restoMin.slice().reverse().map((v, i) => `${xAt(n - 1 - i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
     svg += `<path d="M${arriba} L${abajo} Z" fill="var(--gris)" opacity="0.18"/>`;
   }
-  const colores = ['#c9a023', '#9ca3af', '#b87333']; // oro, plata, bronce
+  const colores = ['#e67e22', '#2980b9', '#9b59b6']; // naranja, azul, morado
   top3.forEach((t, i) => {
     svg += `<path d="${pathOf(series[t.id])}" fill="none" stroke="${colores[i]}" stroke-width="2"/>`;
   });
