@@ -4839,6 +4839,15 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
       return partido && faseEstaCerrada(partido.fase);
     });
   }
+  // Orden: jugados primero (más reciente arriba), luego pendientes (más próximo arriba)
+  allPicks = allPicks.slice().sort((a, b) => {
+    if (a.calculado !== b.calculado) return a.calculado ? -1 : 1;
+    const pa = allPartidos.find(p => p.id === a.partido_id);
+    const pb = allPartidos.find(p => p.id === b.partido_id);
+    const fa = pa ? new Date(pa.fecha_partido) : 0;
+    const fb = pb ? new Date(pb.fecha_partido) : 0;
+    return a.calculado ? (fb - fa) : (fa - fb);
+  });
   const calculados = allPicks.filter(pr => pr.calculado);
   const totalPts   = calculados.reduce((s, pr) => s + (pr.puntos || 0), 0);
   const faseLabel = filtroFase ? (FASES_LABELS[filtroFase] + ' · ') : '';
