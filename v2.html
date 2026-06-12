@@ -4851,12 +4851,15 @@ async function buildEvolucionHTML(participanteId) {
   const allVals = [...series[participanteId], ...top3.flatMap(t => series[t.id]), ...(restoMax || []), ...(restoMin || [])];
   const maxY = Math.max(1, ...allVals);
 
-  const W = 280, H = 110, padX = 6, padTop = 10, padBottom = 10;
-  const xAt = i => padX + (i * (W - padX * 2)) / (n - 1);
-  const yAt = v => H - padBottom - (v / maxY) * (H - padTop - padBottom);
+  const pxPer = 38, padX = 16, padTop = 10, plotH = 90, padBottom = 6, labelH = 28;
+  const W = Math.max(264, padX * 2 + (n - 1) * pxPer);
+  const H = padTop + plotH + padBottom + labelH;
+  const xAt = i => padX + i * pxPer;
+  const yAt = v => padTop + plotH - (v / maxY) * plotH;
   const pathOf = arr => arr.map((v, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ');
 
-  let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:120px;display:block;margin:6px 0 8px">`;
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;background:#fff">`;
+  svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#fff"/>`;
   if (restoMax && restoMin) {
     const arriba = restoMax.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
     const abajo  = restoMin.slice().reverse().map((v, i) => `${xAt(n - 1 - i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
@@ -4867,6 +4870,12 @@ async function buildEvolucionHTML(participanteId) {
     svg += `<path d="${pathOf(series[t.id])}" fill="none" stroke="${colores[i]}" stroke-width="2"/>`;
   });
   svg += `<path d="${pathOf(series[participanteId])}" fill="none" stroke="var(--verde)" stroke-width="3"/>`;
+  // Eje X: fecha de cada partido finalizado
+  finalizados.forEach((p, i) => {
+    const fecha = new Date(p.fecha_partido).toLocaleDateString('es', { day: 'numeric', month: 'short' });
+    const lx = xAt(i), ly = padTop + plotH + 12;
+    svg += `<text x="${lx}" y="${ly}" font-size="9" fill="var(--gris)" text-anchor="end" transform="rotate(-45 ${lx} ${ly})">${fecha}</text>`;
+  });
   svg += '</svg>';
 
   const nombreDe = id => ((parts.find(p => p.id === id) || {}).nombre || '').split(' ')[0];
@@ -4876,7 +4885,10 @@ async function buildEvolucionHTML(participanteId) {
       ${restoIds.length ? `<span><span style="display:inline-block;width:9px;height:9px;background:var(--gris);opacity:0.4;border-radius:50%;margin-right:3px"></span>Resto del grupo</span>` : ''}
     </div>`;
 
-  return `<div style="font-size:0.72rem;color:var(--gris);font-weight:600;padding:2px 2px 0">📈 Evolución de puntos</div>${svg}${leyenda}`;
+  const scrollHint = W > 264 ? '<div style="font-size:0.65rem;color:var(--gris);text-align:right;padding:0 2px 2px">↔ desliza para ver más</div>' : '';
+  const chart = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:6px 0 2px">${svg}</div>${scrollHint}`;
+
+  return `<div style="font-size:0.72rem;color:var(--gris);font-weight:600;padding:2px 2px 0">📈 Evolución de puntos</div>${chart}${leyenda}`;
 }
 
 async function verDetalleParticipante(participanteId, nombre, verTodo = false, filtroFase = null) {
