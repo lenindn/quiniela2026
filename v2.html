@@ -4881,11 +4881,14 @@ async function buildEvolucionHTML(participanteId) {
     const abajo  = restoMin.slice().reverse().map((v, i) => `${xAt(n - 1 - i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
     svg += `<path d="M${arriba} L${abajo} Z" fill="var(--gris)" opacity="0.18"/>`;
   }
-  const colores = ['#e67e22', '#2980b9', '#9b59b6']; // naranja, azul, morado
-  top3.forEach((t, i) => {
-    svg += `<path d="${pathOf(series[t.id])}" fill="none" stroke="${colores[i]}" stroke-width="2"/>`;
-  });
+  // "Tú" se dibuja primero (debajo); el top3 se dibuja despues con guiones para
+  // que se distingan aun si la trayectoria coincide exactamente con otra linea
   svg += `<path d="${pathOf(series[participanteId])}" fill="none" stroke="var(--verde)" stroke-width="3"/>`;
+  const colores = ['#e67e22', '#2980b9', '#9b59b6']; // naranja, azul, morado
+  const dashes  = ['6 3', '3 3', '1.5 2.5'];
+  top3.forEach((t, i) => {
+    svg += `<path d="${pathOf(series[t.id])}" fill="none" stroke="${colores[i]}" stroke-width="2" stroke-dasharray="${dashes[i]}"/>`;
+  });
   // Eje X: fecha de cada partido finalizado
   finalizados.forEach((p, i) => {
     const fecha = new Date(p.fecha_partido).toLocaleDateString('es', { day: 'numeric', month: 'short' });
