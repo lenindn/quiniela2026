@@ -4408,11 +4408,15 @@ async function adminUpdateResult() {
   }).eq('id', pid);
 
   // 2. Calcular puntos para todos los pronósticos de este partido
+  // En paralelo (Promise.all) para minimizar la ventana en que el partido ya
+  // esta 'finalizado' pero algunos pronosticos aun no tienen su puntaje
+  // actualizado (esa ventana causaba que la Tabla de Posiciones se viera
+  // "a medio calcular" si el auto-refresh caia justo ahi).
   const { data: prons } = await sb.from('pronosticos').select('*').eq('partido_id', pid);
-  for (const pr of (prons || [])) {
+  await Promise.all((prons || []).map(pr => {
     const puntos = calcularPuntos({ ...partido, goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal }, pr);
-    await sb.from('pronosticos').update({ puntos, calculado: true }).eq('id', pr.id);
-  }
+    return sb.from('pronosticos').update({ puntos, calculado: true }).eq('id', pr.id);
+  }));
 
   // 3. Actualizar estado local
   const idx = allPartidos.findIndex(p => p.id === pid);
@@ -4458,11 +4462,13 @@ async function guardarEditResultado(pid) {
     goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal, estado: 'finalizado', fuente: 'manual',
   }).eq('id', pid);
 
+  // En paralelo (Promise.all) — ver comentario en adminUpdateResult sobre por
+  // que esto evita que la Tabla de Posiciones se vea "a medio calcular".
   const { data: prons } = await sb.from('pronosticos').select('*').eq('partido_id', pid);
-  for (const pr of (prons || [])) {
+  await Promise.all((prons || []).map(pr => {
     const puntos = calcularPuntos({ ...partido, goles_local: gl, goles_visita: gv, avanza_local: avanzaLocal }, pr);
-    await sb.from('pronosticos').update({ puntos, calculado: true }).eq('id', pr.id);
-  }
+    return sb.from('pronosticos').update({ puntos, calculado: true }).eq('id', pr.id);
+  }));
 
   const idx = allPartidos.findIndex(p => p.id === pid);
   if (idx >= 0) {
