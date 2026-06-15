@@ -1,13 +1,18 @@
 name: Actualizar Resultados Mundial 2026
 
 on:
-  schedule:
-    # Solo durante el torneo (junio-julio) y en la ventana de partidos.
-    # Mundial 2026 en Norteamerica: partidos ~12:00-22:00 hora local
-    # = aprox 16:00-06:00 UTC. Corre cada 2h SOLO en esa franja.
-    # Horas UTC: 16,18,20,22,00,02,04,06. Meses: 6 (jun) y 7 (jul).
-    # Ajustar si el fixture oficial usa otras franjas horarias.
-    - cron: '0 16,18,20,22,0,2,4,6 * 6,7 *'
+  # DESACTIVADO temporalmente: faltan los secrets SUPABASE_URL y
+  # SUPABASE_SERVICE_KEY en el repo, por lo que cada corrida programada
+  # fallaba (get_supabase() hace sys.exit(1) si no estan). Reactivar el
+  # schedule cuando se configuren los secrets y se quiera activar la
+  # sincronizacion automatica.
+  # schedule:
+  #   # Solo durante el torneo (junio-julio) y en la ventana de partidos.
+  #   # Mundial 2026 en Norteamerica: partidos ~12:00-22:00 hora local
+  #   # = aprox 16:00-06:00 UTC. Corre cada 2h SOLO en esa franja.
+  #   # Horas UTC: 16,18,20,22,00,02,04,06. Meses: 6 (jun) y 7 (jul).
+  #   # Ajustar si el fixture oficial usa otras franjas horarias.
+  #   - cron: '0 16,18,20,22,0,2,4,6 * 6,7 *'
   workflow_dispatch:
     # Permite ejecutar manualmente desde GitHub Actions
 
