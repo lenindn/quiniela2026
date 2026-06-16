@@ -2234,6 +2234,7 @@ async function fetchPronosticosDe(partIds, selectFields) {
     const { data, error } = await sb.from('pronosticos')
       .select(selectFields || 'participante_id,puntos,calculado,partido_id')
       .in('participante_id', partIds)
+      .order('id')
       .range(from, from + PAGE - 1);
     if (error) { console.error('Error cargando pronosticos:', error); break; }
     all = all.concat(data || []);
