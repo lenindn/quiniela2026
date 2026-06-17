@@ -2077,14 +2077,14 @@ function filtrarProxPicks(btn, partidoId, res) {
   const yaActivo = btn.dataset.activo === '1';
 
   mismos.forEach(b => { b.dataset.activo = ''; b.style.opacity = '1'; });
-  lista.querySelectorAll('[data-res]').forEach(f => f.style.display = '');
+  lista.querySelectorAll('[data-res]').forEach(f => f.style.display = 'flex');
 
   if (!yaActivo) {
     btn.dataset.activo = '1';
     btn.style.opacity = '1';
     mismos.forEach(b => { if (b !== btn) b.style.opacity = '0.4'; });
     lista.querySelectorAll('[data-res]').forEach(f => {
-      f.style.display = f.dataset.res === res ? '' : 'none';
+      f.style.display = f.dataset.res === res ? 'flex' : 'none';
     });
   }
 }
