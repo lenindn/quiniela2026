@@ -2028,14 +2028,65 @@ async function togglePicksPartido(partidoId) {
   const pronMap = {};
   (prons || []).forEach(pr => { pronMap[pr.participante_id] = pr; });
 
-  box.innerHTML = parts.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p => {
+  const resOf = (gl, gv) => gl > gv ? 'L' : gl < gv ? 'V' : 'E';
+  const partido = allPartidos.find(p => p.id === partidoId);
+  const nomL = partido ? partido.equipo_local  : 'Local';
+  const nomV = partido ? partido.equipo_visita : 'Visita';
+
+  const sorted = parts.slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const conteo = { L: 0, E: 0, V: 0 };
+  sorted.forEach(p => {
     const pr = pronMap[p.id];
-    const pick = pr ? `${pr.goles_local} - ${pr.goles_visita}` : '<span style="color:var(--gris)">sin pick</span>';
-    return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem">
+    if (pr && pr.goles_local !== null && pr.goles_visita !== null)
+      conteo[resOf(pr.goles_local, pr.goles_visita)]++;
+  });
+
+  const chips = [
+    { key: 'L', label: nomL,    color: '#dcfce7', border: '#16a34a', text: '#15803d' },
+    { key: 'E', label: 'Empate', color: '#f1f5f9', border: '#94a3b8', text: '#475569' },
+    { key: 'V', label: nomV,    color: '#dbeafe', border: '#2563eb', text: '#1d4ed8' },
+  ].map(c => `
+    <button onclick="filtrarProxPicks(this,'${partidoId}','${c.key}')"
+      data-res="${c.key}"
+      style="background:${c.color};border:1px solid ${c.border};color:${c.text};border-radius:14px;
+             padding:3px 10px;font-size:0.72rem;cursor:pointer;font-weight:700">
+      ${conteo[c.key]} ${c.label}
+    </button>`).join('');
+
+  const filas = sorted.map(p => {
+    const pr = pronMap[p.id];
+    const res = (pr && pr.goles_local !== null && pr.goles_visita !== null)
+      ? resOf(pr.goles_local, pr.goles_visita) : '';
+    const pick = pr && res
+      ? `${pr.goles_local} - ${pr.goles_visita}`
+      : '<span style="color:var(--gris)">sin pick</span>';
+    return `<div data-res="${res}" style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem">
       <span>${p.nombre}</span><span style="font-weight:700">${pick}</span>
     </div>`;
   }).join('');
+
+  box.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${chips}</div>
+    <div id="picks-lista-${partidoId}">${filas}</div>`;
   box.dataset.loaded = '1';
+}
+
+function filtrarProxPicks(btn, partidoId, res) {
+  const lista  = document.getElementById('picks-lista-' + partidoId);
+  const mismos = document.querySelectorAll(`#picks-partido-${partidoId} button[data-res]`);
+  const yaActivo = btn.dataset.activo === '1';
+
+  mismos.forEach(b => { b.dataset.activo = ''; b.style.opacity = '1'; });
+  lista.querySelectorAll('[data-res]').forEach(f => f.style.display = '');
+
+  if (!yaActivo) {
+    btn.dataset.activo = '1';
+    btn.style.opacity = '1';
+    mismos.forEach(b => { if (b !== btn) b.style.opacity = '0.4'; });
+    lista.querySelectorAll('[data-res]').forEach(f => {
+      f.style.display = f.dataset.res === res ? '' : 'none';
+    });
+  }
 }
 
 // ── Helpers de numeros pseudoaleatorios con semilla (para Proyección estable por dia) ──
