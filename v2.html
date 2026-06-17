@@ -2041,7 +2041,14 @@ async function togglePicksPartido(partidoId) {
       conteo[resOf(pr.goles_local, pr.goles_visita)]++;
   });
 
-  const chips = [
+  const totalConPick = conteo.L + conteo.E + conteo.V;
+  const btnTodos = `<button onclick="filtrarProxPicks(this,'${partidoId}','*')"
+    data-res="*" data-activo="1"
+    style="background:#1a5c2a;border:1px solid #1a5c2a;color:#fff;border-radius:14px;
+           padding:3px 10px;font-size:0.72rem;cursor:pointer;font-weight:700">
+    Todos (${totalConPick})
+  </button>`;
+  const chips = btnTodos + [
     { key: 'L', label: nomL,    color: '#dcfce7', border: '#16a34a', text: '#15803d' },
     { key: 'E', label: 'Empate', color: '#f1f5f9', border: '#94a3b8', text: '#475569' },
     { key: 'V', label: nomV,    color: '#dbeafe', border: '#2563eb', text: '#1d4ed8' },
@@ -2061,7 +2068,7 @@ async function togglePicksPartido(partidoId) {
       ? `${pr.goles_local} - ${pr.goles_visita}`
       : '<span style="color:var(--gris)">sin pick</span>';
     return `<div data-res="${res}" style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem">
-      <span>${p.nombre}</span><span style="font-weight:700">${pick}</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nombre}</span><span style="font-weight:700;padding-left:16px;flex-shrink:0">${pick}</span>
     </div>`;
   }).join('');
 
