@@ -2079,26 +2079,17 @@ async function togglePicksPartido(partidoId) {
 }
 
 function filtrarProxPicks(btn, partidoId, res) {
-  const lista    = document.getElementById('picks-lista-' + partidoId);
-  const mismos   = document.querySelectorAll(`#picks-partido-${partidoId} button[data-res]`);
-  const yaActivo = btn.dataset.activo === '1';
+  const lista  = document.getElementById('picks-lista-' + partidoId);
+  const mismos = document.querySelectorAll(`#picks-partido-${partidoId} button[data-res]`);
 
-  // Limpiar estados y mostrar todo
-  mismos.forEach(b => { b.dataset.activo = ''; b.style.opacity = '1'; });
-  lista.querySelectorAll('[data-res]').forEach(f => f.style.display = 'flex');
-
-  if (res === '*' || yaActivo) {
-    // Todos o toggle-off: mostrar todo y marcar "Todos" como activo
-    const btnTodos = document.querySelector(`#picks-partido-${partidoId} button[data-res="*"]`);
-    if (btnTodos) { btnTodos.dataset.activo = '1'; btnTodos.style.opacity = '1'; }
-    return;
-  }
-
-  // Filtrar por resultado específico
+  // Marcar solo el botón tocado como activo
+  mismos.forEach(b => { b.dataset.activo = ''; b.style.opacity = '0.45'; });
   btn.dataset.activo = '1';
-  mismos.forEach(b => { if (b !== btn) b.style.opacity = '0.45'; });
+  btn.style.opacity = '1';
+
+  // Mostrar filas según filtro
   lista.querySelectorAll('[data-res]').forEach(f => {
-    f.style.display = f.dataset.res === res ? 'flex' : 'none';
+    f.style.display = (res === '*' || f.dataset.res === res) ? 'flex' : 'none';
   });
 }
 
