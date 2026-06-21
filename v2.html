@@ -3157,8 +3157,25 @@ function limpiarFiltro() {
 function renderCadena(equipo) {
   const cont = document.getElementById('resultados-content');
   const term = equipo.toLowerCase();
+
+  // Primero se identifica el UN equipo real que coincide con la busqueda
+  // (preferiendo coincidencia al inicio del nombre, ej. "b" -> el primer
+  // equipo que empiece con "b"), y luego se filtra estrictamente por ese
+  // nombre exacto. Antes se filtraba por "includes" en cualquiera de los
+  // dos equipos de cada partido, lo que mezclaba equipos distintos que
+  // comparten una letra (ej. "b" traia Brasil + Colombia + Cabo Verde +
+  // Bosnia + Belgica, todos bajo el titulo del primero encontrado).
+  const nombresUnicos = [...new Set(allPartidos.flatMap(p => [p.equipo_local, p.equipo_visita]))];
+  const equipoNombre = nombresUnicos.find(n => n.toLowerCase().startsWith(term))
+                     || nombresUnicos.find(n => n.toLowerCase().includes(term));
+
+  if (!equipoNombre) {
+    cont.innerHTML = '<div class="empty-state">No se encontró ningún equipo.</div>';
+    return;
+  }
+
   const matches = allPartidos
-    .filter(p => p.equipo_local.toLowerCase().includes(term) || p.equipo_visita.toLowerCase().includes(term))
+    .filter(p => p.equipo_local === equipoNombre || p.equipo_visita === equipoNombre)
     .sort((a, b) => {
       if (!a.fecha_partido) return 1;
       if (!b.fecha_partido) return -1;
@@ -3170,8 +3187,6 @@ function renderCadena(equipo) {
     return;
   }
 
-  const equipoNombre = matches.find(p => p.equipo_local.toLowerCase().includes(term))?.equipo_local
-    || matches.find(p => p.equipo_visita.toLowerCase().includes(term))?.equipo_visita || equipo;
   const bandera = b(equipoNombre);
   const grupo = matches.find(p => p.fase === 'grupos')?.grupo;
 
@@ -3183,7 +3198,7 @@ function renderCadena(equipo) {
     <div style="position:absolute;left:31px;top:0;bottom:0;width:2px;background:var(--borde);z-index:0"></div>`;
 
   matches.forEach((p, i) => {
-    const esLocal  = p.equipo_local.toLowerCase().includes(term);
+    const esLocal  = p.equipo_local === equipoNombre;
     const rival    = esLocal ? p.equipo_visita : p.equipo_local;
     const finalizado = p.estado === 'finalizado';
     const fecha = p.fecha_partido
