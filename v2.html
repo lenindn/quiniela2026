@@ -3239,6 +3239,12 @@ function renderCadena(equipo) {
               : `<span style="margin-left:auto;font-size:0.8rem;color:var(--gris)">Por jugar</span>`}
           </div>
           ${(p.ciudad || p.estadio) ? `<div style="font-size:0.7rem;color:var(--gris);margin-top:5px">📍 ${[p.ciudad, p.estadio].filter(Boolean).join(' · ')}</div>` : ''}
+          ${finalizado ? `
+            <div style="margin-top:6px">
+              <button onclick="toggleResPicks(${p.id})" style="background:none;border:1px solid var(--borde);border-radius:14px;padding:3px 10px;font-size:0.72rem;cursor:pointer;color:var(--texto)">👀 Ver picks</button>
+            </div>
+            <div id="res-picks-partido-${p.id}" style="display:none;margin-top:8px;border-top:1px solid var(--borde);padding-top:8px"></div>
+          ` : ''}
         </div>
       </div>`;
   });
