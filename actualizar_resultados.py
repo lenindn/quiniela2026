@@ -48,8 +48,11 @@ STATUS_MAP = {
 }
 
 # Mapeo de fase FIFA → fase interna
+# NOTA: GROUP_STAGE se maneja 100% manual (carga de resultados desde admin).
+# Los partidos de grupos en la BD no tienen api_id -> si se incluyera aqui,
+# el script los insertaria como duplicados en vez de actualizarlos. Por eso
+# se omite a proposito; el script solo actua desde 16avos (r32) en adelante.
 FASE_MAP = {
-    'GROUP_STAGE':    'grupos',
     'LAST_32':        'r32',
     'LAST_16':        'r16',
     'QUARTER_FINALS': 'cuartos',
@@ -57,6 +60,64 @@ FASE_MAP = {
     'THIRD_PLACE':    'tercer_lugar',
     'FINAL':          'final',
 }
+
+# Mapeo de nombres de equipo de la API (ingles) -> nombres usados en la BD
+# (espanol, deben coincidir EXACTO con equipo_local/equipo_visita de grupos
+# para que el bracket y los nombres se vean consistentes en toda la app).
+EQUIPO_MAP = {
+    'Mexico':                 'México',
+    'South Africa':           'Sudáfrica',
+    'South Korea':            'Corea del Sur',
+    'Czech Republic':         'Chequia',
+    'Canada':                 'Canadá',
+    'Bosnia and Herzegovina': 'Bosnia y Herzegovina',
+    'Qatar':                  'Qatar',
+    'Switzerland':            'Suiza',
+    'Brazil':                 'Brasil',
+    'Morocco':                'Marruecos',
+    'Haiti':                  'Haití',
+    'Scotland':               'Escocia',
+    'United States':          'Estados Unidos',
+    'Paraguay':               'Paraguay',
+    'Australia':              'Australia',
+    'Turkey':                 'Turquía',
+    'Germany':                'Alemania',
+    'Curacao':                'Curazao',
+    "Ivory Coast":             'Costa de Marfil',
+    "Côte d'Ivoire":           'Costa de Marfil',
+    'Ecuador':                'Ecuador',
+    'Netherlands':            'Países Bajos',
+    'Japan':                  'Japón',
+    'Sweden':                 'Suecia',
+    'Tunisia':                'Túnez',
+    'Belgium':                'Bélgica',
+    'Egypt':                  'Egipto',
+    'Iran':                   'Irán',
+    'New Zealand':             'Nueva Zelanda',
+    'Spain':                  'España',
+    'Cape Verde':             'Cabo Verde',
+    'Saudi Arabia':           'Arabia Saudita',
+    'Uruguay':                'Uruguay',
+    'France':                 'Francia',
+    'Senegal':                'Senegal',
+    'Iraq':                   'Irak',
+    'Norway':                 'Noruega',
+    'Argentina':              'Argentina',
+    'Algeria':                'Argelia',
+    'Austria':                'Austria',
+    'Jordan':                 'Jordania',
+    'Portugal':               'Portugal',
+    'DR Congo':               'RD Congo',
+    'Uzbekistan':             'Uzbekistán',
+    'Colombia':               'Colombia',
+    'England':                'Inglaterra',
+    'Croatia':                'Croacia',
+    'Ghana':                  'Ghana',
+    'Panama':                 'Panamá',
+}
+
+def traducir_equipo(nombre: str) -> str:
+    return EQUIPO_MAP.get(nombre, nombre)
 
 # ============================================================
 # CLIENTE SUPABASE
@@ -135,8 +196,8 @@ def parse_match(m: dict) -> dict | None:
         'api_id':         str(m.get('id', '')),
         'fase':           fase,
         'grupo':          grupo,
-        'equipo_local':   home.get('name', home.get('shortName', 'TBD')),
-        'equipo_visita':  away.get('name', away.get('shortName', 'TBD')),
+        'equipo_local':   traducir_equipo(home.get('name', home.get('shortName', 'TBD'))),
+        'equipo_visita':  traducir_equipo(away.get('name', away.get('shortName', 'TBD'))),
         'fecha_partido':  m.get('utcDate'),
         'sede':           m.get('venue', ''),
         'goles_local':    gl_real,
