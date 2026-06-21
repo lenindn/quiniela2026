@@ -2162,6 +2162,98 @@ function filtrarProxPicks(btn, partidoId, res) {
   });
 }
 
+// ── Ver picks de un partido YA FINALIZADO (vista Resultados) ──
+// Igual al filtro de Próximos (togglePicksPartido/filtrarProxPicks) pero
+// independiente: aquí el partido ya se jugó, así que se muestran los
+// puntos ya calculados (pronosticos.puntos/calculado) en vez de solo el
+// pick. Sin caché compartida con Próximos para no arrastrar bugs entre
+// vistas si una cambia de fase mientras la otra está abierta.
+async function toggleResPicks(partidoId) {
+  const box = document.getElementById('res-picks-partido-' + partidoId);
+  if (!box) return;
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  if (box.dataset.loaded === '1') return;
+  box.innerHTML = '<div style="text-align:center;padding:8px"><div class="spinner"></div></div>';
+
+  let partQuery = sb.from('participantes').select('id,nombre,activo');
+  if (currentGrupo) partQuery = partQuery.eq('grupo_quiniela', currentGrupo.id);
+  const { data: partsData } = await partQuery;
+  const parts = (partsData || []).filter(p => p.activo !== false);
+  const ids   = parts.map(p => p.id);
+
+  const { data: prons } = ids.length > 0
+    ? await sb.from('pronosticos').select('participante_id,goles_local,goles_visita,puntos,calculado').eq('partido_id', partidoId).in('participante_id', ids)
+    : { data: [] };
+
+  const pronMap = {};
+  (prons || []).forEach(pr => { pronMap[pr.participante_id] = pr; });
+
+  const resOf = (gl, gv) => gl > gv ? 'L' : gl < gv ? 'V' : 'E';
+  const partido = allPartidos.find(p => p.id === partidoId);
+  const nomL = partido ? partido.equipo_local  : 'Local';
+  const nomV = partido ? partido.equipo_visita : 'Visita';
+
+  const sorted = parts.slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const conteo = { L: 0, E: 0, V: 0 };
+  sorted.forEach(p => {
+    const pr = pronMap[p.id];
+    if (pr && pr.goles_local !== null && pr.goles_visita !== null)
+      conteo[resOf(pr.goles_local, pr.goles_visita)]++;
+  });
+
+  const totalConPick = conteo.L + conteo.E + conteo.V;
+  const btnTodos = `<button onclick="filtrarResPicks(this,'${partidoId}','*')"
+    data-res="*" data-activo="1"
+    style="background:#1a5c2a;border:1px solid #1a5c2a;color:#fff;border-radius:14px;
+           padding:3px 10px;font-size:0.72rem;cursor:pointer;font-weight:700">
+    Todos (${totalConPick})
+  </button>`;
+  const chips = btnTodos + [
+    { key: 'L', label: nomL,    color: '#dcfce7', border: '#16a34a', text: '#15803d' },
+    { key: 'E', label: 'Empate', color: '#f1f5f9', border: '#94a3b8', text: '#475569' },
+    { key: 'V', label: nomV,    color: '#dbeafe', border: '#2563eb', text: '#1d4ed8' },
+  ].map(c => `
+    <button onclick="filtrarResPicks(this,'${partidoId}','${c.key}')"
+      data-res="${c.key}"
+      style="background:${c.color};border:1px solid ${c.border};color:${c.text};border-radius:14px;
+             padding:3px 10px;font-size:0.72rem;cursor:pointer;font-weight:700">
+      ${conteo[c.key]} ${c.label}
+    </button>`).join('');
+
+  const filas = sorted.map(p => {
+    const pr  = pronMap[p.id];
+    const res = (pr && pr.goles_local !== null && pr.goles_visita !== null)
+      ? resOf(pr.goles_local, pr.goles_visita) : '';
+    const pick = pr && res
+      ? `${pr.goles_local} - ${pr.goles_visita}`
+      : '<span style="color:var(--gris)">sin pick</span>';
+    const badge = (pr && pr.calculado)
+      ? `<span style="font-size:0.7rem;font-weight:700;margin-left:8px;color:${pr.puntos > 0 ? 'var(--exito)' : 'var(--gris)'}">${pr.puntos > 0 ? '+' + pr.puntos + ' pts' : '0 pts'}</span>`
+      : '';
+    return `<div data-res="${res}" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:0.8rem">
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nombre}</span>
+      <span style="display:flex;align-items:center;padding-left:16px;flex-shrink:0"><span style="font-weight:700">${pick}</span>${badge}</span>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${chips}</div>
+    <div id="res-picks-lista-${partidoId}">${filas}</div>`;
+  box.dataset.loaded = '1';
+}
+
+function filtrarResPicks(btn, partidoId, res) {
+  const lista  = document.getElementById('res-picks-lista-' + partidoId);
+  const mismos = document.querySelectorAll(`#res-picks-partido-${partidoId} button[data-res]`);
+  mismos.forEach(b => { b.dataset.activo = ''; b.style.opacity = '0.45'; });
+  btn.dataset.activo = '1';
+  btn.style.opacity = '1';
+  lista.querySelectorAll('[data-res]').forEach(f => {
+    f.style.display = (res === '*' || f.dataset.res === res) ? 'flex' : 'none';
+  });
+}
+
 // ── Helpers de numeros pseudoaleatorios con semilla (para Proyección estable por dia) ──
 function hashString(str) {
   let h = 0;
@@ -3199,6 +3291,12 @@ async function renderResultados() {
             <div style="text-align:center;font-size:0.72rem;color:var(--gris);padding:2px 12px 8px">
               📍 ${[p.ciudad, p.estadio].filter(Boolean).join(' · ')}
             </div>` : ''}
+          ${finalizado ? `
+            <div style="text-align:center;padding:0 12px 10px">
+              <button onclick="toggleResPicks(${p.id})" style="background:none;border:1px solid var(--borde);border-radius:14px;padding:3px 10px;font-size:0.72rem;cursor:pointer;color:var(--texto)">👀 Ver picks</button>
+            </div>
+            <div id="res-picks-partido-${p.id}" style="display:none;padding:0 12px 10px;border-top:1px solid var(--borde)"></div>
+          ` : ''}
           ${finalizado && isAdmin ? `
             <div id="edit-form-${p.id}" style="display:none;background:#f7f7f7;padding:10px 12px;border-top:1px solid var(--borde)">
               <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;font-size:0.85rem">
