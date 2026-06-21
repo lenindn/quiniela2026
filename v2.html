@@ -3154,9 +3154,15 @@ function limpiarFiltro() {
   renderResultados();
 }
 
+// Quita acentos/diacriticos para que buscar "belgica" encuentre "Bélgica",
+// "peru" encuentre "Perú", etc. Usado solo para comparar, nunca para mostrar.
+function sinAcentos(s) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
 function renderCadena(equipo) {
   const cont = document.getElementById('resultados-content');
-  const term = equipo.toLowerCase();
+  const term = sinAcentos(equipo);
 
   // Primero se identifica el UN equipo real que coincide con la busqueda
   // (preferiendo coincidencia al inicio del nombre, ej. "b" -> el primer
@@ -3166,8 +3172,8 @@ function renderCadena(equipo) {
   // comparten una letra (ej. "b" traia Brasil + Colombia + Cabo Verde +
   // Bosnia + Belgica, todos bajo el titulo del primero encontrado).
   const nombresUnicos = [...new Set(allPartidos.flatMap(p => [p.equipo_local, p.equipo_visita]))];
-  const equipoNombre = nombresUnicos.find(n => n.toLowerCase().startsWith(term))
-                     || nombresUnicos.find(n => n.toLowerCase().includes(term));
+  const equipoNombre = nombresUnicos.find(n => sinAcentos(n).startsWith(term))
+                     || nombresUnicos.find(n => sinAcentos(n).includes(term));
 
   if (!equipoNombre) {
     cont.innerHTML = '<div class="empty-state">No se encontró ningún equipo.</div>';
