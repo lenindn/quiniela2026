@@ -1596,7 +1596,15 @@ async function handleLogin() {
   const errEl   = document.getElementById('login-error');
   errEl.style.display = 'none';
 
+  const paisSel = document.getElementById('login-pais').value;
   if (!nombre) { showError(errEl, 'Ingresa tu nombre.'); return; }
+  if (!paisSel) { showError(errEl, 'Selecciona tu país.'); return; }
+  if (paisSel === 'otro' && !document.getElementById('login-wa-otro-cod').value.trim()) {
+    showError(errEl, 'Ingresa el código de país.'); return;
+  }
+  if (!document.getElementById('login-wa-local').value.trim()) {
+    showError(errEl, 'Ingresa tu número de WhatsApp.'); return;
+  }
   if (wa.length < 8) { showError(errEl, 'Ingresa un número de WhatsApp válido con código de país.'); return; }
 
   // Buscar participante en ESTE grupo específico
