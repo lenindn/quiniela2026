@@ -161,9 +161,17 @@ def parse_match(m: dict) -> dict | None:
 
     status      = m.get('status', 'SCHEDULED')
     estado      = STATUS_MAP.get(status, 'pendiente')
-    home        = m.get('homeTeam', {})
-    away        = m.get('awayTeam', {})
+    home        = m.get('homeTeam') or {}
+    away        = m.get('awayTeam') or {}
     score       = m.get('score', {})
+
+    # En fases eliminatorias, mientras los cruces no esten definidos (grupos
+    # sin terminar), la API devuelve homeTeam/awayTeam con name=None (la
+    # llave existe, el valor es null). Sin este chequeo se insertarian
+    # partidos "None vs None" en la BD. Se descartan hasta que la API
+    # confirme los dos equipos del cruce.
+    if not home.get('name') or not away.get('name'):
+        return None
 
     # ?? REGLA DE PUNTUACI?N: usar marcador de 90 MINUTOS (regularTime), NO fullTime.
     # fullTime puede incluir goles de pr?rroga, lo cual cambiar?a el marcador que
