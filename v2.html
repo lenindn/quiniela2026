@@ -619,7 +619,25 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     </div>
     <div class="form-group">
       <label>Tu WhatsApp <span style="color:var(--gris);font-weight:400">(con código de país)</span></label>
-      <input type="tel" id="login-wa" placeholder="Ej: 5219991234567" inputmode="numeric" maxlength="20">
+      <div style="display:flex;gap:6px">
+        <select id="login-pais" onchange="syncLoginWa()" style="flex:0 0 108px;padding:10px 4px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff">
+          <option value="" disabled selected>País</option>
+          <option value="58">🇻🇪 +58</option>
+          <option value="1">🇺🇸 +1</option>
+          <option value="34">🇪🇸 +34</option>
+          <option value="52">🇲🇽 +52</option>
+          <option value="57">🇨🇴 +57</option>
+          <option value="44">🇬🇧 +44</option>
+          <option value="39">🇮🇹 +39</option>
+          <option value="507">🇵🇦 +507</option>
+          <option value="otro">Otro...</option>
+        </select>
+        <input type="tel" id="login-wa-local" placeholder="Número sin código de país" inputmode="numeric" maxlength="15" style="flex:1" oninput="syncLoginWa()">
+      </div>
+      <div id="login-wa-otro-wrap" style="display:none;margin-top:6px">
+        <input type="tel" id="login-wa-otro-cod" placeholder="Código de país (ej: 56)" inputmode="numeric" maxlength="4" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:8px;font-size:0.85rem" oninput="syncLoginWa()">
+      </div>
+      <input type="hidden" id="login-wa">
     </div>
     <button class="btn-primary" onclick="handleLogin()">Entrar al juego</button>
     <div class="login-note">
@@ -1360,7 +1378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } else {
       // No registrado en este grupo -> pre-rellenar formulario
-      document.getElementById('login-wa').value     = autoWa;
+      prefillWaFields(autoWa);
       document.getElementById('login-nombre').value = autoNombre;
     }
   }
@@ -1528,6 +1546,49 @@ async function loadApp() {
 // ============================================================
 // AUTH
 // ============================================================
+// Lista de codigos de pais ofrecidos en el selector del login (debe
+// coincidir con las <option> de #login-pais). Ordenada por longitud de
+// codigo descendente para que prefillWaFields() no confunda, ej. '507'
+// con '1'+'07...' al detectar el codigo de un numero guardado.
+const PAISES_LOGIN = ['507','58','57','52','44','39','34','1'];
+
+// Mantiene el input oculto #login-wa (el que lee handleLogin) sincronizado
+// con el select de pais + el numero local que escribe el usuario.
+function syncLoginWa() {
+  const sel      = document.getElementById('login-pais');
+  const otroWrap = document.getElementById('login-wa-otro-wrap');
+  let pais = sel.value;
+  if (pais === 'otro') {
+    otroWrap.style.display = 'block';
+    pais = (document.getElementById('login-wa-otro-cod').value || '').replace(/\D/g, '');
+  } else {
+    otroWrap.style.display = 'none';
+  }
+  const local = (document.getElementById('login-wa-local').value || '').replace(/\D/g, '');
+  document.getElementById('login-wa').value = pais + local;
+}
+
+// Dado un numero completo ya guardado (ej. autologin desde localStorage),
+// intenta separar codigo de pais + numero local para precargar el selector.
+// Si no coincide con ningun codigo conocido, usa "Otro..." sin perder el
+// numero completo (login-wa se deja con el valor real de todos modos).
+function prefillWaFields(fullWa) {
+  const digits = (fullWa || '').replace(/\D/g, '');
+  const cod = PAISES_LOGIN.find(c => digits.startsWith(c));
+  const sel = document.getElementById('login-pais');
+  if (cod) {
+    sel.value = cod;
+    document.getElementById('login-wa-local').value = digits.slice(cod.length);
+    document.getElementById('login-wa-otro-wrap').style.display = 'none';
+  } else {
+    sel.value = 'otro';
+    document.getElementById('login-wa-otro-wrap').style.display = 'block';
+    document.getElementById('login-wa-otro-cod').value = '';
+    document.getElementById('login-wa-local').value = digits;
+  }
+  document.getElementById('login-wa').value = digits;
+}
+
 async function handleLogin() {
   const nombre  = document.getElementById('login-nombre').value.trim();
   const waInput = document.getElementById('login-wa').value.trim();
