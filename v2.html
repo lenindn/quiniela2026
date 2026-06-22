@@ -1564,7 +1564,16 @@ function syncLoginWa() {
   } else {
     otroWrap.style.display = 'none';
   }
-  const local = (document.getElementById('login-wa-local').value || '').replace(/\D/g, '');
+  let local = (document.getElementById('login-wa-local').value || '').replace(/\D/g, '');
+  // Si el usuario escribio el codigo de pais TAMBIEN dentro del numero local
+  // (costumbre de pegar el numero completo en vez de solo la parte local),
+  // se recorta para no duplicarlo (caso real: select "57" + local
+  // "573180009756" -> guardaba "57573180009756"). Solo se recorta si, tras
+  // quitarlo, sigue quedando un numero razonable (>=7 digitos) para evitar
+  // falsos positivos con numeros locales cortos que coincidan por azar.
+  if (pais && local.startsWith(pais) && local.length - pais.length >= 7) {
+    local = local.slice(pais.length);
+  }
   document.getElementById('login-wa').value = pais + local;
 }
 
