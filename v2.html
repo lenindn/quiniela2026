@@ -1531,13 +1531,15 @@ async function loadApp() {
   myPronosticos = {};
   (prRes.data || []).forEach(p => myPronosticos[p.partido_id] = p);
 
-  // Config: potes por fase (PIN admin no se carga al cliente — verificación server-side via RPC)
+  // Config: potes por fase + pote General (PIN admin no se carga al cliente — verificación server-side via RPC)
   allPotes = {};
   if (cfgRes.data) {
     FASES_ORDEN.forEach(f => {
       const row = cfgRes.data.find(r => r.clave === `pote_${f}`);
       if (row) allPotes[f] = row.valor;
     });
+    const rowGeneral = cfgRes.data.find(r => r.clave === 'pote_general');
+    if (rowGeneral) allPotes['general'] = rowGeneral.valor;
   }
 
   navigate('picks');
@@ -2810,6 +2812,9 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
   const cont = document.getElementById('tabla-content');
   const grupoTxt = currentGrupo
     ? `<div style="font-size:0.78rem;color:var(--gris);margin-bottom:10px">📍 ${currentGrupo.nombre}</div>` : '';
+  const poteGeneral = allPotes['general'] || '';
+  const poteGeneralChip = poteGeneral
+    ? `<div style="background:linear-gradient(135deg,var(--oro),#f0d060);color:#000;border-radius:10px;padding:8px 14px;font-size:0.88rem;font-weight:700;margin-bottom:12px;text-align:center">🏆 ${poteGeneral}</div>` : '';
 
   // Fases con al menos un partido finalizado (aparecen como columna en la tabla)
   const fasesConDatos = FASES_ORDEN.filter(f =>
@@ -2817,7 +2822,7 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
   );
 
   if (fasesConDatos.length === 0) {
-    cont.innerHTML = grupoTxt + `
+    cont.innerHTML = grupoTxt + poteGeneralChip + `
       <div class="fase-cerrada">
         <div class="lock-icon">⏳</div>
         <p>El torneo aún no ha comenzado.<br>
@@ -3000,7 +3005,7 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
       ⭐ = Total exactos · columnas = pts por fase · ✗ = no participó · desliza ➡ para ver fases
     </div>`;
 
-  cont.innerHTML = grupoTxt + ganadoresHTML + tablaHTML;
+  cont.innerHTML = grupoTxt + poteGeneralChip + ganadoresHTML + tablaHTML;
 }
 
 // ── Renderiza el ranking o podio para una fase específica ──
@@ -4785,25 +4790,30 @@ async function toggleFase(fase, abierta) {
 async function renderAdminPremios() {
   const el = document.getElementById('admin-premios-list');
   if (!el) return;
-  // Cargar potes actuales desde config
-  const { data: cfgRows } = await sb.from('config').select('clave,valor')
-    .in('clave', FASES_ORDEN.map(f => `pote_${f}`));
+  // Cargar potes actuales desde config (fases + pote General, acumulado de todas las fases)
+  const claves = [...FASES_ORDEN.map(f => `pote_${f}`), 'pote_general'];
+  const { data: cfgRows } = await sb.from('config').select('clave,valor').in('clave', claves);
   const potesActuales = {};
   (cfgRows || []).forEach(r => { potesActuales[r.clave] = r.valor; });
 
-  el.innerHTML = FASES_ORDEN.map(f => {
-    const clave = `pote_${f}`;
-    const val   = potesActuales[clave] || '';
+  const filaPremio = (clave, label, placeholder) => {
+    const val = potesActuales[clave] || '';
     return `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="min-width:90px;font-size:0.82rem;font-weight:600">${FASES_LABELS[f]}</span>
-        <input id="pote-input-${f}" type="text" value="${val}"
-          placeholder="Ej: $300 MXN · 1er:60% 2do:30% 3ro:10%"
+        <span style="min-width:90px;font-size:0.82rem;font-weight:600">${label}</span>
+        <input id="pote-input-${clave}" type="text" value="${val}"
+          placeholder="${placeholder}"
           style="flex:1;padding:7px 10px;border:1px solid var(--borde);border-radius:8px;font-size:0.82rem">
-        <button class="btn-sm" onclick="guardarPote('${f}')">💾</button>
-        <span id="pote-msg-${f}" style="font-size:0.75rem;color:var(--exito)"></span>
+        <button class="btn-sm" onclick="guardarPote('${clave}')">💾</button>
+        <span id="pote-msg-${clave}" style="font-size:0.75rem;color:var(--exito)"></span>
       </div>`;
-  }).join('');
+  };
+
+  el.innerHTML = FASES_ORDEN.map(f =>
+    filaPremio(f, FASES_LABELS[f], 'Ej: $300 MXN · 1er:60% 2do:30% 3ro:10%')
+  ).join('')
+  + '<hr class="sep" style="margin:12px 0">'
+  + filaPremio('general', '🏆 General', 'Ej: Pote General: $200 · 1ro:50% 2do:30% 3ro:20%');
 }
 
 async function guardarPote(fase) {
