@@ -4797,7 +4797,7 @@ async function renderAdminPremios() {
   (cfgRows || []).forEach(r => { potesActuales[r.clave] = r.valor; });
 
   const filaPremio = (clave, label, placeholder) => {
-    const val = potesActuales[clave] || '';
+    const val = potesActuales[`pote_${clave}`] || '';
     return `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <span style="min-width:90px;font-size:0.82rem;font-weight:600">${label}</span>
