@@ -5194,6 +5194,14 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
     .eq('participante_id', participanteId)
     .order('partido_id');
 
+  // Refrescar allPartidos antes de armar la lista: esta funcion puede abrirse
+  // desde una sesion abierta hace horas sin recargar, mientras el admin ya
+  // actualizo resultados en otro lado -> allPartidos quedaria con marcadores
+  // viejos (null) aunque pronosticos.calculado/puntos ya este correcto,
+  // mostrando "Real: null-null" pese a que el partido ya tiene resultado.
+  const { data: partidosFrescos } = await sb.from('partidos').select('*').order('numero');
+  if (partidosFrescos) allPartidos = partidosFrescos;
+
   // Filtrar por fase si viene del podio (filtroFase != null)
   const partidosDeFase = filtroFase
     ? allPartidos.filter(p => p.fase === filtroFase).map(p => p.id)
