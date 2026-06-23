@@ -2489,12 +2489,26 @@ async function loadLeaderboard() {
   // la consulta sin filtro trae TODOS los pronosticos de la app (2800+) y
   // Supabase corta en 1000 filas por defecto, dejando fuera participantes al azar.
   const partIds = parts.map(p => p.id);
-  const [prons, pardosRes] = await Promise.all([
+  const [prons, pardosRes, cfgRes] = await Promise.all([
     partIds.length > 0 ? fetchPronosticosDe(partIds) : Promise.resolve([]),
     sb.from('partidos').select('id,fase,estado'),
+    sb.from('config').select('clave,valor'),
   ]);
 
   const partidos = pardosRes.data || [];
+
+  // Refrescar allPotes (texto de premios) -- si la sesion lleva tiempo abierta
+  // y el admin edito un premio mientras tanto, esto evita mostrar el texto
+  // viejo que quedo en memoria desde que se cargo la app por primera vez.
+  if (cfgRes.data) {
+    allPotes = {};
+    FASES_ORDEN.forEach(f => {
+      const row = cfgRes.data.find(r => r.clave === claveDePote(f));
+      if (row) allPotes[f] = row.valor;
+    });
+    const rowGeneral = cfgRes.data.find(r => r.clave === claveDePote('general'));
+    if (rowGeneral) allPotes['general'] = rowGeneral.valor;
+  }
 
   // Panel resumen del grupo (inscritos / listos / incompletos / sin picks) de la fase abierta
   renderResumenGrupo(parts, prons, partidos);
