@@ -1531,14 +1531,14 @@ async function loadApp() {
   myPronosticos = {};
   (prRes.data || []).forEach(p => myPronosticos[p.partido_id] = p);
 
-  // Config: potes por fase + pote General (PIN admin no se carga al cliente — verificación server-side via RPC)
+  // Config: potes por fase + pote General, del GRUPO actual (PIN admin no se carga al cliente — verificación server-side via RPC)
   allPotes = {};
   if (cfgRes.data) {
     FASES_ORDEN.forEach(f => {
-      const row = cfgRes.data.find(r => r.clave === `pote_${f}`);
+      const row = cfgRes.data.find(r => r.clave === claveDePote(f));
       if (row) allPotes[f] = row.valor;
     });
-    const rowGeneral = cfgRes.data.find(r => r.clave === 'pote_general');
+    const rowGeneral = cfgRes.data.find(r => r.clave === claveDePote('general'));
     if (rowGeneral) allPotes['general'] = rowGeneral.valor;
   }
 
@@ -4786,18 +4786,27 @@ async function toggleFase(fase, abierta) {
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MÓDULO 11 — ADMIN: PREMIOS POR FASE                        ║
 // ╚══════════════════════════════════════════════════════════════╝
-// Renderiza los campos editables de premio para cada fase
+// Los premios son por GRUPO de quiniela (cada grupo tiene su propio pozo de
+// dinero) -> la clave en config incluye el id del grupo, ej. "pote_grupos_
+// san-jose-89". Sin esto, dos grupos distintos (san-jose-89, familia-bella)
+// compartirian el mismo texto de premio aunque sus pozos sean diferentes.
+function claveDePote(fase) {
+  const sufijo = currentGrupo ? `_${currentGrupo.id}` : '';
+  return `pote_${fase}${sufijo}`;
+}
+
+// Renderiza los campos editables de premio para cada fase (del grupo actual)
 async function renderAdminPremios() {
   const el = document.getElementById('admin-premios-list');
   if (!el) return;
   // Cargar potes actuales desde config (fases + pote General, acumulado de todas las fases)
-  const claves = [...FASES_ORDEN.map(f => `pote_${f}`), 'pote_general'];
+  const claves = [...FASES_ORDEN.map(f => claveDePote(f)), claveDePote('general')];
   const { data: cfgRows } = await sb.from('config').select('clave,valor').in('clave', claves);
   const potesActuales = {};
   (cfgRows || []).forEach(r => { potesActuales[r.clave] = r.valor; });
 
   const filaPremio = (clave, label, placeholder) => {
-    const val = potesActuales[`pote_${clave}`] || '';
+    const val = potesActuales[claveDePote(clave)] || '';
     return `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <span style="min-width:90px;font-size:0.82rem;font-weight:600">${label}</span>
@@ -4809,7 +4818,8 @@ async function renderAdminPremios() {
       </div>`;
   };
 
-  el.innerHTML = FASES_ORDEN.map(f =>
+  const grupoTxt = currentGrupo ? `<div style="font-size:0.78rem;color:var(--gris);margin-bottom:10px">📍 Premios de: ${currentGrupo.nombre}</div>` : '';
+  el.innerHTML = grupoTxt + FASES_ORDEN.map(f =>
     filaPremio(f, FASES_LABELS[f], 'Ej: $300 MXN · 1er:60% 2do:30% 3ro:10%')
   ).join('')
   + '<hr class="sep" style="margin:12px 0">'
@@ -4818,7 +4828,7 @@ async function renderAdminPremios() {
 
 async function guardarPote(fase) {
   const val   = document.getElementById(`pote-input-${fase}`).value.trim();
-  const clave = `pote_${fase}`;
+  const clave = claveDePote(fase);
   const msgEl = document.getElementById(`pote-msg-${fase}`);
   msgEl.textContent = '⏳';
   const { error } = await sb.rpc('set_config_valor', { p_clave: clave, p_valor: val });
