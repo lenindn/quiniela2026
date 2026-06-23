@@ -2824,15 +2824,16 @@ async function loadGruposView() {
 // Asigna "rango" (puesto) a una lista YA ORDENADA de mayor a menor por `key`,
 // compartiendo el mismo puesto entre quienes tengan el mismo valor exacto en
 // `key` (regla del reglamento: empate en PUNTOS reparte el premio del puesto
-// entre los empatados -> deben verse con el mismo numero). Estilo "salto"
-// (1,1,3,4): el siguiente puesto distinto salta al numero de items previos+1,
-// no al rango anterior+1 -- es el estandar de rankings deportivos.
+// entre los empatados -> deben verse con el mismo numero). Estilo "denso"
+// (1,2,2,2,3): el siguiente puesto distinto avanza solo +1 desde el rango
+// anterior, NUNCA salta numeros -- asi el premio de 3er lugar siempre lo
+// reclama alguien, aunque arriba haya un empate de varias personas en 2do.
 function asignarRangos(lista, key = 'pts') {
   let rangoActual  = 0;
   let valorAnterior = null;
-  return lista.map((item, i) => {
+  return lista.map((item) => {
     if (valorAnterior === null || item[key] !== valorAnterior) {
-      rangoActual  = i + 1;
+      rangoActual  += 1;
       valorAnterior = item[key];
     }
     return { ...item, rango: rangoActual };
