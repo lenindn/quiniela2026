@@ -2821,6 +2821,24 @@ async function loadGruposView() {
   }
 }
 
+// Asigna "rango" (puesto) a una lista YA ORDENADA de mayor a menor por `key`,
+// compartiendo el mismo puesto entre quienes tengan el mismo valor exacto en
+// `key` (regla del reglamento: empate en PUNTOS reparte el premio del puesto
+// entre los empatados -> deben verse con el mismo numero). Estilo "salto"
+// (1,1,3,4): el siguiente puesto distinto salta al numero de items previos+1,
+// no al rango anterior+1 -- es el estandar de rankings deportivos.
+function asignarRangos(lista, key = 'pts') {
+  let rangoActual  = 0;
+  let valorAnterior = null;
+  return lista.map((item, i) => {
+    if (valorAnterior === null || item[key] !== valorAnterior) {
+      rangoActual  = i + 1;
+      valorAnterior = item[key];
+    }
+    return { ...item, rango: rangoActual };
+  });
+}
+
 
 function renderLeaderboardGeneral(parts, prons, partidos) {
   const cont = document.getElementById('tabla-content');
@@ -2956,6 +2974,10 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
   );
   const ranking = [...elegibles, ...inelegibles];
 
+  // Rango con empates compartidos (regla: mismo puntaje total = mismo puesto,
+  // reparten el premio del puesto entre ellos). Solo aplica a elegibles.
+  const rangoPorId = new Map(asignarRangos(elegibles, 'totalPts').map(p => [p.id, p.rango]));
+
   // Grid dinámico según cuántas fases tienen datos
   const colsFases = fasesConDatos.map(() => '38px').join(' ');
   const gridCols  = `30px minmax(130px,1fr) 46px ${colsFases} 34px`;
@@ -2968,7 +2990,7 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
   const rows = ranking.map((p, i) => {
     const esMi    = currentUser && p.id === currentUser.id;
     // Posición y medalla solo para elegibles
-    const posEleg = p.elegible ? elegibles.indexOf(p) + 1 : null;
+    const posEleg = p.elegible ? rangoPorId.get(p.id) : null;
     const rankHTML = p.elegible
       ? (posEleg <= 3 ? `<span class="rank-medal">${medals[posEleg-1]}</span>` : posEleg)
       : `<span style="font-size:0.75rem;color:var(--gris)">—</span>`;
@@ -3097,30 +3119,36 @@ function renderLeaderboardFase(fase, parts, prons, partidos) {
 function renderPodio(fase, ranking, finalizados, totalPartidos) {
   const medals = ['🥇','🥈','🥉'];
   const colores = ['#c9a023','#9ca3af','#b87333'];
-  // Solo son podio quienes tienen pts > 0. Los demas van al desplegable.
-  const podio    = ranking.filter(p => p.pts > 0).slice(0, 3);
+  // Rango con empates compartidos sobre TODA la tabla (regla: mismo puntaje =
+  // mismo puesto, reparten el premio). Podio = quienes queden en rango 1-3 Y
+  // tengan pts > 0 -- si hay un empate justo en el limite (ej. 4 personas con
+  // el mismo puntaje en 1er lugar), TODAS entran al podio, no solo las
+  // primeras 3 por indice como antes.
+  const conRango = asignarRangos(ranking, 'pts');
+  const podio    = conRango.filter(p => p.rango <= 3 && p.pts > 0);
   const podioIds = new Set(podio.map(p => p.id));
-  const resto    = ranking.filter(p => !podioIds.has(p.id));
+  const resto    = conRango.filter(p => !podioIds.has(p.id));
 
   const podioHTML = podio.length === 0
     ? '<div style="text-align:center;color:var(--gris);font-style:italic;padding:16px">Nadie puntuó en esta fase aún.</div>'
-    : podio.map((p, i) => {
+    : podio.map((p) => {
     const esMi = currentUser && p.id === currentUser.id;
+    const idx  = p.rango - 1; // 0,1,2 -> color/medalla del puesto (no del indice en el array)
     return `
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:${esMi ? '#f0f9f0' : '#fff'};border-left:4px solid ${colores[i]};margin-bottom:6px;border-radius:0 8px 8px 0">
-        <div style="font-size:2rem;line-height:1">${medals[i]}</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:${esMi ? '#f0f9f0' : '#fff'};border-left:4px solid ${colores[idx]};margin-bottom:6px;border-radius:0 8px 8px 0">
+        <div style="font-size:2rem;line-height:1">${medals[idx]}</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:0.95rem">${p.nombre}${esMi ? ' 👈' : ''}</div>
           <div style="font-size:0.75rem;color:var(--gris)">⭐ ${p.exactos} exactos · ✓ ${p.aciertos} correctos</div>
         </div>
-        <div style="font-size:1.4rem;font-weight:800;color:${colores[i]}">${p.pts} pts</div>
+        <div style="font-size:1.4rem;font-weight:800;color:${colores[idx]}">${p.pts} pts</div>
       </div>`;
   }).join('');
 
   const restoHTML = resto.length > 0 ? `
     <details style="margin-top:8px">
-      <summary style="font-size:0.8rem;color:var(--gris);cursor:pointer;padding:6px 0">Ver posiciones 4–${ranking.length}</summary>
-      ${renderTablaRanking(resto, fase, true, 4)}
+      <summary style="font-size:0.8rem;color:var(--gris);cursor:pointer;padding:6px 0">Ver posiciones ${resto[0].rango}–${ranking.length}</summary>
+      ${renderTablaRanking(resto, fase, true)}
     </details>` : '';
 
   return `
@@ -3135,11 +3163,15 @@ function renderPodio(fase, ranking, finalizados, totalPartidos) {
 }
 
 // ── Renderiza tabla de ranking (usada en en-curso y en resto del podio) ──
-function renderTablaRanking(ranking, fase, esResto = false, startPos = 1) {
+// Si los items ya traen `.rango` (vienen de renderPodio, que ya resolvio
+// empates sobre toda la tabla) se usa tal cual; si no (llamada directa con
+// fase en curso) se calcula aqui mismo sobre esta lista.
+function renderTablaRanking(ranking, fase, esResto = false) {
   if (ranking.length === 0) return '<div class="empty-state">Sin participantes activos en esta fase.</div>';
   const medals = ['🥇','🥈','🥉'];
-  const rows = ranking.map((p, i) => {
-    const pos   = startPos + i;
+  const conRango = ranking[0].rango !== undefined ? ranking : asignarRangos(ranking, 'pts');
+  const rows = conRango.map((p) => {
+    const pos   = p.rango;
     const esMi  = currentUser && p.id === currentUser.id;
     const medal = !esResto && pos <= 3 ? `<span class="rank-medal">${medals[pos-1]}</span>` : pos;
     return `
