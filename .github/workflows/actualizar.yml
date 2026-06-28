@@ -8,10 +8,14 @@ on:
   schedule:
     # Solo durante el torneo (junio-julio) y en la ventana de partidos.
     # Mundial 2026 en Norteamerica: partidos ~12:00-22:00 hora local
-    # = aprox 16:00-06:00 UTC. Corre cada 2h SOLO en esa franja.
-    # Horas UTC: 16,18,20,22,00,02,04,06. Meses: 6 (jun) y 7 (jul).
+    # = aprox 16:00-06:00 UTC. Corre cada 15 min SOLO en esa franja, para
+    # que el resultado quede cargado pocos minutos después de cada partido
+    # (antes corría cada 2h, lo que podía tardar hasta 2h en reflejar un
+    # resultado ya finalizado). football-data.org free tier soporta esta
+    # frecuencia sin problema (muy por debajo del límite de la API).
+    # Horas UTC: 16-23 y 0-6. Meses: 6 (jun) y 7 (jul).
     # Ajustar si el fixture oficial usa otras franjas horarias.
-    - cron: '0 16,18,20,22,0,2,4,6 * 6,7 *'
+    - cron: '*/15 0-6,16-23 * 6,7 *'
   workflow_dispatch:
     # Permite ejecutar manualmente desde GitHub Actions
 
