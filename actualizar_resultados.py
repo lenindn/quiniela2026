@@ -7,6 +7,7 @@ Programar: GitHub Actions cada 2 horas (ver .github/workflows/actualizar.yml)
 
 import os
 import sys
+import json
 import requests
 from datetime import datetime, timezone
 from supabase import create_client, Client
@@ -71,6 +72,7 @@ EQUIPO_MAP = {
     'Czech Republic':         'Chequia',
     'Canada':                 'Canadá',
     'Bosnia and Herzegovina': 'Bosnia y Herzegovina',
+    'Bosnia-Herzegovina':     'Bosnia y Herzegovina',  # nombre real devuelto por la API para r32
     'Qatar':                  'Qatar',
     'Switzerland':            'Suiza',
     'Brazil':                 'Brasil',
@@ -143,7 +145,10 @@ def fetch_matches() -> list:
     try:
         resp = requests.get(url, headers=headers, params=params, timeout=30)
         resp.raise_for_status()
-        data = resp.json()
+        # football-data.org no manda 'charset' en el Content-Type del JSON; sin esto
+        # requests adivina mal la codificacion y los nombres con tilde quedan corruptos
+        # (mojibake, ej. "Sudáfrica" -> "SudÃ¡frica").
+        data = json.loads(resp.content.decode('utf-8'))
         return data.get('matches', [])
     except requests.HTTPError as e:
         print(f'ERROR HTTP al consultar API: {e} — {resp.text[:200]}')
