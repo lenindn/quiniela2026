@@ -1237,6 +1237,40 @@ const FASES_NOMBRE = {
 };
 const FASES_ORDEN = ['grupos','r32','r16','cuartos','semis','tercer_lugar','final'];
 
+// Bandera por equipo (código ISO 3166-1 alpha-2). Nombres deben coincidir EXACTO con
+// equipo_local/equipo_visita en la tabla partidos. Escocia e Inglaterra no tienen bandera
+// emoji estándar de 2 letras (usan secuencias especiales poco soportadas) -> se usa GB.
+const EQUIPO_FLAG = {
+  'Alemania':'DE','Arabia Saudita':'SA','Argelia':'DZ','Argentina':'AR','Australia':'AU',
+  'Austria':'AT','Bosnia y Herzegovina':'BA','Brasil':'BR','Bélgica':'BE','Cabo Verde':'CV',
+  'Canadá':'CA','Chequia':'CZ','Colombia':'CO','Corea del Sur':'KR','Costa de Marfil':'CI',
+  'Croacia':'HR','Curazao':'CW','Ecuador':'EC','Egipto':'EG','Escocia':'GB','España':'ES',
+  'Estados Unidos':'US','Francia':'FR','Ghana':'GH','Haití':'HT','Inglaterra':'GB','Irak':'IQ',
+  'Irán':'IR','Japón':'JP','Jordania':'JO','Marruecos':'MA','México':'MX','Noruega':'NO',
+  'Nueva Zelanda':'NZ','Panamá':'PA','Paraguay':'PY','Países Bajos':'NL','Portugal':'PT',
+  'Qatar':'QA','RD Congo':'CD','Senegal':'SN','Sudáfrica':'ZA','Suecia':'SE','Suiza':'CH',
+  'Turquía':'TR','Túnez':'TN','Uruguay':'UY','Uzbekistán':'UZ',
+};
+function banderaEquipo(nombre) {
+  const iso = EQUIPO_FLAG[nombre];
+  if (!iso) return '🏳️';
+  return iso.toUpperCase().replace(/./g, c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65));
+}
+// Fecha relativa estilo "Hoy, 3:00 p.m." / "Mañana, 9:00 p.m." / "Mié, 1/7, 4:00 p.m."
+function fechaRelativa(fechaIso) {
+  if (!fechaIso) return 'Fecha por confirmar';
+  const fecha = new Date(fechaIso);
+  const ahora = new Date();
+  const hora  = fecha.toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' });
+  const unDia = 24 * 60 * 60 * 1000;
+  const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const diff = Math.floor((new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()) - inicioHoy) / unDia);
+  if (diff === 0) return 'Hoy, ' + hora;
+  if (diff === 1) return 'Mañana, ' + hora;
+  const diaSemana = fecha.toLocaleDateString('es', { weekday: 'short' });
+  return diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1) + ', ' + fecha.getDate() + '/' + (fecha.getMonth()+1) + ', ' + hora;
+}
+
 // Fechas de inicio oficiales FIFA 2026 (primer partido de cada fase, UTC)
 const FASES_INICIO = {
   grupos:       '2026-06-11T19:00:00Z',
@@ -2063,15 +2097,13 @@ async function loadProximosEncuentros() {
 
   cont.innerHTML = partidos.map(p => {
     const cerrada = faseEstaCerrada(p.fase);
-    const fecha = p.fecha_partido
-      ? new Date(p.fecha_partido).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-      : 'Fecha por confirmar';
+    const fecha = fechaRelativa(p.fecha_partido);
     return `
       <div class="match-card" data-pid="${p.id}">
         <div class="match-row">
-          <div class="team-local">${p.equipo_local}</div>
+          <div class="team-local">${banderaEquipo(p.equipo_local)} ${p.equipo_local}</div>
           <div style="text-align:center;font-size:0.7rem;color:var(--gris);white-space:nowrap">${fecha}</div>
-          <div class="team-visita">${p.equipo_visita}</div>
+          <div class="team-visita">${p.equipo_visita} ${banderaEquipo(p.equipo_visita)}</div>
         </div>
         <div class="match-footer">
           <span>${FASES_LABELS[p.fase] || p.fase}</span>
@@ -2688,11 +2720,11 @@ function renderBracketMatch(p) {
 
   return '<div class="bracket-match">'
     + '<div class="bracket-team ' + clsL + '">'
-    + '<span class="bracket-name">' + flechaL + (p.equipo_local  || 'Por definir') + '</span>'
+    + '<span class="bracket-name">' + flechaL + (p.equipo_local ? banderaEquipo(p.equipo_local) + ' ' : '') + (p.equipo_local  || 'Por definir') + '</span>'
     + (fin ? '<span class="bracket-score">' + gL + penL + '</span>' : '')
     + '</div>'
     + '<div class="bracket-team ' + clsV + '">'
-    + '<span class="bracket-name">' + flechaV + (p.equipo_visita || 'Por definir') + '</span>'
+    + '<span class="bracket-name">' + flechaV + (p.equipo_visita ? banderaEquipo(p.equipo_visita) + ' ' : '') + (p.equipo_visita || 'Por definir') + '</span>'
     + (fin ? '<span class="bracket-score">' + gV + penV + '</span>' : '')
     + '</div>'
     + '</div>';
