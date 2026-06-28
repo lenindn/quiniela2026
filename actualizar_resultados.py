@@ -98,6 +98,7 @@ EQUIPO_MAP = {
     'New Zealand':             'Nueva Zelanda',
     'Spain':                  'España',
     'Cape Verde':             'Cabo Verde',
+    'Cape Verde Islands':     'Cabo Verde',  # nombre alterno devuelto por la API para r32
     'Saudi Arabia':           'Arabia Saudita',
     'Uruguay':                'Uruguay',
     'France':                 'Francia',
@@ -110,6 +111,7 @@ EQUIPO_MAP = {
     'Jordan':                 'Jordania',
     'Portugal':               'Portugal',
     'DR Congo':               'RD Congo',
+    'Congo DR':               'RD Congo',  # nombre alterno devuelto por la API para r32
     'Uzbekistan':             'Uzbekistán',
     'Colombia':               'Colombia',
     'England':                'Inglaterra',
