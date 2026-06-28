@@ -2216,8 +2216,10 @@ async function loadProximosEncuentros() {
   cont.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Cargando...</div>';
   proximosPartsCache = null;
 
+  // estado !== 'finalizado' incluye 'pendiente' y 'en_curso' -- un partido que
+  // ya arrancó no debe desaparecer de esta vista hasta que termine.
   const partidos = allPartidos
-    .filter(p => p.estado === 'pendiente')
+    .filter(p => p.estado !== 'finalizado')
     .sort((a, b) => new Date(a.fecha_partido || 0) - new Date(b.fecha_partido || 0));
 
   if (partidos.length === 0) {
@@ -2227,7 +2229,10 @@ async function loadProximosEncuentros() {
 
   cont.innerHTML = partidos.map(p => {
     const cerrada = faseEstaCerrada(p.fase);
-    const fecha = fechaRelativa(p.fecha_partido);
+    const enVivo = p.estado === 'en_curso';
+    const fecha = enVivo
+      ? `<span style="color:#dc2626;font-weight:700">🔴 EN VIVO ${p.goles_local ?? 0}-${p.goles_visita ?? 0}</span>`
+      : fechaRelativa(p.fecha_partido);
     return `
       <div class="match-card" data-pid="${p.id}">
         <div class="match-row">
@@ -3594,6 +3599,7 @@ async function renderResultados() {
     cont.innerHTML += `<div class="card" style="padding:0;overflow:hidden">`;
     partidos.forEach(p => {
       const finalizado = p.estado === 'finalizado';
+      const enCurso = p.estado === 'en_curso';
       const esKO = p.fase && p.fase !== 'grupos';
       const scoreHtml = finalizado
         ? `<div class="resultado-score">${p.goles_local} - ${p.goles_visita}</div>
@@ -3601,6 +3607,9 @@ async function renderResultados() {
              ? `<div class="avanza-info">🏆 Avanzó: ${p.avanza_local ? p.equipo_local : p.equipo_visita}${(p.penales_local !== null && p.penales_local !== undefined) ? ` <span style="color:var(--gris)">(penales ${p.penales_local}-${p.penales_visita})</span>` : ''}</div>` : ''}
            ${isAdmin ? `<button onclick="toggleEditResultado(${p.id})" title="Editar resultado"
              style="margin-top:5px;background:none;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:2px 7px;color:var(--gris)">✏️ editar</button>` : ''}`
+        : enCurso
+        ? `<div class="resultado-score">${p.goles_local ?? 0} - ${p.goles_visita ?? 0}</div>
+           <div style="color:#dc2626;font-weight:700;font-size:0.78rem">🔴 EN VIVO</div>`
         : `<div style="color:var(--gris);font-size:0.85rem">${p.fecha_partido ? formatDate(p.fecha_partido) : 'Por definir'}</div>`;
       cont.innerHTML += `
         <div style="border-bottom:1px solid var(--borde)">
