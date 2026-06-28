@@ -5282,8 +5282,22 @@ async function buildEvolucionHTML(participanteId, filtroFase = null) {
     const prev = miSerie[i - 1], cur = miSerie[i], next = miSerie[i + 1];
     return (cur - prev) * (next - cur) < 0; // cambia de dirección
   };
+  // Fin de cada jornada de Grupos (3 jornadas de ~24 partidos): se marca con una
+  // línea vertical punteada y SIEMPRE se etiqueta el puesto ahí, aunque no sea un
+  // punto de inflexión — para ver claramente "cómo iba al cierre de cada jornada".
+  // Solo aplica viendo la fase de Grupos puntual; en fases eliminatorias no hay
+  // "jornadas" (cada cruce se juega una sola vez).
+  const finJornadaIdx = new Set();
+  if (filtroFase === 'grupos') {
+    const tam = Math.ceil(n / 3);
+    [tam - 1, 2 * tam - 1, n - 1].forEach(idx => { if (idx >= 0 && idx < n) finJornadaIdx.add(idx); });
+    finJornadaIdx.forEach(idx => {
+      const lx = xAt(idx);
+      svg += `<line x1="${lx.toFixed(1)}" y1="${padTop}" x2="${lx.toFixed(1)}" y2="${padTop + plotH}" stroke="var(--gris)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`;
+    });
+  }
   for (let i = 0; i < n; i++) {
-    if (!esInflexion(i)) continue;
+    if (!esInflexion(i) && !finJornadaIdx.has(i)) continue;
     const lx = xAt(i), ly = yAt(miSerie[i]);
     svg += `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.5" fill="var(--verde)"/>`;
     svg += `<text x="${lx.toFixed(1)}" y="${(ly - 6).toFixed(1)}" font-size="9" font-weight="700" fill="var(--verde)" text-anchor="middle" stroke="#fff" stroke-width="3" paint-order="stroke">${miSerie[i]}°</text>`;
