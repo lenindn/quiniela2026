@@ -3417,7 +3417,7 @@ function renderTablaRanking(ranking, fase, esResto = false) {
     return `
       <div class="tabla-row ${!esResto && pos <= 3 ? 'top1' : ''} ${esMi ? 'me' : ''}">
         <div class="rank">${medal}</div>
-        <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',false)" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
+        <div class="nombre-cell" onclick="verDetalleParticipante('${p.id}','${p.nombre.replace(/'/g,"\\'")}',false,'${fase}')" style="cursor:pointer;text-decoration:underline dotted">${p.nombre}${esMi ? ' 👈' : ''}</div>
         <div class="pts-cell">${p.pts}</div>
         <div class="exacto-cell">${p.exactos}</div>
         <div class="ok-cell">${p.aciertos}</div>
