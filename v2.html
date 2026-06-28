@@ -5294,11 +5294,11 @@ async function buildEvolucionHTML(participanteId) {
   svg += '</svg>';
 
   const nombreDe = id => ((parts.find(p => p.id === id) || {}).nombre || '').split(' ')[0];
-  // Resumen "empezó X° (Y pts) → terminó Z° (W pts)" para Tú y cada uno del top3
+  // Resumen "puesto actual (puntos)" para Tú y cada uno del top3
   const resumenDe = (id, color) => {
-    const r0 = rankSeries[id][0], rN = rankSeries[id][n - 1];
-    const p0 = series[id][0], pN = series[id][n - 1];
-    return `<span style="color:${color}">${r0}° (${p0}pts) → ${rN}° (${pN}pts)</span>`;
+    const rN = rankSeries[id][n - 1];
+    const pN = series[id][n - 1];
+    return `<span style="color:${color}">${rN}° (${pN}pts)</span>`;
   };
   const resumen = `<div style="font-size:0.7rem;color:var(--texto);padding:2px 2px 6px;line-height:1.5">
       <div><strong>Tú:</strong> ${resumenDe(participanteId, 'var(--verde)')}</div>
