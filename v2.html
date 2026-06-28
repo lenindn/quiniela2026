@@ -2092,9 +2092,20 @@ async function descargarPicksPDF() {
   if (!win) { alert('El navegador bloqueó la ventana. Habilita popups para descargar el PDF.'); return; }
   win.document.write('<p style="font-family:sans-serif;padding:40px;text-align:center">Generando PDF...</p>');
 
-  const picksOrdenados = allPartidos
-    .filter(p => myPronosticos[p.id])
-    .map(p => ({ partido_id: p.id, gl: myPronosticos[p.id].goles_local, gv: myPronosticos[p.id].goles_visita }))
+  // Traer datos frescos de Supabase justo antes de generar el PDF, en vez de confiar
+  // en allPartidos/myPronosticos en memoria (pueden estar desactualizados si la app
+  // lleva horas abierta y el admin cargó un resultado mientras tanto).
+  const [partidosFrescos, pronsFrescos] = await Promise.all([
+    sb.from('partidos').select('*').order('numero'),
+    sb.from('pronosticos').select('*').eq('participante_id', currentUser.id),
+  ]);
+  const partidosPDF = partidosFrescos.data || allPartidos;
+  const myPronosticosPDF = {};
+  (pronsFrescos.data || []).forEach(p => myPronosticosPDF[p.partido_id] = p);
+
+  const picksOrdenados = partidosPDF
+    .filter(p => myPronosticosPDF[p.id])
+    .map(p => ({ partido_id: p.id, gl: myPronosticosPDF[p.id].goles_local, gv: myPronosticosPDF[p.id].goles_visita }))
     .sort((a, b) => a.partido_id - b.partido_id);
   const hash = picksOrdenados.length ? await hashDePicks(picksOrdenados) : 'SIN-PICKS';
 
@@ -2104,11 +2115,11 @@ async function descargarPicksPDF() {
 
   let filas = '';
   FASES_ORDEN.forEach(fase => {
-    const partidosFase = allPartidos.filter(p => p.fase === fase).sort((a,b) => (a.numero||0)-(b.numero||0));
+    const partidosFase = partidosPDF.filter(p => p.fase === fase).sort((a,b) => (a.numero||0)-(b.numero||0));
     if (partidosFase.length === 0) return;
     filas += `<tr class="fase-row"><td colspan="4">${FASES_LABELS[fase] || fase}</td></tr>`;
     partidosFase.forEach(p => {
-      const pr = myPronosticos[p.id];
+      const pr = myPronosticosPDF[p.id];
       const miPick = pr ? `${pr.goles_local} - ${pr.goles_visita}` : '<span class="sin-pick">Sin pronóstico</span>';
       const real = (p.estado === 'finalizado' && p.goles_local !== null) ? `${p.goles_local} - ${p.goles_visita}` : '—';
       const pts = (pr && pr.calculado) ? pr.puntos : '—';
