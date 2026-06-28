@@ -2563,17 +2563,27 @@ function renderProyeccionTabla(cont, parts, puntosActuales, techo, numPendientes
   const pisoLider = filas[0].puntos;
   const piso3 = filas.length >= 3 ? filas[2].puntos : null;
   const liderAsegurado = filas.length >= 2 && filas[1].techo < pisoLider;
+  // Sin puntos calculados aun (fase recien abierta, nadie ha jugado) no existe
+  // un podio real -- todos estan en 0 y mostrar "en el podio"/"fuera" seria
+  // arbitrario (dependeria solo del orden del array, no de un resultado real).
+  const hayPodioReal = pisoLider > 0;
 
   const txtAmbito = faseLabel ? `del premio de ${FASES_LABELS[faseLabel] || faseLabel}` : 'del premio general acumulado';
-  const aviso = `<div class="alert" style="background:#eef3ff;border:1px solid #c8d6f7;color:#374151;font-size:0.78rem;padding:10px 12px;border-radius:10px;margin:0 16px 12px">
+  const aviso = !hayPodioReal
+    ? `<div class="alert" style="background:#eef3ff;border:1px solid #c8d6f7;color:#374151;font-size:0.78rem;padding:10px 12px;border-radius:10px;margin:0 16px 12px">
+        ⏳ Todavía no hay resultados calculados ${faseLabel ? 'en esta fase' : 'en el torneo'}, así que aún no existe un podio real. "Techo" = lo máximo que puede llegar a sumar cada uno si acierta el marcador exacto en los ${numPendientes} partidos pendientes ${faseLabel ? 'de esta fase' : ''}.
+      </div>`
+    : `<div class="alert" style="background:#eef3ff;border:1px solid #c8d6f7;color:#374151;font-size:0.78rem;padding:10px 12px;border-radius:10px;margin:0 16px 12px">
     🎯 Quién sigue vivo ${txtAmbito}. "Techo" = lo máximo que puede llegar a sumar cada uno si acierta el marcador exacto en los ${numPendientes} partidos pendientes que aún le cuentan ${faseLabel ? 'en esta fase' : ''}.
     Si el techo de alguien queda por debajo de los puntos ya asegurados de otro, ya no lo puede alcanzar matemáticamente.
   </div>`;
 
   const filasHtml = filas.map((f, i) => {
     const enPodioActual = i < 3;
-    let chip;
-    if (piso3 !== null && f.techo < piso3 && !enPodioActual) {
+    let chip = '';
+    if (!hayPodioReal) {
+      chip = '';
+    } else if (piso3 !== null && f.techo < piso3 && !enPodioActual) {
       chip = `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700">❌ fuera del podio</span>`;
     } else if (i === 0 && liderAsegurado) {
       chip = `<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700">🔒 1er lugar asegurado</span>`;
