@@ -5213,6 +5213,18 @@ async function buildEvolucionHTML(participanteId) {
     for (let i = 1; i < n; i++) s[i] += s[i - 1];
   });
 
+  // Rango (posición) de cada participante en cada instante, usando ranking denso
+  // (empates comparten puesto, igual que en la Tabla de Posiciones general).
+  const totalParts = partIds.length;
+  const rankSeries = {};
+  partIds.forEach(id => rankSeries[id] = new Array(n));
+  for (let i = 0; i < n; i++) {
+    const orden = partIds
+      .map(id => ({ id, pts: series[id][i] }))
+      .sort((a, b) => b.pts - a.pts);
+    asignarRangos(orden, 'pts').forEach(r => { rankSeries[r.id][i] = r.rango; });
+  }
+
   const ranking = partIds
     .map(id => ({ id, pts: series[id][n - 1] }))
     .sort((a, b) => b.pts - a.pts);
@@ -5221,49 +5233,51 @@ async function buildEvolucionHTML(participanteId) {
   const top3Ids = new Set(top3.map(t => t.id));
   const restoIds = partIds.filter(id => id !== participanteId && !top3Ids.has(id));
 
-  const restoMax = restoIds.length ? finalizados.map((_, i) => Math.max(...restoIds.map(id => series[id][i]))) : null;
-  const restoMin = restoIds.length ? finalizados.map((_, i) => Math.min(...restoIds.map(id => series[id][i]))) : null;
+  // Banda del resto: mejor puesto (número más bajo) y peor puesto (número más alto)
+  // alcanzado por cualquiera del "resto" en cada instante.
+  const restoMejor = restoIds.length ? finalizados.map((_, i) => Math.min(...restoIds.map(id => rankSeries[id][i]))) : null;
+  const restoPeor  = restoIds.length ? finalizados.map((_, i) => Math.max(...restoIds.map(id => rankSeries[id][i]))) : null;
 
-  const allVals = [...series[participanteId], ...top3.flatMap(t => series[t.id]), ...(restoMax || []), ...(restoMin || [])];
-  const maxY = Math.max(1, ...allVals);
+  // Escala enfocada en el rango de puestos que realmente recorren las líneas
+  // visibles (Tú + top3 + banda del resto) — si todo el movimiento ocurre entre
+  // el 1° y el 14°, por ejemplo, usar esa franja en vez de 1..39 para que el
+  // movimiento se note (igual criterio que usaba el gráfico de puntos).
+  const rangosVisibles = [...rankSeries[participanteId], ...top3.flatMap(t => rankSeries[t.id]), ...(restoMejor || []), ...(restoPeor || [])];
+  const minRango = Math.min(...rangosVisibles);
+  const maxRango = Math.max(...rangosVisibles);
 
   const pxPer = 38, padLeft = 24, padRight = 6, padTop = 10, plotH = 90, padBottom = 6, labelH = 28;
   const W = Math.max(264, padLeft + padRight + (n - 1) * pxPer);
   const H = padTop + plotH + padBottom + labelH;
   const xAt = i => padLeft + i * pxPer;
-  const yAt = v => padTop + plotH - (v / maxY) * plotH;
+  // Puesto mejor (número más bajo) arriba del gráfico, peor abajo — eje invertido a propósito.
+  const yAt = rango => padTop + ((rango - minRango) / Math.max(1, maxRango - minRango)) * plotH;
   const pathOf = arr => arr.map((v, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ');
 
-  // Lineas guia horizontales con valor de puntos (3-4 niveles, numeros "redondos")
-  const niceStep = max => {
-    for (const s of [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500]) {
-      if (max / s <= 4) return s;
-    }
-    return Math.ceil(max / 4);
-  };
-  const step = niceStep(maxY);
-  const yTicks = [];
-  for (let v = 0; v <= maxY; v += step) yTicks.push(v);
+  // Lineas guia horizontales: el mejor puesto, el peor, y 2-3 niveles intermedios
+  const yTicksSet = new Set([minRango, maxRango]);
+  for (const frac of [0.25, 0.5, 0.75]) yTicksSet.add(Math.round(minRango + frac * (maxRango - minRango)));
+  const yTicks = [...yTicksSet].sort((a, b) => a - b);
 
   let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;background:#fff">`;
   svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#fff"/>`;
   yTicks.forEach(v => {
     const ly = yAt(v);
     svg += `<line x1="${padLeft}" y1="${ly.toFixed(1)}" x2="${W - padRight}" y2="${ly.toFixed(1)}" stroke="var(--borde)" stroke-width="1"/>`;
-    svg += `<text x="${padLeft - 4}" y="${(ly + 3).toFixed(1)}" font-size="9" fill="var(--gris)" text-anchor="end">${v}</text>`;
+    svg += `<text x="${padLeft - 4}" y="${(ly + 3).toFixed(1)}" font-size="9" fill="var(--gris)" text-anchor="end">${v}°</text>`;
   });
-  if (restoMax && restoMin) {
-    const arriba = restoMax.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
-    const abajo  = restoMin.slice().reverse().map((v, i) => `${xAt(n - 1 - i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
+  if (restoMejor && restoPeor) {
+    const arriba = restoMejor.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
+    const abajo  = restoPeor.slice().reverse().map((v, i) => `${xAt(n - 1 - i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
     svg += `<path d="M${arriba} L${abajo} Z" fill="var(--gris)" opacity="0.18"/>`;
   }
   // "Tú" se dibuja primero (debajo); el top3 se dibuja despues con guiones para
   // que se distingan aun si la trayectoria coincide exactamente con otra linea
-  svg += `<path d="${pathOf(series[participanteId])}" fill="none" stroke="var(--verde)" stroke-width="3"/>`;
+  svg += `<path d="${pathOf(rankSeries[participanteId])}" fill="none" stroke="var(--verde)" stroke-width="3"/>`;
   const colores = ['#e67e22', '#2980b9', '#9b59b6']; // naranja, azul, morado
   const dashes  = ['6 3', '3 3', '1.5 2.5'];
   top3.forEach((t, i) => {
-    svg += `<path d="${pathOf(series[t.id])}" fill="none" stroke="${colores[i]}" stroke-width="2" stroke-dasharray="${dashes[i]}"/>`;
+    svg += `<path d="${pathOf(rankSeries[t.id])}" fill="none" stroke="${colores[i]}" stroke-width="2" stroke-dasharray="${dashes[i]}"/>`;
   });
   // Eje X: fecha de cada partido finalizado
   finalizados.forEach((p, i) => {
@@ -5274,6 +5288,17 @@ async function buildEvolucionHTML(participanteId) {
   svg += '</svg>';
 
   const nombreDe = id => ((parts.find(p => p.id === id) || {}).nombre || '').split(' ')[0];
+  // Resumen "empezó X° (Y pts) → terminó Z° (W pts)" para Tú y cada uno del top3
+  const resumenDe = (id, color) => {
+    const r0 = rankSeries[id][0], rN = rankSeries[id][n - 1];
+    const p0 = series[id][0], pN = series[id][n - 1];
+    return `<span style="color:${color}">${r0}° (${p0}pts) → ${rN}° (${pN}pts)</span>`;
+  };
+  const resumen = `<div style="font-size:0.7rem;color:var(--texto);padding:2px 2px 6px;line-height:1.5">
+      <div><strong>Tú:</strong> ${resumenDe(participanteId, 'var(--verde)')}</div>
+      ${top3.map((t, i) => `<div>${nombreDe(t.id)}: ${resumenDe(t.id, colores[i])}</div>`).join('')}
+    </div>`;
+
   const leyenda = `<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:0.7rem;color:var(--gris);padding:0 2px 8px">
       <span><span style="display:inline-block;width:9px;height:9px;background:var(--verde);border-radius:50%;margin-right:3px"></span>Tú</span>
       ${top3.map((t, i) => `<span><span style="display:inline-block;width:9px;height:9px;background:${colores[i]};border-radius:50%;margin-right:3px"></span>${nombreDe(t.id)}</span>`).join('')}
@@ -5283,7 +5308,7 @@ async function buildEvolucionHTML(participanteId) {
   const scrollHint = W > 264 ? '<div style="font-size:0.65rem;color:var(--gris);text-align:right;padding:0 2px 2px">↔ desliza para ver más</div>' : '';
   const chart = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:6px 0 2px">${svg}</div>${scrollHint}`;
 
-  return `<div style="font-size:0.72rem;color:var(--gris);font-weight:600;padding:2px 2px 0">📈 Evolución de puntos</div>${chart}${leyenda}`;
+  return `<div style="font-size:0.72rem;color:var(--gris);font-weight:600;padding:2px 2px 0">📊 Evolución de posición en la tabla</div>${chart}${leyenda}${resumen}`;
 }
 
 async function verDetalleParticipante(participanteId, nombre, verTodo = false, filtroFase = null) {
