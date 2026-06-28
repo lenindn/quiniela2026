@@ -5182,12 +5182,15 @@ async function logActividad(accion, detalle) {
   try { await sb.from('actividad').insert({ participante_id: currentUser.id, nombre: currentUser.nombre, grupo: currentGrupo?.nombre || null, accion, detalle: detalle || null }); } catch(e) {}
 }
 
-// ── Mini-gráfica: evolución de puntos (tú vs top 3 vs rango del resto del grupo) ──
-async function buildEvolucionHTML(participanteId) {
+// ── Mini-gráfica: evolución de posición (tú vs top 3 vs todos los demás) ──
+// Si filtroFase viene definido, la evolución y el ranking se calculan SOLO con
+// los partidos de esa fase (cada fase tiene su propio podio/puntaje). Si no,
+// es la evolución general acumulada de todo el torneo hasta ahora.
+async function buildEvolucionHTML(participanteId, filtroFase = null) {
   if (!currentGrupo) return '';
 
   const finalizados = allPartidos
-    .filter(p => p.estado === 'finalizado' && p.fecha_partido)
+    .filter(p => p.estado === 'finalizado' && p.fecha_partido && (!filtroFase || p.fase === filtroFase))
     .sort((a, b) => new Date(a.fecha_partido) - new Date(b.fecha_partido));
   const n = finalizados.length;
   if (n < 2) return ''; // muy pronto para mostrar una tendencia
@@ -5314,7 +5317,8 @@ async function buildEvolucionHTML(participanteId) {
   const scrollHint = W > 264 ? '<div style="font-size:0.65rem;color:var(--gris);text-align:right;padding:0 2px 2px">↔ desliza para ver más</div>' : '';
   const chart = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:6px 0 2px">${svg}</div>${scrollHint}`;
 
-  return `<div style="font-size:0.72rem;color:var(--gris);font-weight:600;padding:2px 2px 0">📊 Evolución de posición en la tabla</div>${chart}${leyenda}${resumen}`;
+  const tituloFase = filtroFase ? ('en ' + (FASES_LABELS[filtroFase] || filtroFase)) : 'general (todo el torneo)';
+  return `<div style="font-size:0.72rem;color:var(--gris);font-weight:600;padding:2px 2px 0">📊 Evolución de posición ${tituloFase}</div>${chart}${leyenda}${resumen}`;
 }
 
 async function verDetalleParticipante(participanteId, nombre, verTodo = false, filtroFase = null) {
@@ -5412,7 +5416,7 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
       </div>`;
   }).join('');
 
-  const evoHTML = await buildEvolucionHTML(participanteId);
+  const evoHTML = await buildEvolucionHTML(participanteId, filtroFase);
 
   body.innerHTML = evoHTML + (rows || '<div style="color:#999;text-align:center;padding:20px">Sin datos.</div>');
 
