@@ -664,7 +664,10 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
 <div id="view-picks" class="view">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
     <div class="section-title" style="margin-bottom:0">⚽ Mis Pronósticos</div>
-    <button onclick="navigate('picks')" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--gris);padding:4px 8px" title="Actualizar">🔄</button>
+    <div>
+      <button onclick="descargarPicksPDF()" style="background:none;border:1px solid var(--borde);border-radius:14px;cursor:pointer;font-size:0.78rem;color:var(--texto);padding:4px 10px;margin-right:4px" title="Descargar mis picks en PDF">📄 PDF</button>
+      <button onclick="navigate('picks')" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--gris);padding:4px 8px" title="Actualizar">🔄</button>
+    </div>
   </div>
   <div class="phase-tabs" id="picks-tabs"></div>
   <div id="picks-content"></div>
@@ -2071,6 +2074,89 @@ function updateProgressBar() {
   const txt  = document.querySelector('.progress-text');
   if (fill) fill.style.width = pct + '%';
   if (txt)  txt.textContent = `${hechos} de ${ps.length} pronósticos completados`;
+}
+
+// ── Descargar PDF de mis picks (vista imprimible, window.print() — sin jsPDF) ──
+// Solo LEE allPartidos/myPronosticos ya cargados en memoria; no escribe nada en
+// Supabase ni modifica el flujo de guardado de picks (función 100% aditiva).
+async function hashDePicks(picksOrdenados) {
+  const texto = picksOrdenados.map(p => `${p.partido_id}:${p.gl}:${p.gv}`).join('|');
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 8).toUpperCase();
+}
+
+async function descargarPicksPDF() {
+  if (!currentUser) return;
+  // Abrir la ventana ANTES de cualquier await (si no, el navegador la bloquea como popup).
+  const win = window.open('', '_blank');
+  if (!win) { alert('El navegador bloqueó la ventana. Habilita popups para descargar el PDF.'); return; }
+  win.document.write('<p style="font-family:sans-serif;padding:40px;text-align:center">Generando PDF...</p>');
+
+  const picksOrdenados = allPartidos
+    .filter(p => myPronosticos[p.id])
+    .map(p => ({ partido_id: p.id, gl: myPronosticos[p.id].goles_local, gv: myPronosticos[p.id].goles_visita }))
+    .sort((a, b) => a.partido_id - b.partido_id);
+  const hash = picksOrdenados.length ? await hashDePicks(picksOrdenados) : 'SIN-PICKS';
+
+  const ahora = new Date();
+  const fechaGen = ahora.toLocaleDateString('es', { day:'2-digit', month:'2-digit', year:'numeric' })
+    + ' ' + ahora.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+
+  let filas = '';
+  FASES_ORDEN.forEach(fase => {
+    const partidosFase = allPartidos.filter(p => p.fase === fase).sort((a,b) => (a.numero||0)-(b.numero||0));
+    if (partidosFase.length === 0) return;
+    filas += `<tr class="fase-row"><td colspan="4">${FASES_LABELS[fase] || fase}</td></tr>`;
+    partidosFase.forEach(p => {
+      const pr = myPronosticos[p.id];
+      const miPick = pr ? `${pr.goles_local} - ${pr.goles_visita}` : '<span class="sin-pick">Sin pronóstico</span>';
+      const real = (p.estado === 'finalizado' && p.goles_local !== null) ? `${p.goles_local} - ${p.goles_visita}` : '—';
+      const pts = (pr && pr.calculado) ? pr.puntos : '—';
+      filas += `<tr>
+        <td>${p.equipo_local} vs ${p.equipo_visita}</td>
+        <td style="text-align:center">${miPick}</td>
+        <td style="text-align:center">${real}</td>
+        <td style="text-align:center">${pts}</td>
+      </tr>`;
+    });
+  });
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Mis Picks - ${currentUser.nombre}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color:#1f2d3d; margin:0; padding:24px; position:relative; }
+    h1 { font-size:1.2rem; margin:0 0 2px; }
+    .sub { color:#666; font-size:0.85rem; margin-bottom:18px; }
+    table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+    th, td { padding:6px 8px; border-bottom:1px solid #ddd; }
+    th { text-align:left; background:#1a5c2a; color:#fff; }
+    .fase-row td { background:#f0f4f0; font-weight:700; padding-top:14px; }
+    .sin-pick { color:#aaa; font-style:italic; }
+    .footer { margin-top:24px; font-size:0.7rem; color:#888; border-top:1px solid #ddd; padding-top:8px; }
+    .watermark { position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; overflow:hidden; pointer-events:none; }
+    .watermark span { position:absolute; color:rgba(0,0,0,0.06); font-size:1.4rem; font-weight:700; white-space:nowrap; transform:rotate(-30deg); }
+    @media print { .watermark span { color:rgba(0,0,0,0.08); } }
+  </style></head><body>
+    <div class="watermark">${Array.from({length:40}, (_,i) =>
+      `<span style="top:${(i%8)*140}px;left:${Math.floor(i/8)*260 - 100}px">${currentGrupo?.nombre || 'Quiniela'} · ${fechaGen}</span>`).join('')}</div>
+    <h1>📋 Mis Pronósticos — ${currentUser.nombre}</h1>
+    <div class="sub">${currentGrupo?.nombre || ''} · Generado el ${fechaGen} · Código de verificación: <strong>${hash}</strong></div>
+    <table>
+      <thead><tr><th>Partido</th><th style="text-align:center">Mi pronóstico</th><th style="text-align:center">Resultado real</th><th style="text-align:center">Pts</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div class="footer">
+      Este PDF es de referencia, generado a partir de los datos guardados en el sistema al momento indicado arriba.
+      El registro oficial de los pronósticos es el guardado en la base de datos al cierre de cada fase, no este documento.
+      Ante cualquier disputa, el código de verificación (${hash}) puede recalcularse desde el sistema para confirmar que los
+      pronósticos no han sido alterados desde esta fecha de generación.
+    </div>
+  </body></html>`;
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
