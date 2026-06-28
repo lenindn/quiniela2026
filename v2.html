@@ -714,6 +714,7 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
 <!-- VISTA PROYECCION (quién sigue matemáticamente vivo por el podio) -->
 <div id="view-proyeccion" class="view">
   <div class="section-title">🎯 ¿Quién sigue vivo por el podio?</div>
+  <div class="phase-tabs" id="proyeccion-fase-tabs"></div>
   <div id="proyeccion-content">
     <div class="empty-state"><div class="spinner"></div><br>Calculando...</div>
   </div>
@@ -1312,6 +1313,7 @@ let editingPartidoId = null;
 let currentGruposTab  = 'grupos'; // null = crear nuevo, numero = editar existente
 let currentPicksTab  = 'grupos';
 let currentTablaFase = 'general';
+let currentProyeccionFase = 'general';
 let currentResTab   = 'grupos';
 let filtroEquipo    = '';
 let currentGrupoKey = '';  // valor del ?g=... en la URL, clave de localStorage
@@ -2433,8 +2435,13 @@ function faseAceptaPicks(fase) {
 }
 
 // ── Proyección determinística: techo (máximo posible) vs piso (ya asegurado) por participante ──
+// Hay premio por cada fase (pote individual) y un premio general acumulado de
+// todo el torneo (ver instrucciones: "dos tipos de premios"). Por eso esta
+// vista deja elegir entre "General" (acumulado) o una fase puntual: el podio
+// de cada uno es independiente y los puntos NO se mezclan entre fases.
 async function loadProyeccion() {
-  const cont = document.getElementById('proyeccion-content');
+  const cont   = document.getElementById('proyeccion-content');
+  const tabsEl = document.getElementById('proyeccion-fase-tabs');
   cont.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Calculando...</div>';
 
   let partQuery = sb.from('participantes').select('id,nombre,activo');
@@ -2444,17 +2451,58 @@ async function loadProyeccion() {
 
   if (parts.length === 0) {
     cont.innerHTML = '<div class="empty-state">No hay participantes para calcular.</div>';
+    tabsEl.innerHTML = '';
     return;
   }
 
   const partIds = parts.map(p => p.id);
   const prons = await fetchPronosticosDe(partIds, 'participante_id,partido_id,goles_local,goles_visita,puntos,calculado');
+  const faseDePartido = {};
+  allPartidos.forEach(p => { faseDePartido[p.id] = p.fase; });
+
+  // ── Tabs: General + una por cada fase que ya tenga partidos generados ──
+  tabsEl.innerHTML = '';
+  const btnGeneral = document.createElement('button');
+  btnGeneral.className = 'tab-btn' + (currentProyeccionFase === 'general' ? ' active' : '');
+  btnGeneral.textContent = '🏆 General';
+  btnGeneral.onclick = () => {
+    currentProyeccionFase = 'general';
+    tabsEl.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btnGeneral));
+    renderProyeccion(cont, parts, prons, faseDePartido, 'general');
+  };
+  tabsEl.appendChild(btnGeneral);
+
+  FASES_ORDEN.forEach(f => {
+    const tieneData = allPartidos.some(p => p.fase === f);
+    if (!tieneData) return;
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (f === currentProyeccionFase ? ' active' : '');
+    btn.textContent = FASES_LABELS[f];
+    btn.onclick = () => {
+      currentProyeccionFase = f;
+      tabsEl.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      renderProyeccion(cont, parts, prons, faseDePartido, f);
+    };
+    tabsEl.appendChild(btn);
+  });
+
+  // Si la fase seleccionada ya no existe (ej. se volvió a cargar la vista en otro grupo), volver a general
+  if (currentProyeccionFase !== 'general' && !allPartidos.some(p => p.fase === currentProyeccionFase)) {
+    currentProyeccionFase = 'general';
+  }
+  renderProyeccion(cont, parts, prons, faseDePartido, currentProyeccionFase);
+}
+
+function renderProyeccion(cont, parts, prons, faseDePartido, fase) {
+  const esGeneral = fase === 'general';
 
   const puntosActuales = {};
-  const pickPorPartido = {}; // participante_id -> Set de partido_id con pick ya cargado
+  const pickPorPartido = {}; // participante_id -> Set de partido_id (de la fase elegida) con pick ya cargado
   parts.forEach(p => { puntosActuales[p.id] = 0; pickPorPartido[p.id] = new Set(); });
 
   prons.forEach(pr => {
+    const faseDelPick = faseDePartido[pr.partido_id];
+    if (!esGeneral && faseDelPick !== fase) return; // solo cuenta lo de esta fase
     if (pr.calculado) {
       puntosActuales[pr.participante_id] = (puntosActuales[pr.participante_id] || 0) + (pr.puntos || 0);
     } else if (pr.goles_local !== null && pr.goles_visita !== null) {
@@ -2462,12 +2510,13 @@ async function loadProyeccion() {
     }
   });
 
-  const pendientes = allPartidos.filter(p => p.estado === 'pendiente');
+  const pendientes = allPartidos.filter(p => p.estado === 'pendiente' && (esGeneral || p.fase === fase));
 
-  // Techo = puntos actuales + lo máximo que puede sumar en cada partido pendiente.
-  // Si ya cargó pick para ese partido (aunque no se haya jugado) o la fase sigue
-  // abierta (todavía puede cargar/corregir su pick), cuenta el máximo (exacto).
-  // Si la fase de ese partido ya cerró y nunca cargó pick, ese partido ya no le suma nada.
+  // Techo = puntos actuales (de esta fase, o del torneo si es General) + lo máximo
+  // que puede sumar en cada partido pendiente que todavía le cuenta. Si ya cargó
+  // pick para ese partido (aunque no se haya jugado) o la fase sigue abierta
+  // (todavía puede cargar/corregir su pick), cuenta el máximo (exacto). Si la fase
+  // de ese partido ya cerró y nunca cargó pick, ese partido ya no le suma nada.
   const techo = {};
   parts.forEach(p => {
     let suma = puntosActuales[p.id];
@@ -2480,19 +2529,25 @@ async function loadProyeccion() {
     techo[p.id] = suma;
   });
 
-  renderProyeccion(cont, parts, puntosActuales, techo, pendientes.length);
+  renderProyeccionTabla(cont, parts, puntosActuales, techo, pendientes.length, esGeneral ? null : fase);
 }
 
-function renderProyeccion(cont, parts, puntosActuales, techo, numPendientes) {
+function renderProyeccionTabla(cont, parts, puntosActuales, techo, numPendientes, faseLabel) {
   const filas = parts.map(p => ({
     id: p.id, nombre: p.nombre,
     puntos: puntosActuales[p.id] || 0,
     techo: techo[p.id] || 0,
   })).sort((a, b) => b.puntos - a.puntos);
 
+  if (filas.length === 0) {
+    cont.innerHTML = '<div class="empty-state">No hay participantes para calcular.</div>';
+    return;
+  }
+
   if (numPendientes === 0) {
+    const txtFinal = faseLabel ? `de ${FASES_LABELS[faseLabel] || faseLabel}` : 'del torneo';
     const aviso = `<div class="alert" style="background:#eef3ff;border:1px solid #c8d6f7;color:#374151;font-size:0.78rem;padding:10px 12px;border-radius:10px;margin:0 16px 12px">
-      🏁 Ya no quedan partidos pendientes — esta es la tabla final.
+      🏁 Ya no quedan partidos pendientes ${txtFinal} — esta es la tabla final.
     </div>`;
     const filasHtml = filas.map((f, i) => {
       const medalla = i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
@@ -2509,8 +2564,9 @@ function renderProyeccion(cont, parts, puntosActuales, techo, numPendientes) {
   const piso3 = filas.length >= 3 ? filas[2].puntos : null;
   const liderAsegurado = filas.length >= 2 && filas[1].techo < pisoLider;
 
+  const txtAmbito = faseLabel ? `del premio de ${FASES_LABELS[faseLabel] || faseLabel}` : 'del premio general acumulado';
   const aviso = `<div class="alert" style="background:#eef3ff;border:1px solid #c8d6f7;color:#374151;font-size:0.78rem;padding:10px 12px;border-radius:10px;margin:0 16px 12px">
-    🎯 "Techo" = lo máximo que puede llegar a sumar cada uno si acierta el marcador exacto en los ${numPendientes} partidos pendientes que aún le cuentan.
+    🎯 Quién sigue vivo ${txtAmbito}. "Techo" = lo máximo que puede llegar a sumar cada uno si acierta el marcador exacto en los ${numPendientes} partidos pendientes que aún le cuentan ${faseLabel ? 'en esta fase' : ''}.
     Si el techo de alguien queda por debajo de los puntos ya asegurados de otro, ya no lo puede alcanzar matemáticamente.
   </div>`;
 
