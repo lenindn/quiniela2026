@@ -2467,15 +2467,15 @@ function renderResumenGrupo(parts, prons, partidos) {
   const chipIncompletos = incompletos > 0
     ? `<span style="background:#fef3c7;color:#b45309;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700">⚠️ ${incompletos} incompletos</span>` : '';
   const chipSinPicks = sinPicks > 0
-    ? `<span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700">✕ ${sinPicks} sin picks</span>` : '';
+    ? `<span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700">✕ ${sinPicks} sin picks cargados</span>` : '';
 
   cont.innerHTML = `
     <div style="background:#fff;border:1px solid var(--borde);border-radius:12px;padding:11px 14px;margin-bottom:12px">
       <div style="font-size:0.7rem;font-weight:800;letter-spacing:1px;color:#94a3b8;text-transform:uppercase;margin-bottom:7px">Jugadores · ${FASES_LABELS[fase] || fase}</div>
       <div style="display:flex;flex-wrap:wrap;gap:7px 12px;align-items:center">
-        <span style="font-size:1.02rem;font-weight:800;color:#1f2d3d">${inscritos} inscritos</span>
+        <span style="font-size:1.02rem;font-weight:800;color:#1f2d3d">${inscritos} registrados</span>
         <span style="color:#cbd5e1">|</span>
-        <span style="font-size:1.02rem;font-weight:800;color:var(--exito)">✅ ${listos}/${inscritos} listos</span>
+        <span style="font-size:1.02rem;font-weight:800;color:var(--exito)">✅ ${listos}/${inscritos} picks cargados</span>
         ${chipIncompletos}
         ${chipSinPicks}
       </div>
