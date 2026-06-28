@@ -14,8 +14,14 @@ on:
     # resultado ya finalizado). football-data.org free tier soporta esta
     # frecuencia sin problema (muy por debajo del límite de la API).
     # Horas UTC: 16-23 y 0-6. Meses: 6 (jun) y 7 (jul).
+    # Minutos en :02/:17/:32/:47 (no en los redondos :00/:15/:30/:45) -- en
+    # esos minutos redondos GitHub Actions recibe una avalancha de cron jobs
+    # de miles de repos a la vez (todos programan ahi por defecto) y durante
+    # picos de carga simplemente descarta la mayoria de esos disparos. Se
+    # confirmo en producción: el cron */15 corrio solo 3 veces en 3.5 horas
+    # en vez de 14. Corriendo en un minuto "raro" se evita ese atasco.
     # Ajustar si el fixture oficial usa otras franjas horarias.
-    - cron: '*/15 0-6,16-23 * 6,7 *'
+    - cron: '2,17,32,47 0-6,16-23 * 6,7 *'
   workflow_dispatch:
     # Permite ejecutar manualmente desde GitHub Actions
 
