@@ -3987,20 +3987,36 @@ const FECHAS_ELIM = {
   final:        ['2026-07-19T18:00'],
 };
 
-// Deshabilita en el select las fases que ya tienen partidos generados
+// Numeracion oficial fija del bracket (no depende de cuando se cree cada
+// cruce): Round of 32 = 73-88, Octavos = 89-96, Cuartos = 97-100,
+// Semis = 101-102, 3er Lugar = 103, Final = 104. Asignar por esta base +
+// indice del cruce (no por "max numero + 1") es lo que permite crear los
+// cruces de Octavos progresivamente, en cualquier orden, sin romper el
+// orden visual del bracket.
+const NUMERO_BASE_ELIM = { r16: 89, cuartos: 97, semis: 101, tercer_lugar: 103, final: 104 };
+// Cantidad total de cruces que tiene cada fase eliminatoria (para saber
+// cuando ya esta 100% generada y poder deshabilitar la opcion del select).
+const CRUCES_TOTAL_ELIM = { r16: 8, cuartos: 4, semis: 2, tercer_lugar: 1, final: 1 };
+
+// Deshabilita en el select solo las fases que YA estan 100% generadas
+// (las parcialmente generadas se dejan habilitadas para poder seguir
+// creando cruces a medida que se van resolviendo los partidos de origen).
 function actualizarOpcionesFaseElim() {
   const sel = document.getElementById('gen-fase-dest');
   if (!sel) return;
   Array.from(sel.options).forEach(opt => {
     const fase  = opt.value;
     const count = allPartidos.filter(p => p.fase === fase).length;
-    if (count > 0) {
+    const total = CRUCES_TOTAL_ELIM[fase];
+    const completa = total ? count >= total : count > 0; // r32 (sin total fijo aqui) sigue todo-o-nada
+    if (completa) {
       opt.disabled = true;
-      opt.textContent = opt.textContent.split(' (Ya')[0] + ' (Ya generados: ' + count + ' partidos)';
+      opt.textContent = opt.textContent.split(' (')[0] + ' (Ya generados: ' + count + ' partidos)';
       opt.style.color = 'var(--gris)';
     } else {
       opt.disabled = false;
       opt.style.color = '';
+      opt.textContent = opt.textContent.split(' (')[0] + (count > 0 ? ' (' + count + '/' + total + ' creados)' : '');
     }
   });
   // Si la opci?n seleccionada qued? deshabilitada, mover al primer habilitado
@@ -4026,43 +4042,43 @@ async function generarSiguienteFase() {
 
   if (!faseOrig || !faseDest) { bracketEl.innerHTML = '<div class="alert alert-error">Selecciona una fase.</div>'; return; }
 
-  // Leer partidos de la fase origen finalizados
+  // Leer TODOS los partidos de la fase origen (no solo finalizados) en orden
+  // de numero -- los cruces reales del bracket son pares adyacentes por
+  // numero (M[0]+M[1] -> cruce 1, M[2]+M[3] -> cruce 2, ...), asi que un
+  // cruce concreto puede crearse en cuanto ESE par especifico termine, sin
+  // esperar a que termine toda la ronda.
   const { data: partidos, error } = await sb.from('partidos')
     .select('id,numero,equipo_local,equipo_visita,goles_local,goles_visita,avanza_local,estado')
     .eq('fase', faseOrig).order('numero');
 
   if (error || !partidos || partidos.length === 0) {
-    bracketEl.innerHTML = '<div class="alert alert-error">No hay partidos finalizados en la fase ' + faseOrig.toUpperCase() + '.</div>';
+    bracketEl.innerHTML = '<div class="alert alert-error">No hay partidos en la fase ' + faseOrig.toUpperCase() + '.</div>';
     return;
   }
 
-  const finalizados = partidos.filter(p => p.estado === 'finalizado');
-  if (finalizados.length === 0) {
-    bracketEl.innerHTML = '<div class="alert alert-error">No hay partidos finalizados en ' + faseOrig.toUpperCase() + ' a?n.</div>';
-    return;
-  }
-
-  // Extraer ganadores o perdedores seg?n la fase destino
+  // Extraer ganador (o perdedor, para 3er lugar) de un partido ya finalizado.
+  // Devuelve null si el partido todavia no termino -> ese cruce queda pendiente.
   const esLosers = faseDest === 'tercer_lugar';
-
-  const equipos = finalizados.map(p => {
+  function elegirDe(p) {
+    if (p.estado !== 'finalizado') return null;
     let avanza;
     if (p.avanza_local !== null && p.avanza_local !== undefined) {
       avanza = p.avanza_local ? p.equipo_local : p.equipo_visita;
+    } else if (p.goles_local !== null && p.goles_visita !== null) {
+      if (p.goles_local > p.goles_visita)      avanza = p.equipo_local;
+      else if (p.goles_visita > p.goles_local) avanza = p.equipo_visita;
+      else avanza = p.equipo_local; // empate sin definir: local por defecto
     } else {
-      // Inferir por marcador (grupos)
-      if (p.goles_local > p.goles_visita)       avanza = p.equipo_local;
-      else if (p.goles_visita > p.goles_local)   avanza = p.equipo_visita;
-      else avanza = p.equipo_local; // empate: local por defecto
+      return null;
     }
-    const pierde = avanza === p.equipo_local ? p.equipo_visita : p.equipo_local;
-    return esLosers ? pierde : avanza;
-  });
+    return esLosers ? (avanza === p.equipo_local ? p.equipo_visita : p.equipo_local) : avanza;
+  }
 
-  // Emparejar de a dos: [0vs1, 2vs3, 4vs5, ...]
+  // Cruces reales: pares adyacentes por numero (orden fijo del bracket)
   const cruces = [];
-  for (let i = 0; i < equipos.length - 1; i += 2) {
-    cruces.push({ local: equipos[i], visita: equipos[i + 1] });
+  for (let i = 0; i < partidos.length - 1; i += 2) {
+    const a = partidos[i], b = partidos[i + 1];
+    cruces.push({ local: elegirDe(a), visita: elegirDe(b), numA: a.numero, numB: b.numero });
   }
 
   if (cruces.length === 0) {
@@ -4070,16 +4086,36 @@ async function generarSiguienteFase() {
     return;
   }
 
+  // Cruces que ya existen en la fase destino (comparando el par de equipos,
+  // sin importar el orden local/visita) para no duplicarlos.
+  const yaCreados = new Set(
+    allPartidos.filter(p => p.fase === faseDest)
+      .map(p => [p.equipo_local, p.equipo_visita].sort().join('|'))
+  );
+
   const fechas  = FECHAS_ELIM[faseDest] || [];
-  const optsAll = [...new Set(equipos)].sort();
+  const optsAll = [...new Set(partidos.flatMap(p => [p.equipo_local, p.equipo_visita]))].sort();
   const optsHtml = optsAll.map(eq => '<option value="' + eq + '">' + eq + '</option>').join('');
 
   let html = '<div style="font-weight:700;margin-bottom:8px;font-size:0.9rem">'
-    + FASES_LABELS[faseDest] + ' ? ' + cruces.length + ' partidos ? ajusta si es necesario</div>';
+    + FASES_LABELS[faseDest] + ' \u2014 ' + cruces.length + ' cruces en total (se crean los que ya est\u00e9n definidos)</div>';
   html += '<div style="display:grid;grid-template-columns:1fr 20px 1fr 150px 100px;gap:6px;font-size:0.72rem;font-weight:700;color:var(--gris);padding:0 0 4px;border-bottom:1px solid var(--borde);margin-bottom:6px">'
     + '<div>Local</div><div></div><div>Visita</div><div>Fecha/hora</div><div>Ciudad</div></div>';
 
+  const idxsListos = [];
   cruces.forEach((c, i) => {
+    if (!c.local || !c.visita) {
+      const faltan = [!c.local ? c.numA : null, !c.visita ? c.numB : null].filter(n => n !== null);
+      html += '<div style="padding:6px 0;font-size:0.78rem;color:var(--gris)">'
+        + '\u23F3 Cruce ' + (i + 1) + ': esperando resultado del partido #' + faltan.join(' y #') + '</div>';
+      return;
+    }
+    const key = [c.local, c.visita].sort().join('|');
+    if (yaCreados.has(key)) {
+      html += '<div style="padding:6px 0;font-size:0.78rem;color:var(--exito)">\u2705 ' + c.local + ' vs ' + c.visita + ' \u2014 ya creado</div>';
+      return;
+    }
+    idxsListos.push(i);
     const localOpts  = optsHtml.replace('value="' + c.local + '"',  'value="' + c.local + '" selected');
     const visitaOpts = optsHtml.replace('value="' + c.visita + '"', 'value="' + c.visita + '" selected');
     const fecha = fechas[i] || '';
@@ -4092,35 +4128,32 @@ async function generarSiguienteFase() {
       + '</div>';
   });
 
+  if (idxsListos.length === 0) {
+    html += '<div style="margin-top:8px;font-size:0.82rem;color:var(--gris)">Todav\u00eda no hay cruces nuevos listos para crear.</div>';
+    bracketEl.innerHTML = html;
+    return;
+  }
+
   html += '<div id="elim-msg" style="font-size:0.82rem;margin:8px 0"></div>';
   html += '<div style="display:flex;gap:8px">';
-  html += '<button class="btn-primary" onclick="crearTodosElim(' + cruces.length + ',\'' + faseDest + '\')" style="flex:1">&#x2705; Crear ' + cruces.length + ' partidos de ' + FASES_LABELS[faseDest] + '</button>';
+  html += '<button class="btn-primary" onclick="crearTodosElim([' + idxsListos.join(',') + '],\'' + faseDest + '\')" style="flex:1">&#x2705; Crear ' + idxsListos.length + ' partido' + (idxsListos.length > 1 ? 's' : '') + ' de ' + FASES_LABELS[faseDest] + '</button>';
   html += '<button class="btn-sm" onclick="ocultarElimBracket()" style="flex-shrink:0">Cancelar</button>';
   html += '</div>';
 
   bracketEl.innerHTML = html;
 }
 
-async function crearTodosElim(total, faseDest) {
+async function crearTodosElim(idxs, faseDest) {
   const msgEl = document.getElementById('elim-msg');
-  // Prevenir duplicados: si la fase ya tiene partidos, pedir confirmacion
-  const yaExisten = allPartidos.filter(p => p.fase === faseDest).length;
-  if (yaExisten > 0) {
-    if (!confirm('\u26A0\uFE0F La fase ' + (FASES_LABELS[faseDest] || faseDest) + ' ya tiene ' + yaExisten + ' partidos creados.\n\nSi continuas se DUPLICARAN. Para regenerar, primero elimina los existentes.\n\n\u00bfCrear de todas formas?')) {
-      msgEl.style.color = 'var(--gris)';
-      msgEl.textContent = 'Cancelado.';
-      return;
-    }
-  }
   msgEl.style.color = 'var(--gris)';
   msgEl.textContent = '\u23F3 Verificando...';
 
   const usados = [];
-  for (let i = 0; i < total; i++) {
+  for (const i of idxs) {
     const loc = document.getElementById('elim-local-'  + i)?.value;
     const vis = document.getElementById('elim-visita-' + i)?.value;
-    if (!loc || !vis) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Partido '+(i+1)+': faltan equipos.'; return; }
-    if (loc === vis)  { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Partido '+(i+1)+': local y visita iguales.'; return; }
+    if (!loc || !vis) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Cruce '+(i+1)+': faltan equipos.'; return; }
+    if (loc === vis)  { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Cruce '+(i+1)+': local y visita iguales.'; return; }
     if (usados.includes(loc)) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c '+loc+' aparece dos veces.'; return; }
     if (usados.includes(vis)) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c '+vis+' aparece dos veces.'; return; }
     usados.push(loc, vis);
@@ -4129,17 +4162,18 @@ async function crearTodosElim(total, faseDest) {
   msgEl.style.color = 'var(--gris)';
   msgEl.textContent = '\u23F3 Creando partidos...';
 
-  const { data: maxRow } = await sb.from('partidos')
-    .select('numero').order('numero', { ascending: false }).limit(1).maybeSingle();
-  let numero = (maxRow?.numero || 0) + 1;
+  // Numero fijo del bracket oficial (base de la fase + indice del cruce), NO
+  // "max numero + 1" -- asi el orden visual del bracket queda correcto sin
+  // importar en que momento/orden se vaya creando cada cruce.
+  const base = NUMERO_BASE_ELIM[faseDest];
 
   const inserts = [];
-  for (let i = 0; i < total; i++) {
+  for (const i of idxs) {
     const loc    = document.getElementById('elim-local-'   + i).value;
     const vis    = document.getElementById('elim-visita-'  + i).value;
     const fecha  = document.getElementById('elim-fecha-'   + i).value;
     const ciudad = document.getElementById('elim-ciudad-'  + i).value.trim();
-    inserts.push({ numero: numero++, fase: faseDest, equipo_local: loc, equipo_visita: vis,
+    inserts.push({ numero: base + i, fase: faseDest, equipo_local: loc, equipo_visita: vis,
       fecha_partido: fecha ? new Date(fecha).toISOString() : null,
       ciudad: ciudad || null, estado: 'pendiente' });
   }
@@ -4148,7 +4182,7 @@ async function crearTodosElim(total, faseDest) {
   if (error) { msgEl.style.color='var(--error)'; msgEl.textContent='\u274c Error: '+error.message; return; }
 
   msgEl.style.color = 'var(--exito)';
-  msgEl.textContent = '\u2705 ' + total + ' partidos creados para ' + FASES_LABELS[faseDest];
+  msgEl.textContent = '\u2705 ' + idxs.length + ' partido' + (idxs.length > 1 ? 's' : '') + ' creado' + (idxs.length > 1 ? 's' : '') + ' para ' + FASES_LABELS[faseDest];
   allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
   setTimeout(() => loadAdminPanel(), 1500);
 }
