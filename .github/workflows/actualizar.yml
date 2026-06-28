@@ -8,20 +8,19 @@ on:
   schedule:
     # Solo durante el torneo (junio-julio) y en la ventana de partidos.
     # Mundial 2026 en Norteamerica: partidos ~12:00-22:00 hora local
-    # = aprox 16:00-06:00 UTC. Corre cada 15 min SOLO en esa franja, para
-    # que el resultado quede cargado pocos minutos después de cada partido
-    # (antes corría cada 2h, lo que podía tardar hasta 2h en reflejar un
-    # resultado ya finalizado). football-data.org free tier soporta esta
-    # frecuencia sin problema (muy por debajo del límite de la API).
+    # = aprox 16:00-06:00 UTC. Corre cada 5 min SOLO en esa franja -- es el
+    # minimo que permite GitHub Actions para cron programado. football-data.org
+    # free tier soporta esto sin problema (limite real: 10 solicitudes/min,
+    # aqui hacemos 1 cada 5 min).
     # Horas UTC: 16-23 y 0-6. Meses: 6 (jun) y 7 (jul).
-    # Minutos en :02/:17/:32/:47 (no en los redondos :00/:15/:30/:45) -- en
+    # Minutos en :02/:07/:12/.../:57 (no en los redondos :00/:15/:30/:45) -- en
     # esos minutos redondos GitHub Actions recibe una avalancha de cron jobs
     # de miles de repos a la vez (todos programan ahi por defecto) y durante
     # picos de carga simplemente descarta la mayoria de esos disparos. Se
     # confirmo en producción: el cron */15 corrio solo 3 veces en 3.5 horas
     # en vez de 14. Corriendo en un minuto "raro" se evita ese atasco.
     # Ajustar si el fixture oficial usa otras franjas horarias.
-    - cron: '2,17,32,47 0-6,16-23 * 6,7 *'
+    - cron: '2-57/5 0-6,16-23 * 6,7 *'
   workflow_dispatch:
     # Permite ejecutar manualmente desde GitHub Actions
 
