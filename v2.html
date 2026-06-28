@@ -711,9 +711,9 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
   </div>
 </div>
 
-<!-- VISTA PROYECCION (probabilidad estimada de ganar la quiniela) -->
+<!-- VISTA PROYECCION (quién sigue matemáticamente vivo por el podio) -->
 <div id="view-proyeccion" class="view">
-  <div class="section-title">🎲 Proyección de Ganador</div>
+  <div class="section-title">🎯 ¿Quién sigue vivo por el podio?</div>
   <div id="proyeccion-content">
     <div class="empty-state"><div class="spinner"></div><br>Calculando...</div>
   </div>
@@ -1185,7 +1185,7 @@ hr.sep { border: none; border-top: 1px solid var(--borde); margin: 16px 0; }
     <span class="icon">📅</span>Próximos
   </button>
   <button class="nav-btn" onclick="navigate('proyeccion')" data-view="proyeccion">
-    <span class="icon">🎲</span>Proyección
+    <span class="icon">🎯</span>Podio
   </button>
   <button class="nav-btn" onclick="navigate('resultados')" data-view="resultados">
     <span class="icon">📊</span>Resultados
@@ -2425,25 +2425,14 @@ function filtrarResPicks(btn, partidoId, res) {
   });
 }
 
-// ── Helpers de numeros pseudoaleatorios con semilla (para Proyección estable por dia) ──
-function hashString(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-  }
-  return h;
-}
-function mulberry32(seed) {
-  let a = seed;
-  return function() {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+// ── Devuelve si una fase aun acepta/puede llegar a aceptar picks (no cerrada) ──
+function faseAceptaPicks(fase) {
+  const fd = allFases[fase];
+  if (!fd || !fd.abierta) return false;
+  return !fd.fecha_cierre || new Date(fd.fecha_cierre) > new Date();
 }
 
-// ── Proyección probabilística de ganador (simulación de partidos pendientes) ──
+// ── Proyección determinística: techo (máximo posible) vs piso (ya asegurado) por participante ──
 async function loadProyeccion() {
   const cont = document.getElementById('proyeccion-content');
   cont.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Calculando...</div>';
@@ -2462,94 +2451,87 @@ async function loadProyeccion() {
   const prons = await fetchPronosticosDe(partIds, 'participante_id,partido_id,goles_local,goles_visita,puntos,calculado');
 
   const puntosActuales = {};
-  parts.forEach(p => puntosActuales[p.id] = 0);
+  const pickPorPartido = {}; // participante_id -> Set de partido_id con pick ya cargado
+  parts.forEach(p => { puntosActuales[p.id] = 0; pickPorPartido[p.id] = new Set(); });
 
-  const picksPendientesPorPartido = {};
   prons.forEach(pr => {
     if (pr.calculado) {
       puntosActuales[pr.participante_id] = (puntosActuales[pr.participante_id] || 0) + (pr.puntos || 0);
     } else if (pr.goles_local !== null && pr.goles_visita !== null) {
-      (picksPendientesPorPartido[pr.partido_id] || (picksPendientesPorPartido[pr.partido_id] = [])).push(pr);
+      if (pickPorPartido[pr.participante_id]) pickPorPartido[pr.participante_id].add(pr.partido_id);
     }
   });
 
   const pendientes = allPartidos.filter(p => p.estado === 'pendiente');
-  const winCount = {};
-  parts.forEach(p => winCount[p.id] = 0);
 
-  if (pendientes.length === 0) {
-    let max = -Infinity;
-    parts.forEach(p => { if (puntosActuales[p.id] > max) max = puntosActuales[p.id]; });
-    parts.filter(p => puntosActuales[p.id] === max).forEach(p => winCount[p.id] = 1);
-    renderProyeccion(cont, parts, puntosActuales, winCount, 1, 0);
+  // Techo = puntos actuales + lo máximo que puede sumar en cada partido pendiente.
+  // Si ya cargó pick para ese partido (aunque no se haya jugado) o la fase sigue
+  // abierta (todavía puede cargar/corregir su pick), cuenta el máximo (exacto).
+  // Si la fase de ese partido ya cerró y nunca cargó pick, ese partido ya no le suma nada.
+  const techo = {};
+  parts.forEach(p => {
+    let suma = puntosActuales[p.id];
+    pendientes.forEach(partido => {
+      const pts = PUNTOS[partido.fase];
+      if (!pts) return;
+      const tienePick = pickPorPartido[p.id].has(partido.id);
+      if (tienePick || faseAceptaPicks(partido.fase)) suma += pts.exacto;
+    });
+    techo[p.id] = suma;
+  });
+
+  renderProyeccion(cont, parts, puntosActuales, techo, pendientes.length);
+}
+
+function renderProyeccion(cont, parts, puntosActuales, techo, numPendientes) {
+  const filas = parts.map(p => ({
+    id: p.id, nombre: p.nombre,
+    puntos: puntosActuales[p.id] || 0,
+    techo: techo[p.id] || 0,
+  })).sort((a, b) => b.puntos - a.puntos);
+
+  if (numPendientes === 0) {
+    const aviso = `<div class="alert" style="background:#eef3ff;border:1px solid #c8d6f7;color:#374151;font-size:0.78rem;padding:10px 12px;border-radius:10px;margin:0 16px 12px">
+      🏁 Ya no quedan partidos pendientes — esta es la tabla final.
+    </div>`;
+    const filasHtml = filas.map((f, i) => {
+      const medalla = i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+      return `<div style="display:flex;justify-content:space-between;margin:0 16px 8px;font-size:0.85rem">
+        <span><strong>${medalla}</strong> ${f.nombre}</span>
+        <span style="color:var(--gris)">${f.puntos} pts</span>
+      </div>`;
+    }).join('');
+    cont.innerHTML = aviso + filasHtml;
     return;
   }
 
-  // Simulación tipo Monte Carlo: marcadores al azar (distribución aproximada de goles 0-4)
-  // Semilla fija por dia: el resultado se mantiene estable durante todo el dia,
-  // y solo cambia cuando avanza el torneo (nuevos resultados/picks) o al dia siguiente.
-  const semillaHoy = new Date().toISOString().slice(0, 10);
-  const rand = mulberry32(hashString(semillaHoy));
-  const PESOS_GOLES = [0.25, 0.35, 0.22, 0.12, 0.06];
-  function golAleatorio() {
-    const r = rand();
-    let acc = 0;
-    for (let i = 0; i < PESOS_GOLES.length; i++) {
-      acc += PESOS_GOLES[i];
-      if (r < acc) return i;
-    }
-    return PESOS_GOLES.length - 1;
-  }
-
-  const N_SIM = 3000;
-  const simPartido = {};
-  for (let sim = 0; sim < N_SIM; sim++) {
-    const totales = {};
-    parts.forEach(p => totales[p.id] = puntosActuales[p.id]);
-
-    pendientes.forEach(partido => {
-      simPartido.fase = partido.fase;
-      simPartido.goles_local = golAleatorio();
-      simPartido.goles_visita = golAleatorio();
-      const picks = picksPendientesPorPartido[partido.id];
-      if (!picks) return;
-      picks.forEach(pr => { totales[pr.participante_id] += calcularPuntos(simPartido, pr); });
-    });
-
-    let max = -Infinity;
-    parts.forEach(p => { if (totales[p.id] > max) max = totales[p.id]; });
-    const ganadores = parts.filter(p => totales[p.id] === max);
-    const share = 1 / ganadores.length;
-    ganadores.forEach(p => winCount[p.id] += share);
-  }
-
-  renderProyeccion(cont, parts, puntosActuales, winCount, N_SIM, pendientes.length);
-}
-
-function renderProyeccion(cont, parts, puntosActuales, winCount, nSim, numPendientes) {
-  const filas = parts.map(p => ({
-    nombre: p.nombre,
-    puntos: puntosActuales[p.id] || 0,
-    prob: (winCount[p.id] / nSim) * 100,
-  })).sort((a, b) => b.prob - a.prob || b.puntos - a.puntos);
+  const pisoLider = filas[0].puntos;
+  const piso3 = filas.length >= 3 ? filas[2].puntos : null;
+  const liderAsegurado = filas.length >= 2 && filas[1].techo < pisoLider;
 
   const aviso = `<div class="alert" style="background:#eef3ff;border:1px solid #c8d6f7;color:#374151;font-size:0.78rem;padding:10px 12px;border-radius:10px;margin:0 16px 12px">
-    🎲 Estimación basada en ${nSim.toLocaleString('es')} simulaciones${numPendientes ? ' de los ' + numPendientes + ' partidos pendientes (marcadores al azar)' : ''}.
-    Es un cálculo orientativo y de entretenimiento — no considera la fuerza real de los equipos.
-    El resultado se mantiene estable durante el día y se actualiza al avanzar el torneo o al día siguiente.
+    🎯 "Techo" = lo máximo que puede llegar a sumar cada uno si acierta el marcador exacto en los ${numPendientes} partidos pendientes que aún le cuentan.
+    Si el techo de alguien queda por debajo de los puntos ya asegurados de otro, ya no lo puede alcanzar matemáticamente.
   </div>`;
 
   const filasHtml = filas.map((f, i) => {
-    const pct = f.prob.toFixed(1);
-    const color = i === 0 ? 'var(--exito)' : i === 1 ? 'var(--oro)' : i === 2 ? 'var(--amarillo)' : 'var(--verde)';
-    return `<div style="margin:0 16px 10px">
-      <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:3px">
+    const enPodioActual = i < 3;
+    let chip;
+    if (piso3 !== null && f.techo < piso3 && !enPodioActual) {
+      chip = `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700">❌ fuera del podio</span>`;
+    } else if (i === 0 && liderAsegurado) {
+      chip = `<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700">🔒 1er lugar asegurado</span>`;
+    } else if (enPodioActual) {
+      chip = `<span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700">✅ en el podio</span>`;
+    } else {
+      chip = `<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700">💪 puede alcanzar el podio</span>`;
+    }
+    return `<div style="margin:0 16px 10px;padding:8px 10px;background:#f9fafb;border-radius:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;margin-bottom:4px">
         <span><strong>${i+1}.</strong> ${f.nombre}</span>
-        <span style="color:var(--gris)">${f.puntos} pts · <strong>${pct}%</strong></span>
+        ${chip}
       </div>
-      <div style="background:#eee;border-radius:6px;height:10px;overflow:hidden">
-        <div style="background:${color};width:${Math.max(Number(pct), 1)}%;height:100%"></div>
-      </div>
+      <div style="font-size:0.78rem;color:var(--gris)">${f.puntos} pts actuales · techo ${f.techo} pts</div>
     </div>`;
   }).join('');
 
