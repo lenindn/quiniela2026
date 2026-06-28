@@ -375,7 +375,7 @@ body {
 /* LEADERBOARD */
 .tabla-header {
   display: grid;
-  grid-template-columns: 32px 1fr 60px 60px 60px;
+  grid-template-columns: 28px 1fr 46px 38px 38px;
   padding: 8px 12px;
   font-size: 0.72rem;
   font-weight: 700;
@@ -384,7 +384,7 @@ body {
 }
 .tabla-row {
   display: grid;
-  grid-template-columns: 32px 1fr 60px 60px 60px;
+  grid-template-columns: 28px 1fr 46px 38px 38px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--borde);
   align-items: center;
@@ -3580,7 +3580,9 @@ async function renderResultados() {
   }
 
   cont.innerHTML = '';
-  const ps = allPartidos.filter(p => p.fase === currentResTab);
+  const ps = allPartidos
+    .filter(p => p.fase === currentResTab)
+    .sort((a, b) => new Date(a.fecha_partido || 0) - new Date(b.fecha_partido || 0));
 
   if (ps.length === 0) {
     cont.innerHTML = '<div class="empty-state">No hay partidos disponibles aún.</div>';
