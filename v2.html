@@ -424,6 +424,15 @@ body {
 .bracket-col.col-last  .bracket-match::after  { display:none; }
 .bracket-col.col-aparte .bracket-match::before,
 .bracket-col.col-aparte .bracket-match::after { display:none; }
+/* Llave (líneas verticales) que une cada pareja de partidos con el cruce que alimentan */
+.bracket-pair { position:relative; display:flex; flex-direction:column; justify-content:space-around; gap:10px; flex:1; }
+.bracket-pair::after {
+  content:''; position:absolute; top:25%; bottom:25%; right:-12px; width:12px;
+  border-top:2px solid #9aa5b1; border-right:2px solid #9aa5b1; border-bottom:2px solid #9aa5b1;
+  border-radius:0 4px 4px 0; z-index:0;
+}
+.bracket-col.col-last .bracket-pair::after { display:none; }
+.bracket-pair .bracket-match::after { display:none; } /* el conector de la pareja reemplaza el puntito individual */
 .bracket-team { display:flex; align-items:center; justify-content:space-between;
   padding:7px 10px; border-bottom:1px solid var(--borde); gap:6px; }
 .bracket-team:last-child { border-bottom:none; border-radius:0 0 7px 7px; }
@@ -2643,15 +2652,18 @@ async function loadBracketView() {
       html += '<div class="bracket-col-header">' + label + '</div>';
       html += '<div class="bracket-col-body">';
 
-      if (matches.length === 0) {
-        // Fase no generada a?n ? mostrar slots vac?os
-        for (let i = 0; i < n; i++) {
-          html += renderBracketMatchEmpty();
-        }
+      const slots = matches.length === 0 ? new Array(n).fill(null) : matches;
+      const sinPareja = (key === 'final' || key === 'tercer_lugar');
+
+      if (sinPareja) {
+        slots.forEach(p => { html += p ? renderBracketMatch(p) : renderBracketMatchEmpty(); });
       } else {
-        matches.forEach(p => {
-          html += renderBracketMatch(p);
-        });
+        for (let i = 0; i < slots.length; i += 2) {
+          html += '<div class="bracket-pair">';
+          html += slots[i]   ? renderBracketMatch(slots[i])   : renderBracketMatchEmpty();
+          html += slots[i+1] ? renderBracketMatch(slots[i+1]) : renderBracketMatchEmpty();
+          html += '</div>';
+        }
       }
       html += '</div>';
       html += '</div>';
