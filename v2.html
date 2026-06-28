@@ -2231,7 +2231,7 @@ async function loadProximosEncuentros() {
     const cerrada = faseEstaCerrada(p.fase);
     const enVivo = p.estado === 'en_curso';
     const fecha = enVivo
-      ? `<span style="color:#dc2626;font-weight:700">🔴 EN VIVO ${p.goles_local ?? 0}-${p.goles_visita ?? 0}</span>`
+      ? `<span style="color:#dc2626;font-weight:700">🔴 EN VIVO${p.minuto ? ' ' + p.minuto + "'" : ''} ${p.goles_local ?? 0}-${p.goles_visita ?? 0}</span>`
       : fechaRelativa(p.fecha_partido);
     return `
       <div class="match-card" data-pid="${p.id}">
@@ -3611,7 +3611,7 @@ async function renderResultados() {
              style="margin-top:5px;background:none;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:2px 7px;color:var(--gris)">✏️ editar</button>` : ''}`
         : enCurso
         ? `<div class="resultado-score">${p.goles_local ?? 0} - ${p.goles_visita ?? 0}</div>
-           <div style="color:#dc2626;font-weight:700;font-size:0.78rem">🔴 EN VIVO</div>`
+           <div style="color:#dc2626;font-weight:700;font-size:0.78rem">🔴 EN VIVO${p.minuto ? ' ' + p.minuto + "'" : ''}</div>`
         : `<div style="color:var(--gris);font-size:0.85rem">${p.fecha_partido ? formatDate(p.fecha_partido) : 'Por definir'}</div>`;
       cont.innerHTML += `
         <div style="border-bottom:1px solid var(--borde)">

@@ -199,6 +199,10 @@ def parse_match(m: dict) -> dict | None:
     group_raw   = m.get('group', '')
     grupo       = group_raw.replace('GROUP_', '').strip() if group_raw else None
 
+    # Minuto en vivo (solo presente mientras estado es IN_PLAY/PAUSED). La API
+    # lo devuelve en el nivel raiz del partido, no dentro de "score".
+    minuto      = m.get('minute') if estado == 'en_curso' else None
+
     avanza_local = None
     if estado == 'finalizado' and fase != 'grupos' and winner:
         if winner == 'HOME_TEAM':
@@ -217,6 +221,7 @@ def parse_match(m: dict) -> dict | None:
         'sede':           m.get('venue', ''),
         'goles_local':    gl_real,
         'goles_visita':   gv_real,
+        'minuto':         minuto,
         'avanza_local':   avanza_local,
         'penales_local':  pen_local,
         'penales_visita': pen_visita,
@@ -248,10 +253,14 @@ def sync_matches(sb: Client, api_matches: list) -> list:
         existing = db_partidos.get(api_id)
 
         if existing:
-            # Actualizar si cambió el estado o el resultado
-            if existing.get('estado') != parsed['estado'] or (
-               parsed['goles_local'] is not None and
-               existing.get('goles_local') != parsed['goles_local']):
+            # Actualizar si cambio el estado, el resultado, o si esta en vivo
+            # (el minuto cambia en cada poll aunque el marcador no se mueva).
+            necesita_update = (
+                existing.get('estado') != parsed['estado'] or
+                (parsed['goles_local'] is not None and existing.get('goles_local') != parsed['goles_local']) or
+                parsed['estado'] == 'en_curso'
+            )
+            if necesita_update:
 
                 was_not_final = existing.get('estado') != 'finalizado'
                 is_now_final  = parsed['estado'] == 'finalizado'
@@ -259,6 +268,7 @@ def sync_matches(sb: Client, api_matches: list) -> list:
                 updates = {
                     'goles_local':    parsed['goles_local'],
                     'goles_visita':   parsed['goles_visita'],
+                    'minuto':         parsed['minuto'],
                     'avanza_local':   parsed['avanza_local'],
                     'penales_local':  parsed['penales_local'],
                     'penales_visita': parsed['penales_visita'],
