@@ -5233,20 +5233,13 @@ async function buildEvolucionHTML(participanteId) {
   const top3Ids = new Set(top3.map(t => t.id));
   const restoIds = partIds.filter(id => id !== participanteId && !top3Ids.has(id));
 
-  // Banda del resto: mejor puesto (número más bajo) y peor puesto (número más alto)
-  // alcanzado por cualquiera del "resto" en cada instante.
-  const restoMejor = restoIds.length ? finalizados.map((_, i) => Math.min(...restoIds.map(id => rankSeries[id][i]))) : null;
-  const restoPeor  = restoIds.length ? finalizados.map((_, i) => Math.max(...restoIds.map(id => rankSeries[id][i]))) : null;
+  // Escala: con todas las líneas individuales visibles (estilo "bump chart"),
+  // el rango real recorrido es prácticamente 1..totalParts, así que se usa
+  // ese rango completo en vez de un zoom — igual que en la referencia.
+  const minRango = 1;
+  const maxRango = totalParts;
 
-  // Escala enfocada en el rango de puestos que realmente recorren las líneas
-  // visibles (Tú + top3 + banda del resto) — si todo el movimiento ocurre entre
-  // el 1° y el 14°, por ejemplo, usar esa franja en vez de 1..39 para que el
-  // movimiento se note (igual criterio que usaba el gráfico de puntos).
-  const rangosVisibles = [...rankSeries[participanteId], ...top3.flatMap(t => rankSeries[t.id]), ...(restoMejor || []), ...(restoPeor || [])];
-  const minRango = Math.min(...rangosVisibles);
-  const maxRango = Math.max(...rangosVisibles);
-
-  const pxPer = 38, padLeft = 24, padRight = 6, padTop = 10, plotH = 90, padBottom = 6, labelH = 28;
+  const pxPer = 38, padLeft = 24, padRight = 16, padTop = 14, plotH = Math.max(140, totalParts * 3), padBottom = 6, labelH = 28;
   const W = Math.max(264, padLeft + padRight + (n - 1) * pxPer);
   const H = padTop + plotH + padBottom + labelH;
   const xAt = i => padLeft + i * pxPer;
@@ -5266,19 +5259,32 @@ async function buildEvolucionHTML(participanteId) {
     svg += `<line x1="${padLeft}" y1="${ly.toFixed(1)}" x2="${W - padRight}" y2="${ly.toFixed(1)}" stroke="var(--borde)" stroke-width="1"/>`;
     svg += `<text x="${padLeft - 4}" y="${(ly + 3).toFixed(1)}" font-size="9" fill="var(--gris)" text-anchor="end">${v}°</text>`;
   });
-  if (restoMejor && restoPeor) {
-    const arriba = restoMejor.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
-    const abajo  = restoPeor.slice().reverse().map((v, i) => `${xAt(n - 1 - i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' L');
-    svg += `<path d="M${arriba} L${abajo} Z" fill="var(--gris)" opacity="0.18"/>`;
-  }
-  // "Tú" se dibuja primero (debajo); el top3 se dibuja despues con guiones para
-  // que se distingan aun si la trayectoria coincide exactamente con otra linea
-  svg += `<path d="${pathOf(rankSeries[participanteId])}" fill="none" stroke="var(--verde)" stroke-width="3"/>`;
+  // Línea fina gris por cada participante del "resto" (estilo bump chart completo)
+  restoIds.forEach(id => {
+    svg += `<path d="${pathOf(rankSeries[id])}" fill="none" stroke="var(--gris)" stroke-width="1" opacity="0.35"/>`;
+  });
   const colores = ['#e67e22', '#2980b9', '#9b59b6']; // naranja, azul, morado
   const dashes  = ['6 3', '3 3', '1.5 2.5'];
   top3.forEach((t, i) => {
     svg += `<path d="${pathOf(rankSeries[t.id])}" fill="none" stroke="${colores[i]}" stroke-width="2" stroke-dasharray="${dashes[i]}"/>`;
   });
+  // "Tú" se dibuja al final (encima de todo) para que resalte sobre el resto
+  const miSerie = rankSeries[participanteId];
+  svg += `<path d="${pathOf(miSerie)}" fill="none" stroke="var(--verde)" stroke-width="3"/>`;
+  // Etiquetas de puesto sobre la línea de "Tú", solo en los puntos de inflexión
+  // (donde cambia de subir a bajar o viceversa) más el primero y el último,
+  // para no saturar el gráfico con un número en cada partido.
+  const esInflexion = i => {
+    if (i === 0 || i === n - 1) return true;
+    const prev = miSerie[i - 1], cur = miSerie[i], next = miSerie[i + 1];
+    return (cur - prev) * (next - cur) < 0; // cambia de dirección
+  };
+  for (let i = 0; i < n; i++) {
+    if (!esInflexion(i)) continue;
+    const lx = xAt(i), ly = yAt(miSerie[i]);
+    svg += `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.5" fill="var(--verde)"/>`;
+    svg += `<text x="${lx.toFixed(1)}" y="${(ly - 6).toFixed(1)}" font-size="9" font-weight="700" fill="var(--verde)" text-anchor="middle" stroke="#fff" stroke-width="3" paint-order="stroke">${miSerie[i]}°</text>`;
+  }
   // Eje X: fecha de cada partido finalizado
   finalizados.forEach((p, i) => {
     const fecha = new Date(p.fecha_partido).toLocaleDateString('es', { day: 'numeric', month: 'short' });
