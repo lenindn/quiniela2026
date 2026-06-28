@@ -1358,12 +1358,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Validar que el grupo existe — buscar por slug primero, luego por id numérico
+  // Validar que el grupo existe — buscar por slug primero, luego por id numérico.
+  // OJO: hay que distinguir "no se encontró el grupo" (error=null, data=null) de
+  // "la consulta falló por un problema de red/conexión" (error!=null) — si no, a
+  // alguien con mala conexión (ej. bloqueos/throttling de ciertos proveedores en
+  // Venezuela) se le dice incorrectamente "el grupo no existe" cuando en realidad
+  // nunca llegó a preguntarle a Supabase.
   currentGrupoKey = grupoParam;
-  let { data: grupo } = await sb.from('grupos_quiniela').select('*').eq('slug', grupoParam).maybeSingle();
-  if (!grupo) {
-    const { data: byId } = await sb.from('grupos_quiniela').select('*').eq('id', grupoParam).maybeSingle();
+  let { data: grupo, error: errSlug } = await sb.from('grupos_quiniela').select('*').eq('slug', grupoParam).maybeSingle();
+  let errorDeRed = errSlug;
+  if (!grupo && !errSlug) {
+    const { data: byId, error: errId } = await sb.from('grupos_quiniela').select('*').eq('id', grupoParam).maybeSingle();
     grupo = byId;
+    errorDeRed = errId;
+  }
+  if (!grupo && errorDeRed) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-nogrupo').classList.add('active');
+    document.getElementById('ng-url').value = `⚠️ No se pudo conectar. Revisa tu conexión a internet e intenta de nuevo.`;
+    return;
   }
   if (!grupo) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -1526,8 +1539,17 @@ async function buscarMisGrupos() {
 }
 
 function irAGrupo() {
-  const url = document.getElementById('ng-url').value.trim();
-  if (url) window.location.href = url;
+  const texto = document.getElementById('ng-url').value.trim();
+  if (!texto) return;
+  // Tolerante a pegados "sucios": texto de WhatsApp alrededor del link, el link
+  // sin "https://", o solo el slug del grupo sin el resto de la URL.
+  const matchUrl = texto.match(/https?:\/\/\S+/);
+  if (matchUrl) { window.location.href = matchUrl[0].replace(/[.,;:!?]+$/, ''); return; }
+  const matchG = texto.match(/[?&]g=([^&\s]+)/);
+  if (matchG) { window.location.href = '?g=' + matchG[1].replace(/[.,;:!?]+$/, ''); return; }
+  // Si pegaron solo el slug (ej. "familia-bella"), sin "?g=" ni URL completa.
+  if (/^[a-z0-9-]+$/i.test(texto)) { window.location.href = '?g=' + texto; return; }
+  window.location.href = texto;
 }
 function mostrarAdminSinGrupo() {
   document.getElementById('ng-admin-pin').style.display = 'block';
