@@ -2584,18 +2584,40 @@ function renderResumenGrupo(parts, prons, partidos) {
   });
 
   const inscritos = parts.length;
-  let listos = 0, incompletos = 0, sinPicks = 0;
+  const completos = [], incompletosArr = [], sinPicksArr = [];
   parts.forEach(p => {
     const n = conteo[p.id] ? conteo[p.id].size : 0;
-    if (n === 0) sinPicks++;
-    else if (n >= total) listos++;
-    else incompletos++;
+    if (n === 0) sinPicksArr.push(p);
+    else if (n >= total) completos.push(p);
+    else incompletosArr.push({ ...p, n });
   });
+  const listos = completos.length, incompletos = incompletosArr.length, sinPicks = sinPicksArr.length;
 
   const chipIncompletos = incompletos > 0
     ? `<span style="background:#fef3c7;color:#b45309;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700">⚠️ ${incompletos} incompletos</span>` : '';
   const chipSinPicks = sinPicks > 0
     ? `<span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700">✕ ${sinPicks} sin picks cargados</span>` : '';
+
+  // Detalle por nombre — solo visible para el admin (información sensible de
+  // seguimiento, no debe ser pública para todos los participantes del grupo).
+  let detalleAdmin = '';
+  if (isAdmin) {
+    const listaDe = (arr, render) => arr.length
+      ? '<div style="margin-top:4px">' + arr.map(render).join('') + '</div>'
+      : '<div style="color:var(--gris);font-size:0.78rem;margin-top:4px">— ninguno —</div>';
+    detalleAdmin = `
+      <div style="margin-top:8px">
+        <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none' ? '' : 'none'"
+          style="background:none;border:1px solid var(--borde);border-radius:14px;padding:3px 10px;font-size:0.75rem;cursor:pointer;color:var(--texto)">
+          👁️ Ver detalle por nombre (solo admin)
+        </button>
+        <div style="display:none;margin-top:8px;font-size:0.82rem">
+          <div><strong style="color:var(--exito)">✅ Completos (${listos})</strong>${listaDe(completos, p => `<div>${p.nombre}</div>`)}</div>
+          <div style="margin-top:8px"><strong style="color:#b45309">⚠️ Incompletos (${incompletos})</strong>${listaDe(incompletosArr, p => `<div>${p.nombre} — ${p.n}/${total}</div>`)}</div>
+          <div style="margin-top:8px"><strong style="color:#dc2626">✕ Sin picks (${sinPicks})</strong>${listaDe(sinPicksArr, p => `<div>${p.nombre}</div>`)}</div>
+        </div>
+      </div>`;
+  }
 
   cont.innerHTML = `
     <div style="background:#fff;border:1px solid var(--borde);border-radius:12px;padding:11px 14px;margin-bottom:12px">
@@ -2607,6 +2629,7 @@ function renderResumenGrupo(parts, prons, partidos) {
         ${chipIncompletos}
         ${chipSinPicks}
       </div>
+      ${detalleAdmin}
     </div>`;
 }
 
