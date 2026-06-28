@@ -2817,7 +2817,7 @@ async function loadGruposView() {
           + '</tr>';
       });
       html += '</tbody></table>';
-      const resultados = [...finalizados].reverse().slice(0,3);
+      const resultados = completo ? [...finalizados].reverse() : [...finalizados].reverse().slice(0,3);
       if (resultados.length > 0) {
         html += '<div style="font-size:0.72rem;color:var(--gris);font-weight:600;margin-bottom:4px">Resultados</div>';
         resultados.forEach(p => {
