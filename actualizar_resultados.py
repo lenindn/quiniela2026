@@ -189,6 +189,8 @@ def parse_match(m: dict) -> dict | None:
     rt_score    = score.get('regularTime') or score.get('fullTime', {})
     gl_real     = rt_score.get('home')
     gv_real     = rt_score.get('away')
+    if str(m.get('id')) == '537415':
+        print(f'DEBUG 537415 status={status!r} score={score!r}')
     winner      = score.get('winner')  # HOME_TEAM / AWAY_TEAM / DRAW / null
 
     # Penales (informativo, no afecta puntos). La API los da en score.penalties.
