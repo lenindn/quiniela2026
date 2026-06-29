@@ -186,11 +186,16 @@ def parse_match(m: dict) -> dict | None:
     # el marcador ? solo definen qui?n avanza (campo avanza_local).
     # Cuando se active este script en producci?n, verificar que la API devuelva
     # regularTime correctamente (algunos endpoints usan fullTime para todo).
-    rt_score    = score.get('regularTime') or score.get('fullTime', {})
-    gl_real     = rt_score.get('home')
-    gv_real     = rt_score.get('away')
-    if str(m.get('id')) == '537415':
-        print(f'DEBUG 537415 status={status!r} score={score!r}')
+    # Mientras el partido esta IN_PLAY, la API manda el marcador en vivo dentro
+    # de fullTime y deja regularTime en null (regularTime solo se completa al
+    # terminar el partido). Por eso se usa regularTime cuando esta disponible
+    # (excluye goles de prorroga al finalizar) y fullTime como respaldo en vivo.
+    rt_score    = score.get('regularTime') or {}
+    ft_score    = score.get('fullTime') or {}
+    if rt_score.get('home') is not None and rt_score.get('away') is not None:
+        gl_real, gv_real = rt_score['home'], rt_score['away']
+    else:
+        gl_real, gv_real = ft_score.get('home'), ft_score.get('away')
     winner      = score.get('winner')  # HOME_TEAM / AWAY_TEAM / DRAW / null
 
     # Penales (informativo, no afecta puntos). La API los da en score.penalties.
