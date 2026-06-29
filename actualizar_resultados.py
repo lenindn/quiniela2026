@@ -383,12 +383,6 @@ def main():
     sb = get_supabase()
     print('Conectado a Supabase ✓')
 
-    # CORRECCION PUNTUAL (revertir despues): la API reporto un gol de tiempo
-    # extra falso para el partido id=182 (Alemania-Paraguay) que se filtro al
-    # marcador antes de aplicar el fix de fullTime. Marcador real de 90 min: 1-1.
-    sb.table('partidos').update({'goles_local': 1, 'goles_visita': 1}).eq('id', 182).execute()
-    print('CORRECCION PUNTUAL aplicada: partido 182 -> 1-1')
-
     # 1. Obtener partidos de la API
     print('\n[1/4] Consultando football-data.org...')
     api_matches = fetch_matches()
