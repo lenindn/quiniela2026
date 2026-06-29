@@ -202,6 +202,8 @@ def parse_match(m: dict) -> dict | None:
     # Minuto en vivo (solo presente mientras estado es IN_PLAY/PAUSED). La API
     # lo devuelve en el nivel raiz del partido, no dentro de "score".
     minuto      = m.get('minute') if estado == 'en_curso' else None
+    if estado == 'en_curso':
+        print(f'DEBUG en_curso raw keys: {list(m.keys())} | minute={m.get("minute")!r}')
 
     avanza_local = None
     if estado == 'finalizado' and fase != 'grupos' and winner:
