@@ -266,8 +266,10 @@ def sync_matches(sb: Client, api_matches: list) -> list:
                 is_now_final  = parsed['estado'] == 'finalizado'
 
                 updates = {
-                    'goles_local':    parsed['goles_local'],
-                    'goles_visita':   parsed['goles_visita'],
+                    # Si la API devuelve el marcador vacio momentaneamente (ej. hueco de
+                    # datos a media partida), no machacar un resultado ya conocido con null.
+                    'goles_local':    parsed['goles_local'] if parsed['goles_local'] is not None else existing.get('goles_local'),
+                    'goles_visita':   parsed['goles_visita'] if parsed['goles_visita'] is not None else existing.get('goles_visita'),
                     'minuto':         parsed['minuto'],
                     'avanza_local':   parsed['avanza_local'],
                     'penales_local':  parsed['penales_local'],
