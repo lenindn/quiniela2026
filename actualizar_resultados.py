@@ -278,14 +278,6 @@ def sync_matches(sb: Client, api_matches: list) -> list:
             )
             if necesita_update:
 
-                # Nunca hacer downgrade finalizado → en_curso.
-                # Ocurre cuando la API devuelve FINISHED + regularTime null en polls
-                # posteriores a que ya cerramos el partido; parse_match lo convierte
-                # a en_curso por precaución, pero si la BD ya tiene el resultado
-                # correcto no debemos pisarlo.
-                if existing.get('estado') == 'finalizado' and parsed['estado'] == 'en_curso':
-                    continue
-
                 was_not_final = existing.get('estado') != 'finalizado'
                 is_now_final  = parsed['estado'] == 'finalizado'
 
@@ -303,9 +295,9 @@ def sync_matches(sb: Client, api_matches: list) -> list:
                     'fecha_partido':  parsed['fecha_partido'],
                     'sede':           parsed.get('sede', existing.get('sede', '')),
                 }
-                # No sobreescribir resultado manual con resultado de API si ya estaba finalizado
-                if existing.get('fuente') == 'manual' and existing.get('estado') == 'finalizado':
-                    print(f'  SKIP: {existing["equipo_local"]} vs {existing["equipo_visita"]} — resultado manual, no se sobreescribe.')
+                # Partido ya finalizado: nunca sobreescribir, sin importar la fuente.
+                # Correcciones siempre via parche manual (fix_* en main).
+                if existing.get('estado') == 'finalizado':
                     continue
 
                 sb.table('partidos').update(updates).eq('api_id', api_id).execute()
