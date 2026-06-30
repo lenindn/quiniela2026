@@ -347,8 +347,16 @@ def sync_from_espn(sb: Client, espn_matches: list) -> list:
             'sede':           m['sede'] or existing.get('sede', ''),
         }
 
-        sb.table('partidos').update(updates).eq('id', existing['id']).execute()
-        print(f'  UPD: {key[0]} vs {key[1]} — {m["estado"]}')
+        try:
+            resp = sb.table('partidos').update(updates).eq('id', existing['id']).execute()
+            if not resp.data:
+                raise Exception('sin datos en respuesta')
+            print(f'  UPD: {key[0]} vs {key[1]} — {m["estado"]}')
+        except Exception as ex:
+            print(f'  WARN update falló ({ex}), reintentando sin minuto...')
+            updates.pop('minuto', None)
+            sb.table('partidos').update(updates).eq('id', existing['id']).execute()
+            print(f'  UPD (sin minuto): {key[0]} vs {key[1]} — {m["estado"]}')
 
         if was_not_final and is_now_final:
             recien_finalizados.append({**existing, **updates})
