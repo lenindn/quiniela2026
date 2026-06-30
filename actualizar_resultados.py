@@ -410,11 +410,24 @@ def actualizar_bonus_campeon(sb: Client):
 # ============================================================
 # FLUJO PRINCIPAL
 # ============================================================
+def cleanup_r16_falsos(sb: Client):
+    """Elimina partidos de R16 creados por error (eran partidos de R32)."""
+    falsos = ['Costa de Marfil', 'Francia', 'México']
+    res = sb.table('partidos').select('id,equipo_local,equipo_visita').eq('fase', 'r16').execute()
+    for p in (res.data or []):
+        if p['equipo_local'] in falsos or p['equipo_visita'] in falsos:
+            sb.table('partidos').delete().eq('id', p['id']).execute()
+            print(f'  CLEANUP: eliminado R16 falso id={p["id"]} ({p["equipo_local"]} vs {p["equipo_visita"]})')
+
+
 def main():
     print(f'=== Quiniela Mundial 2026 — {datetime.now(timezone.utc).isoformat()} ===')
 
     sb = get_supabase()
     print('Conectado a Supabase ✓')
+
+    print('\n[0/5] Limpiando R16 falsos (solo si existen)...')
+    cleanup_r16_falsos(sb)
 
     today = datetime.now(timezone.utc).strftime('%Y%m%d')
 
@@ -437,9 +450,10 @@ def main():
         if validos:
             print(f'  {fecha}: {len(validos)} partidos con equipos definidos.')
 
-    # 3. Auto-generar cruces R16 cuando ESPN ya tiene los equipos confirmados
+    # 3. Auto-generar cruces R16 cuando ESPN ya tiene los equipos confirmados.
+    # SOLO usar partidos de fechas R16 — nunca partidos de R32 de hoy.
     print('\n[3/5] Verificando cruces R16...')
-    generar_cruces_r16(sb, [p for p in partidos_hoy + partidos_r16 if p])
+    generar_cruces_r16(sb, [p for p in partidos_r16 if p])
 
     # 4. Sincronizar resultados de hoy
     print('\n[4/5] Sincronizando resultados...')
