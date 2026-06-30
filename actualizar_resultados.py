@@ -1,13 +1,13 @@
 """
 Quiniela Mundial 2026 — Script de actualización automática de resultados
-Fuente: football-data.org (API gratuita)
+Fuente: ESPN (API pública, sin autenticación requerida)
 Ejecutar: python actualizar_resultados.py
-Programar: GitHub Actions cada 2 horas (ver .github/workflows/actualizar.yml)
+Programar: cron-job.org → POST a GitHub Actions workflow_dispatch cada 5 min
 """
 
 import os
 import sys
-import json
+import re
 import requests
 from datetime import datetime, timezone
 from supabase import create_client, Client
@@ -17,13 +17,17 @@ from supabase import create_client, Client
 # ============================================================
 SUPABASE_URL         = os.environ.get('SUPABASE_URL', '')
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
-FOOTBALL_API_KEY     = os.environ.get('FOOTBALL_API_KEY', '')
 
-FOOTBALL_API_BASE = 'https://api.football-data.org/v4'
-COMPETITION_CODE  = 'WC'   # FIFA World Cup en football-data.org
-SEASON            = 2026
+ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
 
-# Sistema de puntos (debe coincidir con index.html)
+# Fechas con partidos de R16 (para auto-generación de cruces)
+FECHAS_R16 = ['20260704', '20260705', '20260706', '20260707']
+
+# Numeración del bracket eliminatorio
+R32_BASE = 73   # numero del primer partido de R32
+R16_BASE = 89   # numero del primer partido de R16
+
+# Sistema de puntos (debe coincidir con v2.html)
 PUNTOS = {
     'grupos':       {'resultado': 2,  'exacto': 5 },
     'r32':          {'resultado': 3,  'exacto': 8 },
@@ -35,36 +39,8 @@ PUNTOS = {
 }
 BONUS_CAMPEON = 20
 
-# Mapeo de estado FIFA → estado interno
-STATUS_MAP = {
-    'SCHEDULED': 'pendiente',
-    'TIMED':     'pendiente',
-    'IN_PLAY':   'en_curso',
-    'PAUSED':    'en_curso',
-    'FINISHED':  'finalizado',
-    'SUSPENDED': 'pendiente',
-    'POSTPONED': 'pendiente',
-    'CANCELLED': 'pendiente',
-    'AWARDED':   'finalizado',
-}
-
-# Mapeo de fase FIFA → fase interna
-# NOTA: GROUP_STAGE se maneja 100% manual (carga de resultados desde admin).
-# Los partidos de grupos en la BD no tienen api_id -> si se incluyera aqui,
-# el script los insertaria como duplicados en vez de actualizarlos. Por eso
-# se omite a proposito; el script solo actua desde 16avos (r32) en adelante.
-FASE_MAP = {
-    'LAST_32':        'r32',
-    'LAST_16':        'r16',
-    'QUARTER_FINALS': 'cuartos',
-    'SEMI_FINALS':    'semis',
-    'THIRD_PLACE':    'tercer_lugar',
-    'FINAL':          'final',
-}
-
-# Mapeo de nombres de equipo de la API (ingles) -> nombres usados en la BD
-# (espanol, deben coincidir EXACTO con equipo_local/equipo_visita de grupos
-# para que el bracket y los nombres se vean consistentes en toda la app).
+# Traducción ESPN (inglés) → nombres usados en la BD (español).
+# ESPN usa los mismos nombres en inglés que football-data.org en su mayoría.
 EQUIPO_MAP = {
     'Mexico':                 'México',
     'South Africa':           'Sudáfrica',
@@ -72,7 +48,6 @@ EQUIPO_MAP = {
     'Czech Republic':         'Chequia',
     'Canada':                 'Canadá',
     'Bosnia and Herzegovina': 'Bosnia y Herzegovina',
-    'Bosnia-Herzegovina':     'Bosnia y Herzegovina',  # nombre real devuelto por la API para r32
     'Qatar':                  'Qatar',
     'Switzerland':            'Suiza',
     'Brazil':                 'Brasil',
@@ -80,13 +55,14 @@ EQUIPO_MAP = {
     'Haiti':                  'Haití',
     'Scotland':               'Escocia',
     'United States':          'Estados Unidos',
+    'USA':                    'Estados Unidos',
     'Paraguay':               'Paraguay',
     'Australia':              'Australia',
     'Turkey':                 'Turquía',
     'Germany':                'Alemania',
     'Curacao':                'Curazao',
-    "Ivory Coast":             'Costa de Marfil',
-    "Côte d'Ivoire":           'Costa de Marfil',
+    'Ivory Coast':            'Costa de Marfil',
+    "Côte d'Ivoire":          'Costa de Marfil',
     'Ecuador':                'Ecuador',
     'Netherlands':            'Países Bajos',
     'Japan':                  'Japón',
@@ -95,10 +71,9 @@ EQUIPO_MAP = {
     'Belgium':                'Bélgica',
     'Egypt':                  'Egipto',
     'Iran':                   'Irán',
-    'New Zealand':             'Nueva Zelanda',
+    'New Zealand':            'Nueva Zelanda',
     'Spain':                  'España',
     'Cape Verde':             'Cabo Verde',
-    'Cape Verde Islands':     'Cabo Verde',  # nombre alterno devuelto por la API para r32
     'Saudi Arabia':           'Arabia Saudita',
     'Uruguay':                'Uruguay',
     'France':                 'Francia',
@@ -111,7 +86,6 @@ EQUIPO_MAP = {
     'Jordan':                 'Jordania',
     'Portugal':               'Portugal',
     'DR Congo':               'RD Congo',
-    'Congo DR':               'RD Congo',  # nombre alterno devuelto por la API para r32
     'Uzbekistan':             'Uzbekistán',
     'Colombia':               'Colombia',
     'England':                'Inglaterra',
@@ -133,185 +107,247 @@ def get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # ============================================================
-# API FOOTBALL-DATA.ORG
+# ESPN API
 # ============================================================
-def fetch_matches() -> list:
-    if not FOOTBALL_API_KEY:
-        print('WARN: FOOTBALL_API_KEY no configurada. Saltando fetch de API.')
-        return []
+ESPN_STATUS_MAP = {
+    'Full Time':                     'finalizado',
+    'Final Score - After Penalties': 'finalizado',
+    'In Progress':                   'en_curso',
+    '1st Half':                      'en_curso',
+    '2nd Half':                      'en_curso',
+    'Halftime':                      'en_curso',
+    'Extra Time':                    'en_curso',
+    'Penalty Shootout':              'en_curso',
+    'Scheduled':                     'pendiente',
+    'Timed':                         'pendiente',
+    'Postponed':                     'pendiente',
+    'Cancelled':                     'pendiente',
+    'Suspended':                     'pendiente',
+}
 
-    url = f'{FOOTBALL_API_BASE}/competitions/{COMPETITION_CODE}/matches'
-    headers = {'X-Auth-Token': FOOTBALL_API_KEY}
-    params  = {'season': SEASON}
-
+def fetch_espn(date_str: str = None) -> list:
+    """Obtiene partidos de ESPN. date_str en formato YYYYMMDD o None para hoy."""
+    params = {'dates': date_str} if date_str else {}
     try:
-        resp = requests.get(url, headers=headers, params=params, timeout=30)
+        resp = requests.get(ESPN_BASE, params=params, timeout=15)
         resp.raise_for_status()
-        # football-data.org no manda 'charset' en el Content-Type del JSON; sin esto
-        # requests adivina mal la codificacion y los nombres con tilde quedan corruptos
-        # (mojibake, ej. "Sudáfrica" -> "SudÃ¡frica").
-        data = json.loads(resp.content.decode('utf-8'))
-        return data.get('matches', [])
-    except requests.HTTPError as e:
-        print(f'ERROR HTTP al consultar API: {e} — {resp.text[:200]}')
-        return []
+        return resp.json().get('events', [])
     except Exception as e:
-        print(f'ERROR al consultar API: {e}')
+        print(f'  WARN ESPN ({date_str or "hoy"}): {e}')
         return []
 
-def parse_match(m: dict) -> dict | None:
-    """Convierte un partido de la API al formato interno."""
-    stage = m.get('stage', '')
-    fase  = FASE_MAP.get(stage)
-    if not fase:
-        return None  # Etapa no reconocida
+def parse_penalty_notes(notes: list, home_raw: str, away_raw: str):
+    """
+    Extrae (pen_local, pen_visita) de ESPN notes.
+    Formato ESPN: "Team advance X-Y on penalties"
+    Retorna (None, None) si no hubo penales.
+    """
+    for note in notes:
+        text = note.get('text', '')
+        if 'on penalties' not in text.lower():
+            continue
+        m = re.search(r'(\d+)-(\d+)\s+on penalties', text, re.IGNORECASE)
+        if not m:
+            continue
+        w_score, l_score = int(m.group(1)), int(m.group(2))
+        team_adv = text.split(' advance')[0].strip() if ' advance' in text else ''
+        # Determinar si el ganador de penales es home o away
+        home_wins = team_adv and (
+            team_adv.lower() in home_raw.lower() or
+            home_raw.lower() in team_adv.lower()
+        )
+        if home_wins:
+            return w_score, l_score   # home ganó penales
+        else:
+            return l_score, w_score   # away ganó penales
+    return None, None
 
-    status      = m.get('status', 'SCHEDULED')
-    estado      = STATUS_MAP.get(status, 'pendiente')
-    home        = m.get('homeTeam') or {}
-    away        = m.get('awayTeam') or {}
-    score       = m.get('score', {})
+def parse_espn_event(event: dict) -> dict | None:
+    """Convierte un evento de ESPN al formato interno. Retorna None si debe ignorarse."""
+    comp        = event.get('competitions', [{}])[0]
+    competitors = {c['homeAway']: c for c in comp.get('competitors', [])}
+    home        = competitors.get('home', {})
+    away        = competitors.get('away', {})
 
-    # En fases eliminatorias, mientras los cruces no esten definidos (grupos
-    # sin terminar), la API devuelve homeTeam/awayTeam con name=None (la
-    # llave existe, el valor es null). Sin este chequeo se insertarian
-    # partidos "None vs None" en la BD. Se descartan hasta que la API
-    # confirme los dos equipos del cruce.
-    if not home.get('name') or not away.get('name'):
+    home_raw = home.get('team', {}).get('displayName', '')
+    away_raw = away.get('team', {}).get('displayName', '')
+
+    # Ignorar partidos donde los equipos aún no están definidos
+    if not home_raw or not away_raw:
+        return None
+    if 'winner' in home_raw.lower() or 'winner' in away_raw.lower():
         return None
 
-    # ?? REGLA DE PUNTUACI?N: usar marcador de 90 MINUTOS (regularTime), NO fullTime.
-    # fullTime puede incluir goles de pr?rroga, lo cual cambiar?a el marcador que
-    # los usuarios pronosticaron. Los goles de pr?rroga y penales NO cuentan para
-    # el marcador ? solo definen qui?n avanza (campo avanza_local).
-    # Cuando se active este script en producci?n, verificar que la API devuelva
-    # regularTime correctamente (algunos endpoints usan fullTime para todo).
-    # fullTime NO es confiable como respaldo en vivo: se observo en produccion
-    # que la API puede reportar goles de tiempo extra dentro de extraTime aun
-    # cuando el marcador real (regla: solo cuentan los 90 min) seguia sin ese
-    # gol -- usar fullTime como respaldo inflaba el marcador con datos falsos.
-    # Por seguridad solo se usa regularTime; si no esta disponible (partido en
-    # vivo, aun sin terminar oficialmente) no se actualiza el marcador y se
-    # conserva el ultimo valor conocido (ver 'goles_local'/'goles_visita' en
-    # sync_matches, que ya hacen ese fallback al valor existente cuando viene None).
-    rt_score    = score.get('regularTime') or {}
-    gl_real     = rt_score.get('home')
-    gv_real     = rt_score.get('away')
-    winner      = score.get('winner')  # HOME_TEAM / AWAY_TEAM / DRAW / null
+    equipo_local  = traducir_equipo(home_raw)
+    equipo_visita = traducir_equipo(away_raw)
 
-    # Penales (informativo, no afecta puntos). La API los da en score.penalties.
-    pen_score   = score.get('penalties') or {}
-    pen_local   = pen_score.get('home')
-    pen_visita  = pen_score.get('away')
+    status_desc = event.get('status', {}).get('type', {}).get('description', 'Scheduled')
+    estado      = ESPN_STATUS_MAP.get(status_desc, 'pendiente')
 
-    group_raw   = m.get('group', '')
-    grupo       = group_raw.replace('GROUP_', '').strip() if group_raw else None
+    # Marcador reglamentario (90'). ESPN muestra el marcador de 90' como score
+    # principal; los goles de prórroga y penales NO están incluidos aquí.
+    home_score = home.get('score')
+    away_score = away.get('score')
+    gl = int(home_score) if home_score not in (None, '') else None
+    gv = int(away_score) if away_score not in (None, '') else None
 
-    # Minuto en vivo (solo presente mientras estado es IN_PLAY/PAUSED). La API
-    # lo devuelve en el nivel raiz del partido, no dentro de "score".
-    minuto      = m.get('minute') if estado == 'en_curso' else None
+    # Guardia: no cerrar si el marcador de 90' aún no está disponible
+    if estado == 'finalizado' and (gl is None or gv is None):
+        estado = 'en_curso'
 
+    # Penales: parsear desde notes (solo si el estado es "After Penalties")
+    pen_local, pen_visita = None, None
+    if 'penalties' in status_desc.lower() or estado == 'finalizado':
+        pen_local, pen_visita = parse_penalty_notes(comp.get('notes', []), home_raw, away_raw)
+
+    # Ganador
     avanza_local = None
-    if estado == 'finalizado' and fase != 'grupos' and winner:
-        if winner == 'HOME_TEAM':
+    if estado == 'finalizado':
+        if home.get('winner') is True:
             avanza_local = True
-        elif winner == 'AWAY_TEAM':
+        elif away.get('winner') is True:
             avanza_local = False
-        # DRAW no debería ocurrir en eliminatorias finalizadas
 
-    # Guardia: la API a veces marca FINISHED antes de poblar regularTime.
-    # Si el marcador de 90' aún no está disponible, tratar como en_curso
-    # para no congelar un resultado incorrecto. El siguiente poll lo cerrará
-    # cuando regularTime ya esté completo.
-    if estado == 'finalizado' and (gl_real is None or gv_real is None):
-        estado       = 'en_curso'
-        avanza_local = None
+    # Minuto en vivo (ej. "35'", "45'+2'")
+    clock  = event.get('status', {}).get('displayClock', '')
+    minuto = clock if estado == 'en_curso' and clock else None
+
+    venue = comp.get('venue', {})
+    sede  = venue.get('fullName', '')
 
     return {
-        'api_id':         str(m.get('id', '')),
-        'fase':           fase,
-        'grupo':          grupo,
-        'equipo_local':   traducir_equipo(home.get('name', home.get('shortName', 'TBD'))),
-        'equipo_visita':  traducir_equipo(away.get('name', away.get('shortName', 'TBD'))),
-        'fecha_partido':  m.get('utcDate'),
-        'sede':           m.get('venue', ''),
-        'goles_local':    gl_real,
-        'goles_visita':   gv_real,
-        'minuto':         minuto,
-        'avanza_local':   avanza_local,
+        'equipo_local':   equipo_local,
+        'equipo_visita':  equipo_visita,
+        'estado':         estado,
+        'goles_local':    gl,
+        'goles_visita':   gv,
         'penales_local':  pen_local,
         'penales_visita': pen_visita,
-        'estado':         estado,
+        'avanza_local':   avanza_local,
+        'minuto':         minuto,
+        'sede':           sede,
+        'fecha_partido':  event.get('date', ''),
         'fuente':         'automatico' if estado == 'finalizado' else 'pendiente',
     }
 
 # ============================================================
-# SINCRONIZACIÓN CON SUPABASE
+# AUTO-GENERACIÓN DE CRUCES R16
 # ============================================================
-def sync_matches(sb: Client, api_matches: list) -> list:
-    """Actualiza partidos en Supabase. Retorna lista de partidos finalizados nuevos."""
-    if not api_matches:
-        return []
+def generar_cruces_r16(sb: Client, espn_matches: list):
+    """
+    Crea partidos de R16 en la BD cuando ESPN ya tiene los equipos definidos.
+    El numero de bracket se calcula a partir de los numeros de los R32 que ganaron.
+    Solo crea cruces nuevos — nunca modifica los existentes.
+    """
+    # Cruces ya existentes en BD (no duplicar)
+    r16_res = sb.table('partidos').select('equipo_local,equipo_visita').eq('fase', 'r16').execute()
+    ya_creados = {frozenset([p['equipo_local'], p['equipo_visita']]) for p in (r16_res.data or [])}
 
-    # Cargar partidos actuales de la DB
-    res = sb.table('partidos').select('*').execute()
-    db_partidos = {str(p.get('api_id', '')): p for p in (res.data or []) if p.get('api_id')}
-    db_numero   = {p.get('numero'): p for p in (res.data or [])}
+    # Ganadores de R32 → numero del partido que ganaron
+    r32_res = sb.table('partidos') \
+        .select('numero,equipo_local,equipo_visita,avanza_local,estado') \
+        .eq('fase', 'r32').execute()
+    ganadores = {}  # equipo -> numero r32
+    for p in (r32_res.data or []):
+        if p.get('estado') != 'finalizado' or p.get('numero') is None:
+            continue
+        if p.get('avanza_local') is True:
+            ganadores[p['equipo_local']] = p['numero']
+        elif p.get('avanza_local') is False:
+            ganadores[p['equipo_visita']] = p['numero']
+
+    nuevos = 0
+    for m in espn_matches:
+        if not m:
+            continue
+        par = frozenset([m['equipo_local'], m['equipo_visita']])
+        if par in ya_creados:
+            continue
+
+        # Calcular numero de bracket: pares adyacentes de R32 alimentan un slot de R16
+        r32_a = ganadores.get(m['equipo_local'])
+        r32_b = ganadores.get(m['equipo_visita'])
+        if r32_a and r32_b:
+            numero = R16_BASE + (min(r32_a, r32_b) - R32_BASE) // 2
+        else:
+            numero = None
+            print(f'  WARN: no se pudo calcular numero para {m["equipo_local"]} vs {m["equipo_visita"]} (ganadores R32 no encontrados)')
+
+        res = sb.table('partidos').insert({
+            'fase':          'r16',
+            'equipo_local':  m['equipo_local'],
+            'equipo_visita': m['equipo_visita'],
+            'fecha_partido': m['fecha_partido'],
+            'sede':          m['sede'],
+            'estado':        'pendiente',
+            'numero':        numero,
+            'fuente':        'pendiente',
+        }).execute()
+
+        if res.data:
+            ya_creados.add(par)
+            nuevos += 1
+            print(f'  CRUCE R16: {m["equipo_local"]} vs {m["equipo_visita"]} | numero={numero} | {m["sede"]}')
+
+    if nuevos == 0:
+        print('  Sin cruces nuevos.')
+
+# ============================================================
+# SINCRONIZACIÓN DE RESULTADOS
+# ============================================================
+def sync_from_espn(sb: Client, espn_matches: list) -> list:
+    """Actualiza resultados en BD desde ESPN. Retorna lista de partidos recién finalizados."""
+    res    = sb.table('partidos').select('*').execute()
+    db_map = {}
+    for p in (res.data or []):
+        db_map[(p['equipo_local'], p['equipo_visita'])] = p
 
     recien_finalizados = []
 
-    for m in api_matches:
-        parsed = parse_match(m)
-        if not parsed:
+    for m in espn_matches:
+        if not m:
+            continue
+        key      = (m['equipo_local'], m['equipo_visita'])
+        existing = db_map.get(key)
+        if not existing:
             continue
 
-        api_id   = parsed['api_id']
-        existing = db_partidos.get(api_id)
+        # Nunca modificar partidos ya finalizados en la BD
+        if existing.get('estado') == 'finalizado':
+            continue
 
-        if existing:
-            # Actualizar si cambio el estado, el resultado, o si esta en vivo
-            # (el minuto cambia en cada poll aunque el marcador no se mueva).
-            necesita_update = (
-                existing.get('estado') != parsed['estado'] or
-                (parsed['goles_local'] is not None and existing.get('goles_local') != parsed['goles_local']) or
-                parsed['estado'] == 'en_curso'
-            )
-            if necesita_update:
+        # ESPN devuelve score=0 para partidos pendientes — ignorar
+        if m['estado'] == 'pendiente':
+            continue
 
-                was_not_final = existing.get('estado') != 'finalizado'
-                is_now_final  = parsed['estado'] == 'finalizado'
+        necesita_update = (
+            existing.get('estado') != m['estado'] or
+            (m['goles_local'] is not None and existing.get('goles_local') != m['goles_local']) or
+            m['estado'] == 'en_curso'
+        )
+        if not necesita_update:
+            continue
 
-                updates = {
-                    # Si la API devuelve el marcador vacio momentaneamente (ej. hueco de
-                    # datos a media partida), no machacar un resultado ya conocido con null.
-                    'goles_local':    parsed['goles_local'] if parsed['goles_local'] is not None else existing.get('goles_local'),
-                    'goles_visita':   parsed['goles_visita'] if parsed['goles_visita'] is not None else existing.get('goles_visita'),
-                    'minuto':         parsed['minuto'],
-                    'avanza_local':   parsed['avanza_local'],
-                    'penales_local':  parsed['penales_local'],
-                    'penales_visita': parsed['penales_visita'],
-                    'estado':         parsed['estado'],
-                    'fuente':         parsed['fuente'],
-                    'fecha_partido':  parsed['fecha_partido'],
-                    'sede':           parsed.get('sede', existing.get('sede', '')),
-                }
-                # Partido ya finalizado: nunca sobreescribir, sin importar la fuente.
-                # Correcciones siempre via parche manual (fix_* en main).
-                if existing.get('estado') == 'finalizado':
-                    continue
+        was_not_final = existing.get('estado') != 'finalizado'
+        is_now_final  = m['estado'] == 'finalizado'
 
-                sb.table('partidos').update(updates).eq('api_id', api_id).execute()
-                print(f'  UPD: {existing["equipo_local"]} vs {existing["equipo_visita"]} — {parsed["estado"]}')
+        updates = {
+            'goles_local':    m['goles_local']  if m['goles_local']  is not None else existing.get('goles_local'),
+            'goles_visita':   m['goles_visita'] if m['goles_visita'] is not None else existing.get('goles_visita'),
+            'minuto':         m['minuto'],
+            'avanza_local':   m['avanza_local'],
+            'penales_local':  m['penales_local'],
+            'penales_visita': m['penales_visita'],
+            'estado':         m['estado'],
+            'fuente':         m['fuente'],
+            'sede':           m['sede'] or existing.get('sede', ''),
+        }
 
-                if was_not_final and is_now_final:
-                    recien_finalizados.append({**existing, **updates})
+        sb.table('partidos').update(updates).eq('id', existing['id']).execute()
+        print(f'  UPD: {key[0]} vs {key[1]} — {m["estado"]}')
 
-        else:
-            # Partido nuevo (generalmente fases eliminatorias)
-            print(f'  INSERT: {parsed["equipo_local"]} vs {parsed["equipo_visita"]} ({parsed["fase"]})')
-            res2 = sb.table('partidos').insert(parsed).execute()
-            if res2.data:
-                db_partidos[api_id] = res2.data[0]
+        if was_not_final and is_now_final:
+            recien_finalizados.append({**existing, **updates})
 
     return recien_finalizados
 
@@ -320,12 +356,9 @@ def sync_matches(sb: Client, api_matches: list) -> list:
 # ============================================================
 def calcular_puntos(partido: dict, pronostico: dict) -> int:
     """
-    Calcula puntos segun la regla de penales (Option A):
-    - Solo se usa el marcador de 90 minutos (regularTime)
-    - Exacto: marcador exacto al 90' (incluyendo empates como 2-2 que van a penales)
-    - Resultado KO: partido fue a penales (empate 90') -> cualquier empate cuenta
-                    partido se definio en 90' -> ganador correcto cuenta
-    Sincronizado con calcularPuntos() en v2.html
+    Puntos según marcador al 90'. Prórroga y penales NO cuentan para el score.
+    Empate en 90' (incluyendo los que van a penales) = resultado 'E'.
+    Sincronizado con calcularPuntos() en v2.html.
     """
     fase = partido.get('fase', 'grupos')
     pts  = PUNTOS.get(fase, PUNTOS['grupos'])
@@ -337,10 +370,6 @@ def calcular_puntos(partido: dict, pronostico: dict) -> int:
     if gl_r is None or gv_r is None:
         return 0
 
-    # TODAS las fases usan la misma logica: marcador al final de los 90 minutos.
-    # Reglamento: prorroga y penales NO cuentan. Si va a penales, el resultado
-    # oficial es EMPATE (mismo trato que grupos). avanza_local solo se usa para
-    # el bracket/generar fases, NO para puntos.
     def res(gl, gv):
         if gl > gv: return 'L'
         if gl < gv: return 'V'
@@ -356,11 +385,9 @@ def actualizar_puntos_partido(sb: Client, partido: dict):
     pid = partido.get('id')
     if not pid:
         return
-
-    res = sb.table('pronosticos').select('*').eq('partido_id', pid).execute()
+    res   = sb.table('pronosticos').select('*').eq('partido_id', pid).execute()
     prons = res.data or []
     print(f'  Calculando {len(prons)} pronósticos para partido {pid}...')
-
     for pr in prons:
         puntos = calcular_puntos(partido, pr)
         sb.table('pronosticos').update({
@@ -372,11 +399,9 @@ def actualizar_bonus_campeon(sb: Client):
     """Aplica bonus de 20 pts si el campeón ya se conoce."""
     cfg = sb.table('config').select('valor').eq('clave', 'campeon_real').execute()
     if not cfg.data or not cfg.data[0].get('valor'):
-        return  # Campeón no definido aún
-
+        return
     campeon_real = cfg.data[0]['valor'].strip()
     print(f'  Campeón real: {campeon_real}')
-
     res = sb.table('pronostico_campeon').select('*').execute()
     for c in (res.data or []):
         puntos = BONUS_CAMPEON if c.get('equipo') == campeon_real else 0
@@ -391,26 +416,40 @@ def main():
     sb = get_supabase()
     print('Conectado a Supabase ✓')
 
-    # 1. Obtener partidos de la API
-    print('\n[1/4] Consultando football-data.org...')
-    api_matches = fetch_matches()
-    print(f'  {len(api_matches)} partidos obtenidos.')
+    today = datetime.now(timezone.utc).strftime('%Y%m%d')
 
-    # 2. Sincronizar con Supabase
-    print('\n[2/4] Sincronizando partidos...')
-    recien_finalizados = sync_matches(sb, api_matches)
+    # 1. Fetch ESPN hoy (partidos en vivo y recién terminados)
+    print('\n[1/5] Consultando ESPN (hoy)...')
+    eventos_hoy   = fetch_espn()
+    partidos_hoy  = [parse_espn_event(e) for e in eventos_hoy]
+    print(f'  {len([p for p in partidos_hoy if p])} partidos válidos.')
+
+    # 2. Fetch ESPN fechas R16 futuras (para auto-generación de cruces)
+    print('\n[2/5] Consultando ESPN (fechas R16 pendientes)...')
+    partidos_r16 = []
+    for fecha in FECHAS_R16:
+        if fecha <= today:
+            continue
+        eventos = fetch_espn(fecha)
+        parsed  = [parse_espn_event(e) for e in eventos]
+        validos = [p for p in parsed if p]
+        partidos_r16.extend(validos)
+        if validos:
+            print(f'  {fecha}: {len(validos)} partidos con equipos definidos.')
+
+    # 3. Auto-generar cruces R16 cuando ESPN ya tiene los equipos confirmados
+    print('\n[3/5] Verificando cruces R16...')
+    generar_cruces_r16(sb, [p for p in partidos_hoy + partidos_r16 if p])
+
+    # 4. Sincronizar resultados de hoy
+    print('\n[4/5] Sincronizando resultados...')
+    recien_finalizados = sync_from_espn(sb, partidos_hoy)
     print(f'  {len(recien_finalizados)} partidos recién finalizados.')
 
-    # 3. Calcular puntos de partidos recién finalizados
-    print('\n[3/4] Calculando puntos...')
-    if recien_finalizados:
-        for partido in recien_finalizados:
-            actualizar_puntos_partido(sb, partido)
-    else:
-        print('  Sin cambios nuevos.')
-
-    # 4. Bonus campeón
-    print('\n[4/4] Verificando bonus campeón...')
+    # 5. Calcular puntos y bonus campeón
+    print('\n[5/5] Calculando puntos...')
+    for partido in recien_finalizados:
+        actualizar_puntos_partido(sb, partido)
     actualizar_bonus_campeon(sb)
 
     print('\n=== Completado ✓ ===')
