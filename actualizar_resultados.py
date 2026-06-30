@@ -377,11 +377,34 @@ def actualizar_bonus_campeon(sb: Client):
 # ============================================================
 # FLUJO PRINCIPAL
 # ============================================================
+def fix_costa_de_marfil_noruega(sb: Client):
+    res = sb.table('partidos').select('id,equipo_local,equipo_visita,goles_local,goles_visita,avanza_local').eq('equipo_local', 'Costa de Marfil').eq('equipo_visita', 'Noruega').execute()
+    if not res.data:
+        print('  FIX: Partido Costa de Marfil vs Noruega no encontrado.')
+        return
+    p = res.data[0]
+    print(f'  FIX: partido id={p["id"]} — resultado actual: {p["goles_local"]}-{p["goles_visita"]} avanza_local={p["avanza_local"]} → corrigiendo a 1-2 Noruega avanza')
+    sb.table('partidos').update({
+        'goles_local':    1,
+        'goles_visita':   2,
+        'penales_local':  None,
+        'penales_visita': None,
+        'avanza_local':   False,
+        'estado':         'finalizado',
+        'fuente':         'manual',
+    }).eq('id', p['id']).execute()
+    actualizar_puntos_partido(sb, {**p, 'goles_local': 1, 'goles_visita': 2, 'fase': 'r32'})
+    print('  FIX: Corrección aplicada ✓')
+
+
 def main():
     print(f'=== Quiniela Mundial 2026 — {datetime.now(timezone.utc).isoformat()} ===')
 
     sb = get_supabase()
     print('Conectado a Supabase ✓')
+
+    print('\n[FIX] Corrigiendo Costa de Marfil vs Noruega...')
+    fix_costa_de_marfil_noruega(sb)
 
     # 1. Obtener partidos de la API
     print('\n[1/4] Consultando football-data.org...')
