@@ -377,11 +377,40 @@ def actualizar_bonus_campeon(sb: Client):
 # ============================================================
 # FLUJO PRINCIPAL
 # ============================================================
+def fix_paises_bajos_marruecos(sb: Client):
+    """
+    CORRECCIÓN TEMPORAL: penales Países Bajos 2-3 Marruecos (real: 1-1 a.e.t., pen. 2-3).
+    La API reportó datos incorrectos. Eliminar este bloque una vez aplicado.
+    """
+    res = sb.table('partidos').select('id,equipo_local,equipo_visita,penales_local,penales_visita').eq('equipo_local', 'Países Bajos').eq('equipo_visita', 'Marruecos').execute()
+    if not res.data:
+        print('  FIX: Partido Países Bajos vs Marruecos no encontrado.')
+        return
+    p = res.data[0]
+    print(f'  FIX: partido id={p["id"]} — penales actuales: {p["penales_local"]}-{p["penales_visita"]} → corrigiendo a 2-3')
+    sb.table('partidos').update({
+        'goles_local':    1,
+        'goles_visita':   1,
+        'penales_local':  2,
+        'penales_visita': 3,
+        'avanza_local':   False,
+        'estado':         'finalizado',
+        'fuente':         'manual',
+    }).eq('id', p['id']).execute()
+    # Recalcular puntos con el marcador correcto 1-1
+    actualizar_puntos_partido(sb, {**p, 'goles_local': 1, 'goles_visita': 1, 'fase': 'r32'})
+    print('  FIX: Corrección aplicada ✓')
+
+
 def main():
     print(f'=== Quiniela Mundial 2026 — {datetime.now(timezone.utc).isoformat()} ===')
 
     sb = get_supabase()
     print('Conectado a Supabase ✓')
+
+    # PARCHE TEMPORAL: corregir penales Países Bajos vs Marruecos
+    print('\n[0/4] Aplicando corrección Países Bajos vs Marruecos...')
+    fix_paises_bajos_marruecos(sb)
 
     # 1. Obtener partidos de la API
     print('\n[1/4] Consultando football-data.org...')
