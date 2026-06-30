@@ -2853,7 +2853,19 @@ async function loadBracketView() {
       html += '<div class="bracket-col-header">' + label + '</div>';
       html += '<div class="bracket-col-body">';
 
-      const slots = matches.length === 0 ? new Array(n).fill(null) : matches;
+      // Construir array de n slots usando numero-base como índice de posición.
+      // Esto alinea correctamente el bracket cuando la fase está incompleta
+      // (ej. solo 1 de 8 partidos de octavos ya generado).
+      let slots;
+      const baseNum = NUMERO_BASE_ELIM[key];
+      if (matches.length === 0) {
+        slots = new Array(n).fill(null);
+      } else if (baseNum != null && matches.every(m => m.numero != null)) {
+        slots = new Array(n).fill(null);
+        matches.forEach(m => { const idx = m.numero - baseNum; if (idx >= 0 && idx < n) slots[idx] = m; });
+      } else {
+        slots = matches; // fallback: sin numero, usar orden de la BD
+      }
       const sinPareja = (key === 'final' || key === 'tercer_lugar');
 
       if (sinPareja) {
