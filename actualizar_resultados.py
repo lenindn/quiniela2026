@@ -278,6 +278,14 @@ def sync_matches(sb: Client, api_matches: list) -> list:
             )
             if necesita_update:
 
+                # Nunca hacer downgrade finalizado → en_curso.
+                # Ocurre cuando la API devuelve FINISHED + regularTime null en polls
+                # posteriores a que ya cerramos el partido; parse_match lo convierte
+                # a en_curso por precaución, pero si la BD ya tiene el resultado
+                # correcto no debemos pisarlo.
+                if existing.get('estado') == 'finalizado' and parsed['estado'] == 'en_curso':
+                    continue
+
                 was_not_final = existing.get('estado') != 'finalizado'
                 is_now_final  = parsed['estado'] == 'finalizado'
 
