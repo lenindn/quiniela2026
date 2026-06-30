@@ -9,7 +9,7 @@ import os
 import sys
 import re
 import requests
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from supabase import create_client, Client
 
 # ============================================================
@@ -429,13 +429,24 @@ def main():
     print('\n[0/5] Limpiando R16 falsos (solo si existen)...')
     cleanup_r16_falsos(sb)
 
-    today = datetime.now(timezone.utc).strftime('%Y%m%d')
+    now_utc   = datetime.now(timezone.utc)
+    today     = now_utc.strftime('%Y%m%d')
+    yesterday = (now_utc - timedelta(days=1)).strftime('%Y%m%d')
 
-    # 1. Fetch ESPN hoy (partidos en vivo y recién terminados)
-    print('\n[1/5] Consultando ESPN (hoy)...')
+    # 1. Fetch ESPN hoy + ayer (partidos nocturnos que cruzan medianoche UTC)
+    print('\n[1/5] Consultando ESPN (hoy + ayer)...')
+    eventos_ayer  = fetch_espn(yesterday) if yesterday != today else []
     eventos_hoy   = fetch_espn()
-    partidos_hoy  = [parse_espn_event(e) for e in eventos_hoy]
-    print(f'  {len([p for p in partidos_hoy if p])} partidos válidos.')
+    # Combinar evitando duplicados por id
+    seen_ids = set()
+    eventos_combinados = []
+    for e in eventos_ayer + eventos_hoy:
+        eid = e.get('id')
+        if eid not in seen_ids:
+            seen_ids.add(eid)
+            eventos_combinados.append(e)
+    partidos_hoy  = [parse_espn_event(e) for e in eventos_combinados]
+    print(f'  {len([p for p in partidos_hoy if p])} partidos válidos (ayer+hoy).')
 
     # 2. Fetch ESPN fechas R16 futuras (para auto-generación de cruces)
     print('\n[2/5] Consultando ESPN (fechas R16 pendientes)...')
