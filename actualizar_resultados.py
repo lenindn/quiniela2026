@@ -219,6 +219,14 @@ def parse_match(m: dict) -> dict | None:
             avanza_local = False
         # DRAW no debería ocurrir en eliminatorias finalizadas
 
+    # Guardia: la API a veces marca FINISHED antes de poblar regularTime.
+    # Si el marcador de 90' aún no está disponible, tratar como en_curso
+    # para no congelar un resultado incorrecto. El siguiente poll lo cerrará
+    # cuando regularTime ya esté completo.
+    if estado == 'finalizado' and (gl_real is None or gv_real is None):
+        estado       = 'en_curso'
+        avanza_local = None
+
     return {
         'api_id':         str(m.get('id', '')),
         'fase':           fase,
