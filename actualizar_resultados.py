@@ -393,49 +393,11 @@ def actualizar_bonus_campeon(sb: Client):
 # ============================================================
 # FLUJO PRINCIPAL
 # ============================================================
-def fix_resultados_r32(sb: Client):
-    correcciones = [
-        {
-            'local': 'Sudáfrica', 'visita': 'Canadá',
-            'gl': 0, 'gv': 1, 'pl': None, 'pv': None, 'avanza_local': False,
-        },
-        {
-            'local': 'Brasil', 'visita': 'Japón',
-            'gl': 2, 'gv': 1, 'pl': None, 'pv': None, 'avanza_local': True,
-        },
-        {
-            'local': 'Alemania', 'visita': 'Paraguay',
-            'gl': 1, 'gv': 1, 'pl': 3, 'pv': 4, 'avanza_local': False,
-        },
-    ]
-    for c in correcciones:
-        res = sb.table('partidos').select('id,equipo_local,equipo_visita,goles_local,goles_visita,estado').eq('equipo_local', c['local']).eq('equipo_visita', c['visita']).execute()
-        if not res.data:
-            print(f'  FIX: {c["local"]} vs {c["visita"]} no encontrado.')
-            continue
-        p = res.data[0]
-        print(f'  FIX: {p["equipo_local"]} vs {p["equipo_visita"]} id={p["id"]} estado={p["estado"]} → {c["gl"]}-{c["gv"]}')
-        sb.table('partidos').update({
-            'goles_local':    c['gl'],
-            'goles_visita':   c['gv'],
-            'penales_local':  c['pl'],
-            'penales_visita': c['pv'],
-            'avanza_local':   c['avanza_local'],
-            'estado':         'finalizado',
-            'fuente':         'manual',
-        }).eq('id', p['id']).execute()
-        actualizar_puntos_partido(sb, {**p, 'goles_local': c['gl'], 'goles_visita': c['gv'], 'fase': 'r32'})
-        print(f'  FIX: {p["equipo_local"]} vs {p["equipo_visita"]} ✓')
-
-
 def main():
     print(f'=== Quiniela Mundial 2026 — {datetime.now(timezone.utc).isoformat()} ===')
 
     sb = get_supabase()
     print('Conectado a Supabase ✓')
-
-    print('\n[FIX] Corrigiendo resultados R32...')
-    fix_resultados_r32(sb)
 
     # 1. Obtener partidos de la API
     print('\n[1/4] Consultando football-data.org...')
