@@ -377,34 +377,11 @@ def actualizar_bonus_campeon(sb: Client):
 # ============================================================
 # FLUJO PRINCIPAL
 # ============================================================
-def fix_numeros_r16(sb: Client):
-    """PARCHE TEMPORAL: asignar numero correcto a partidos r16 que quedaron con numero=null."""
-    # R16 base=89, cruces en orden bracket (pares de r32 adyacentes por numero):
-    # cruce 0 (r32 73+74)→89, cruce 1 (r32 75+76)→90, ... cruce 7 (r32 87+88)→96
-    asignaciones = {
-        'Canadá|Marruecos': 90,   # ganadores r32 75 (Canadá) y 76 (Marruecos)
-    }
-    res = sb.table('partidos').select('id,equipo_local,equipo_visita,numero').eq('fase', 'r16').execute()
-    for p in (res.data or []):
-        if p.get('numero') is not None:
-            continue  # ya tiene numero, no tocar
-        key_ab = f"{p['equipo_local']}|{p['equipo_visita']}"
-        key_ba = f"{p['equipo_visita']}|{p['equipo_local']}"
-        nuevo = asignaciones.get(key_ab) or asignaciones.get(key_ba)
-        if nuevo:
-            sb.table('partidos').update({'numero': nuevo}).eq('id', p['id']).execute()
-            print(f'  FIX numero: {p["equipo_local"]} vs {p["equipo_visita"]} → numero {nuevo}')
-
-
 def main():
     print(f'=== Quiniela Mundial 2026 — {datetime.now(timezone.utc).isoformat()} ===')
 
     sb = get_supabase()
     print('Conectado a Supabase ✓')
-
-    # PARCHE TEMPORAL: corregir numeros r16 con null
-    print('\n[0/4] Corrigiendo numeros r16...')
-    fix_numeros_r16(sb)
 
     # 1. Obtener partidos de la API
     print('\n[1/4] Consultando football-data.org...')
