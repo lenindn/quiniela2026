@@ -3636,8 +3636,8 @@ async function renderResultados() {
       const esKO = p.fase && p.fase !== 'grupos';
       const scoreHtml = finalizado
         ? `<div class="resultado-score">${p.goles_local} - ${p.goles_visita}</div>
-           ${p.avanza_local !== null && p.avanza_local !== undefined && p.goles_local === p.goles_visita
-             ? `<div class="avanza-info">🏆 Avanzó: ${p.avanza_local ? p.equipo_local : p.equipo_visita}${(p.penales_local !== null && p.penales_local !== undefined) ? ` <span style="color:var(--gris)">(penales ${p.penales_local}-${p.penales_visita})</span>` : ''}</div>` : ''}
+           ${p.avanza_local !== null && p.avanza_local !== undefined
+             ? `<div class="avanza-info">🏆 Avanzó: ${p.avanza_local ? p.equipo_local : p.equipo_visita}${(p.penales_local !== null && p.penales_local !== undefined) ? ` <span style="color:var(--gris)">(${p.tipo_fin === 'tiempo_extra' ? 'T.E.' : 'pen.'} ${p.penales_local}-${p.penales_visita})</span>` : ''}</div>` : ''}
            ${isAdmin ? `<button onclick="toggleEditResultado(${p.id})" title="Editar resultado"
              style="margin-top:5px;background:none;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:0.7rem;padding:2px 7px;color:var(--gris)">✏️ editar</button>` : ''}`
         : enCurso
