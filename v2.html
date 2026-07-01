@@ -447,6 +447,8 @@ body {
 .bracket-team.tbd    { color:var(--gris); font-style:italic; font-size:0.72rem; }
 .bracket-score { font-weight:800; font-size:0.9rem; min-width:18px; text-align:center; flex-shrink:0; }
 .bracket-pen { font-weight:600; font-size:0.68rem; color:var(--gris); }
+.bracket-te-badge { text-align:center; font-size:0.65rem; font-weight:700; color:#7c3aed;
+  background:#ede9fe; padding:2px 6px; border-radius:0 0 6px 6px; letter-spacing:.03em; }
 .bracket-name  { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* Connector visual entre rondas */
 .bracket-connector { width:20px; flex-shrink:0; display:flex; flex-direction:column; }
@@ -1987,9 +1989,16 @@ function matchCard(p, editable) {
   let footerRight = '';
   if (p.estado === 'finalizado') {
     footerRight = `<span class="result-badge">${p.goles_local ?? '?'} - ${p.goles_visita ?? '?'}</span>`;
-    if (p.avanza_local !== null && p.avanza_local !== undefined && p.goles_local === p.goles_visita) {
+    if (p.avanza_local !== null && p.avanza_local !== undefined) {
       const avanzador = p.avanza_local ? p.equipo_local : p.equipo_visita;
-      footerRight += ` <span class="avanza-info">Avanzó: ${b(avanzador)} ${avanzador}${(p.penales_local !== null && p.penales_local !== undefined) ? ` (pen. ${p.penales_local}-${p.penales_visita})` : ''}</span>`;
+      const tieneExtra = p.penales_local !== null && p.penales_local !== undefined;
+      let sufijo = '';
+      if (tieneExtra) {
+        sufijo = p.tipo_fin === 'tiempo_extra'
+          ? ` (T.E. ${p.penales_local}-${p.penales_visita})`
+          : ` (pen. ${p.penales_local}-${p.penales_visita})`;
+      }
+      footerRight += ` <span class="avanza-info">Avanz\xF3: ${b(avanzador)} ${avanzador}${sufijo}</span>`;
     }
     if (pr && pr.calculado) {
       const pts = pr.puntos || 0;
@@ -2813,7 +2822,7 @@ async function loadBracketView() {
   el.innerHTML = '<div class="empty-state"><div class="spinner"></div><br>Cargando bracket...</div>';
   try {
     const { data: partidos, error } = await sb.from('partidos')
-      .select('id,numero,fase,equipo_local,equipo_visita,goles_local,goles_visita,estado,avanza_local,penales_local,penales_visita')
+      .select('id,numero,fase,equipo_local,equipo_visita,goles_local,goles_visita,estado,avanza_local,penales_local,penales_visita,tipo_fin')
       .in('fase', ['r32','r16','cuartos','semis','tercer_lugar','final'])
       .order('numero');
 
@@ -2921,10 +2930,13 @@ function renderBracketMatch(p) {
   const wV   = fin && (p.avanza_local === false || (!fin && p.goles_visita > p.goles_local));
   const gL   = fin ? (p.goles_local  ?? '?') : '';
   const gV   = fin ? (p.goles_visita ?? '?') : '';
-  const hayPen = fin && p.penales_local !== null && p.penales_local !== undefined
-                     && p.penales_visita !== null && p.penales_visita !== undefined;
-  const penL = hayPen ? ' <span class="bracket-pen">(' + p.penales_local + ')</span>' : '';
-  const penV = hayPen ? ' <span class="bracket-pen">(' + p.penales_visita + ')</span>' : '';
+  const hayPen   = fin && p.penales_local !== null && p.penales_local !== undefined
+                       && p.penales_visita !== null && p.penales_visita !== undefined;
+  const esPenales = hayPen && p.tipo_fin !== 'tiempo_extra';
+  const esTE      = hayPen && p.tipo_fin === 'tiempo_extra';
+  const penL    = esPenales ? ' <span class="bracket-pen">(' + p.penales_local + ')</span>' : '';
+  const penV    = esPenales ? ' <span class="bracket-pen">(' + p.penales_visita + ')</span>' : '';
+  const teBadge = esTE ? '<div class="bracket-te-badge">T.E. ' + p.penales_local + '–' + p.penales_visita + '</div>' : '';
 
   // Determinar ganador real para fases KO
   let ganadorLocal  = false;
@@ -2952,6 +2964,7 @@ function renderBracketMatch(p) {
     + '<span class="bracket-name">' + flechaV + (p.equipo_visita ? banderaEquipo(p.equipo_visita) + ' ' : '') + (p.equipo_visita || 'Por definir') + '</span>'
     + (fin ? '<span class="bracket-score">' + gV + penV + '</span>' : '')
     + '</div>'
+    + teBadge
     + '</div>';
 }
 
@@ -5663,9 +5676,10 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
       : pts > 0
         ? `<span style="background:${esExacto ? 'var(--oro)' : '#e8f5e9'};color:${esExacto ? '#000' : '#1a5c2a'};padding:2px 7px;border-radius:10px;font-size:0.75rem;font-weight:700">+${pts}${esExacto ? ' ⭐' : ''}</span>`
         : '<span style="color:#bbb;font-size:0.75rem">0 pts</span>';
-    const hayPen = !pendiente && partido.penales_local !== null && partido.penales_local !== undefined
-                   && partido.penales_visita !== null && partido.penales_visita !== undefined;
-    const penStr = hayPen ? ` <span style="color:#94a3b8">(pen. ${partido.penales_local}-${partido.penales_visita})</span>` : '';
+    const hayPen  = !pendiente && partido.penales_local !== null && partido.penales_local !== undefined
+                    && partido.penales_visita !== null && partido.penales_visita !== undefined;
+    const penLabel = hayPen && partido.tipo_fin === 'tiempo_extra' ? 'T.E.' : 'pen.';
+    const penStr  = hayPen ? ` <span style="color:#94a3b8">(${penLabel} ${partido.penales_local}-${partido.penales_visita})</span>` : '';
     const realStr = pendiente
       ? '<span style="color:#aaa">A\u00fan no jugado</span>'
       : `Real: <strong>${partido.goles_local}-${partido.goles_visita}</strong>${penStr}`;

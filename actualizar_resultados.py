@@ -236,20 +236,34 @@ def parse_espn_event(event: dict) -> dict | None:
     gl = int(home_score) if home_score not in (None, '') else None
     gv = int(away_score) if away_score not in (None, '') else None
 
+    # tipo_fin: null (90'), 'penales', 'tiempo_extra'
+    tipo_fin  = None
+    pen_local, pen_visita = None, None
+
     if status_desc == 'Final Score - After Extra Time':
+        # ESPN incluye goles de ET en el score → buscar marcador real al 90'
+        et_total_local  = int(home_score) if home_score not in (None, '') else None
+        et_total_visita = int(away_score) if away_score not in (None, '') else None
         event_id = event.get('id', '')
         gl90, gv90 = fetch_90min_score(event_id, home_raw, away_raw)
         if gl90 is not None:
-            gl, gv = gl90, gv90
+            gl, gv    = gl90, gv90
+            tipo_fin  = 'tiempo_extra'
+            pen_local, pen_visita = et_total_local, et_total_visita
+        else:
+            gl, gv = et_total_local, et_total_visita
+    elif 'penalties' in status_desc.lower():
+        pen_local, pen_visita = parse_penalty_notes(comp.get('notes', []), home_raw, away_raw)
+        tipo_fin = 'penales'
+        gl = int(home_score) if home_score not in (None, '') else None
+        gv = int(away_score) if away_score not in (None, '') else None
+    else:
+        gl = int(home_score) if home_score not in (None, '') else None
+        gv = int(away_score) if away_score not in (None, '') else None
 
     # Guardia: no cerrar si el marcador de 90' aún no está disponible
     if estado == 'finalizado' and (gl is None or gv is None):
         estado = 'en_curso'
-
-    # Penales: parsear desde notes (solo si el estado es "After Penalties")
-    pen_local, pen_visita = None, None
-    if 'penalties' in status_desc.lower() or estado == 'finalizado':
-        pen_local, pen_visita = parse_penalty_notes(comp.get('notes', []), home_raw, away_raw)
 
     # Ganador
     avanza_local = None
@@ -274,6 +288,7 @@ def parse_espn_event(event: dict) -> dict | None:
         'goles_visita':   gv,
         'penales_local':  pen_local,
         'penales_visita': pen_visita,
+        'tipo_fin':       tipo_fin,
         'avanza_local':   avanza_local,
         'minuto':         minuto,
         'sede':           sede,
@@ -393,6 +408,7 @@ def sync_from_espn(sb: Client, espn_matches: list) -> list:
             'avanza_local':   m['avanza_local'],
             'penales_local':  m['penales_local'],
             'penales_visita': m['penales_visita'],
+            'tipo_fin':       m['tipo_fin'],
             'estado':         m['estado'],
             'fuente':         m['fuente'],
             'sede':           m['sede'] or existing.get('sede', ''),
@@ -498,7 +514,11 @@ def main():
         p = res.data[0]
         if p.get('goles_local') == 3 and p.get('goles_visita') == 2:
             print('FIX: corrigiendo Bélgica 3-2 → 2-2 Senegal y recalculando puntos...')
-            sb.table('partidos').update({'goles_local': 2, 'goles_visita': 2, 'fuente': 'manual'}).eq('id', p['id']).execute()
+            sb.table('partidos').update({
+                'goles_local': 2, 'goles_visita': 2,
+                'penales_local': 3, 'penales_visita': 2,
+                'tipo_fin': 'tiempo_extra', 'fuente': 'manual'
+            }).eq('id', p['id']).execute()
             p['goles_local'], p['goles_visita'] = 2, 2
             actualizar_puntos_partido(sb, p)
             print('FIX: completado.')
