@@ -304,7 +304,11 @@ def sync_from_espn(sb: Client, espn_matches: list) -> list:
     res    = sb.table('partidos').select('*').execute()
     db_map = {}
     for p in (res.data or []):
-        db_map[(p['equipo_local'], p['equipo_visita'])] = p
+        key = (p['equipo_local'], p['equipo_visita'])
+        prev = db_map.get(key)
+        # Si hay duplicado, preferir el que NO es r16 (evita que falsos R16 oculten el R32 real)
+        if prev is None or prev.get('fase') == 'r16':
+            db_map[key] = p
 
     recien_finalizados = []
 
