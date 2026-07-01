@@ -423,13 +423,18 @@ def actualizar_bonus_campeon(sb: Client):
 # FLUJO PRINCIPAL
 # ============================================================
 def cleanup_r16_falsos(sb: Client):
-    """Elimina partidos de R16 creados por error (eran partidos de R32)."""
+    """Elimina partidos de R16 creados por error, solo si no tienen picks."""
     falsos = ['Costa de Marfil', 'Francia', 'México']
     res = sb.table('partidos').select('id,equipo_local,equipo_visita').eq('fase', 'r16').execute()
     for p in (res.data or []):
-        if p['equipo_local'] in falsos or p['equipo_visita'] in falsos:
-            sb.table('partidos').delete().eq('id', p['id']).execute()
-            print(f'  CLEANUP: eliminado R16 falso id={p["id"]} ({p["equipo_local"]} vs {p["equipo_visita"]})')
+        if p['equipo_local'] not in falsos and p['equipo_visita'] not in falsos:
+            continue
+        picks = sb.table('pronosticos').select('id').eq('partido_id', p['id']).execute()
+        if picks.data:
+            print(f'  SKIP cleanup id={p["id"]} ({p["equipo_local"]} vs {p["equipo_visita"]}): tiene {len(picks.data)} picks')
+            continue
+        sb.table('partidos').delete().eq('id', p['id']).execute()
+        print(f'  CLEANUP: eliminado R16 falso id={p["id"]} ({p["equipo_local"]} vs {p["equipo_visita"]})')
 
 
 def main():
