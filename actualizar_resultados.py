@@ -131,6 +131,44 @@ ESPN_STATUS_MAP = {
     'Suspended':                     'pendiente',
 }
 
+ESPN_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
+GOAL_TYPES   = {'goal', 'goal - header', 'penalty - scored'}
+
+def fetch_90min_score(event_id: str, home_raw: str, away_raw: str):
+    """
+    Consulta el summary de ESPN y devuelve (goles_local, goles_visita) al 90'
+    contando solo los keyEvents de período 1 y 2 (ignora prórroga P3/P4).
+    Usado cuando status = 'Final Score - After Extra Time'.
+    Retorna (None, None) si falla.
+    """
+    try:
+        resp = requests.get(ESPN_SUMMARY, params={'event': event_id}, timeout=15)
+        resp.raise_for_status()
+        events = resp.json().get('keyEvents', [])
+    except Exception as e:
+        print(f'  WARN summary ESPN ({event_id}): {e}')
+        return None, None
+
+    gl, gv = 0, 0
+    for ev in events:
+        period = ev.get('period', {}).get('number', 99)
+        if period > 2:
+            continue  # ignorar prórroga
+        etype = ev.get('type', {}).get('text', '').lower()
+        if etype not in GOAL_TYPES:
+            continue
+        team_name = (ev.get('team') or {}).get('displayName', '')
+        own_goal  = 'own goal' in etype
+        scores_for_home = (team_name.lower() == home_raw.lower()) != own_goal
+        if scores_for_home:
+            gl += 1
+        else:
+            gv += 1
+
+    print(f'  90min score via summary: {home_raw} {gl}-{gv} {away_raw}')
+    return gl, gv
+
+
 def fetch_espn(date_str: str = None) -> list:
     """Obtiene partidos de ESPN. date_str en formato YYYYMMDD o None para hoy."""
     params = {'dates': date_str} if date_str else {}
@@ -192,10 +230,17 @@ def parse_espn_event(event: dict) -> dict | None:
 
     # Marcador reglamentario (90'). ESPN muestra el marcador de 90' como score
     # principal; los goles de prórroga y penales NO están incluidos aquí.
+    # Excepción: "After Extra Time" incluye goles de prórroga → consultar summary.
     home_score = home.get('score')
     away_score = away.get('score')
     gl = int(home_score) if home_score not in (None, '') else None
     gv = int(away_score) if away_score not in (None, '') else None
+
+    if status_desc == 'Final Score - After Extra Time':
+        event_id = event.get('id', '')
+        gl90, gv90 = fetch_90min_score(event_id, home_raw, away_raw)
+        if gl90 is not None:
+            gl, gv = gl90, gv90
 
     # Guardia: no cerrar si el marcador de 90' aún no está disponible
     if estado == 'finalizado' and (gl is None or gv is None):
