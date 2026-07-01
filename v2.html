@@ -1566,7 +1566,7 @@ async function adminSinGrupoLogin() {
   allFases = {};
   const { data: fData } = await sb.from('fases').select('*');
   (fData || []).forEach(f => allFases[f.id] = f);
-  const { data: pData } = await sb.from('partidos').select('*').order('numero');
+  const { data: pData } = await sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero');
   allPartidos = pData || [];
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-admin').classList.add('active');
@@ -1591,7 +1591,7 @@ async function loadApp() {
   // Cargar datos en paralelo (v2: sin pronostico_campeon)
   const [fRes, pRes, prRes, cfgRes] = await Promise.all([
     sb.from('fases').select('*'),
-    sb.from('partidos').select('*').order('numero'),
+    sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero'),
     sb.from('pronosticos').select('*').eq('participante_id', currentUser.id),
     sb.from('config').select('*'),
   ]);
@@ -1847,7 +1847,7 @@ async function navigate(view) {
   if (view === 'picks') {
     if (currentUser) {
       const [pRes, prRes] = await Promise.all([
-        sb.from('partidos').select('*').order('numero'),
+        sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero'),
         sb.from('pronosticos').select('*').eq('participante_id', currentUser.id),
       ]);
       if (pRes.data) allPartidos = pRes.data;
@@ -2129,7 +2129,7 @@ async function descargarPicksPDF() {
   // en allPartidos/myPronosticos en memoria (pueden estar desactualizados si la app
   // lleva horas abierta y el admin cargó un resultado mientras tanto).
   const [partidosFrescos, pronsFrescos] = await Promise.all([
-    sb.from('partidos').select('*').order('numero'),
+    sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero'),
     sb.from('pronosticos').select('*').eq('participante_id', currentUser.id),
   ]);
   const partidosPDF = partidosFrescos.data || allPartidos;
@@ -3588,7 +3588,7 @@ async function renderResultados() {
   const cont = document.getElementById('resultados-content');
   cont.innerHTML = '<div class="empty-state" style="padding:20px">Cargando...</div>';
 
-  const { data: fresh } = await sb.from('partidos').select('*').order('numero');
+  const { data: fresh } = await sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero');
   if (fresh) allPartidos = fresh;
 
   const tabs = document.getElementById('res-tabs');
@@ -3792,7 +3792,7 @@ async function activarPanelAdmin() {
   if (Object.keys(allFases).length === 0) {
     const [fRes, pRes] = await Promise.all([
       sb.from('fases').select('*'),
-      sb.from('partidos').select('*').order('numero'),
+      sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero'),
     ]);
     (fRes.data || []).forEach(f => allFases[f.id] = f);
     allPartidos = pRes.data || [];
@@ -4001,7 +4001,7 @@ async function crearTodosR32(total) {
   msgEl.style.color = 'var(--exito)';
   msgEl.textContent = '\u2705 ' + total + ' partidos del R32 creados exitosamente.';
 
-  allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
+  allPartidos = (await sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero')).data || [];
   setTimeout(() => loadAdminPanel(), 1500);
 }
 
@@ -4214,7 +4214,7 @@ async function crearTodosElim(idxs, faseDest) {
 
   msgEl.style.color = 'var(--exito)';
   msgEl.textContent = '\u2705 ' + idxs.length + ' partido' + (idxs.length > 1 ? 's' : '') + ' creado' + (idxs.length > 1 ? 's' : '') + ' para ' + FASES_LABELS[faseDest];
-  allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
+  allPartidos = (await sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero')).data || [];
   setTimeout(() => loadAdminPanel(), 1500);
 }
 
@@ -4416,7 +4416,7 @@ async function crearPartido() {
     return;
   }
 
-  allPartidos = (await sb.from('partidos').select('*').order('numero')).data || [];
+  allPartidos = (await sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero')).data || [];
   loadAdminPanel();
 }
 
@@ -5625,7 +5625,7 @@ async function verDetalleParticipante(participanteId, nombre, verTodo = false, f
   // actualizo resultados en otro lado -> allPartidos quedaria con marcadores
   // viejos (null) aunque pronosticos.calculado/puntos ya este correcto,
   // mostrando "Real: null-null" pese a que el partido ya tiene resultado.
-  const { data: partidosFrescos } = await sb.from('partidos').select('*').order('numero');
+  const { data: partidosFrescos } = await sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero');
   if (partidosFrescos) allPartidos = partidosFrescos;
 
   // Filtrar por fase si viene del podio (filtroFase != null)
