@@ -113,6 +113,7 @@ def get_supabase() -> Client:
 ESPN_STATUS_MAP = {
     'Full Time':                     'finalizado',
     'Final Score - After Penalties': 'finalizado',
+    'Final Score - After Extra Time':'finalizado',
     'In Progress':                   'en_curso',
     '1st Half':                      'en_curso',
     '2nd Half':                      'en_curso',
