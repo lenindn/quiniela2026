@@ -446,9 +446,6 @@ def main():
     sb = get_supabase()
     print('Conectado a Supabase ✓')
 
-    print('\n[0/5] Limpiando R16 falsos (solo si existen)...')
-    cleanup_r16_falsos(sb)
-
     now_utc   = datetime.now(timezone.utc)
     today     = now_utc.strftime('%Y%m%d')
     yesterday = (now_utc - timedelta(days=1)).strftime('%Y%m%d')
