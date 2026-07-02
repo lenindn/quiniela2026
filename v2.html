@@ -2869,9 +2869,9 @@ async function loadBracketView() {
       const baseNum = NUMERO_BASE_ELIM[key];
       if (matches.length === 0) {
         slots = new Array(n).fill(null);
-      } else if (baseNum != null && matches.every(m => m.numero != null)) {
+      } else if (baseNum != null && matches.some(m => m.numero != null)) {
         slots = new Array(n).fill(null);
-        matches.forEach(m => { const idx = m.numero - baseNum; if (idx >= 0 && idx < n) slots[idx] = m; });
+        matches.forEach(m => { if (m.numero != null) { const idx = m.numero - baseNum; if (idx >= 0 && idx < n) slots[idx] = m; } });
       } else {
         slots = matches; // fallback: sin numero, usar orden de la BD
       }

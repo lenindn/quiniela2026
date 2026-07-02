@@ -505,6 +505,31 @@ def actualizar_bonus_campeon(sb: Client):
 # ============================================================
 # FLUJO PRINCIPAL
 # ============================================================
+def reparar_numeros_r16(sb: Client):
+    """Rellena numero=null en partidos de R16 que ya tienen ganadores de R32 en BD."""
+    r32_res = sb.table('partidos') \
+        .select('numero,equipo_local,equipo_visita,avanza_local,estado') \
+        .eq('fase', 'r32').execute()
+    ganadores = {}
+    for p in (r32_res.data or []):
+        if p.get('estado') != 'finalizado' or p.get('numero') is None:
+            continue
+        if p.get('avanza_local') is True:
+            ganadores[p['equipo_local']] = p['numero']
+        elif p.get('avanza_local') is False:
+            ganadores[p['equipo_visita']] = p['numero']
+
+    r16_res = sb.table('partidos').select('id,equipo_local,equipo_visita,numero').eq('fase', 'r16').execute()
+    for p in (r16_res.data or []):
+        if p.get('numero') is not None:
+            continue
+        r32_a = ganadores.get(p['equipo_local'])
+        r32_b = ganadores.get(p['equipo_visita'])
+        if r32_a and r32_b:
+            numero = R16_BASE + (min(r32_a, r32_b) - R32_BASE) // 2
+            sb.table('partidos').update({'numero': numero}).eq('id', p['id']).execute()
+            print(f'  REPAIR: numero={numero} asignado a {p["equipo_local"]} vs {p["equipo_visita"]}')
+
 def cleanup_r16_falsos(sb: Client):
     """Elimina partidos de R16 creados por error, solo si no tienen picks."""
     falsos = ['Costa de Marfil', 'Francia', 'México']
@@ -559,15 +584,16 @@ def main():
         if validos:
             print(f'  {fecha}: {len(validos)} partidos con equipos definidos.')
 
-    # 3. Auto-generar cruces R16 cuando ESPN ya tiene los equipos confirmados.
-    # SOLO usar partidos de fechas R16 — nunca partidos de R32 de hoy.
-    print('\n[3/5] Verificando cruces R16...')
-    generar_cruces_r16(sb, [p for p in partidos_r16 if p])
-
-    # 4. Sincronizar resultados de hoy
-    print('\n[4/5] Sincronizando resultados...')
+    # 3. Sincronizar resultados de hoy (primero, para que generar_cruces_r16
+    #    encuentre los ganadores de R32 ya actualizados en BD)
+    print('\n[3/5] Sincronizando resultados...')
     recien_finalizados = sync_from_espn(sb, partidos_hoy)
     print(f'  {len(recien_finalizados)} partidos recién finalizados.')
+
+    # 4. Auto-generar cruces R16 y reparar numeros faltantes
+    print('\n[4/5] Verificando cruces R16...')
+    generar_cruces_r16(sb, [p for p in partidos_r16 if p])
+    reparar_numeros_r16(sb)
 
     # 5. Calcular puntos y bonus campeón
     print('\n[5/5] Calculando puntos...')
