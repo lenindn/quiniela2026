@@ -508,21 +508,6 @@ def main():
     sb = get_supabase()
     print('Conectado a Supabase ✓')
 
-    # ── FIX TEMPORAL: corregir Bélgica 3-2 Senegal → 2-2 (90') y recalcular ──
-    res = sb.table('partidos').select('*').eq('equipo_local', 'Bélgica').eq('equipo_visita', 'Senegal').execute()
-    if res.data:
-        p = res.data[0]
-        if p.get('goles_local') == 3 and p.get('goles_visita') == 2:
-            print('FIX: corrigiendo Bélgica 3-2 → 2-2 Senegal y recalculando puntos...')
-            sb.table('partidos').update({
-                'goles_local': 2, 'goles_visita': 2,
-                'penales_local': 3, 'penales_visita': 2,
-                'tipo_fin': 'tiempo_extra', 'fuente': 'manual'
-            }).eq('id', p['id']).execute()
-            p['goles_local'], p['goles_visita'] = 2, 2
-            actualizar_puntos_partido(sb, p)
-            print('FIX: completado.')
-    # ── FIN FIX TEMPORAL ──
 
     now_utc   = datetime.now(timezone.utc)
     today     = now_utc.strftime('%Y%m%d')
