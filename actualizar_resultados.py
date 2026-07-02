@@ -110,26 +110,33 @@ def get_supabase() -> Client:
 # ============================================================
 # ESPN API
 # ============================================================
-ESPN_STATUS_MAP = {
-    'Full Time':                     'finalizado',
-    'Final Score - After Penalties': 'finalizado',
-    'Final Score - After Extra Time':'finalizado',
-    'In Progress':                   'en_curso',
-    '1st Half':                      'en_curso',
-    '2nd Half':                      'en_curso',
-    'First Half':                    'en_curso',
-    'Second Half':                   'en_curso',
-    'Halftime':                      'en_curso',
-    'Half Time':                     'en_curso',
-    'Extra Time':                    'en_curso',
-    'Overtime':                      'en_curso',
-    'Penalty Shootout':              'en_curso',
-    'Scheduled':                     'pendiente',
-    'Timed':                         'pendiente',
-    'Postponed':                     'pendiente',
-    'Cancelled':                     'pendiente',
-    'Suspended':                     'pendiente',
+# Strings que indican finalización con prórroga o penales (para tipo_fin)
+ESPN_FINAL_EXTRA = {
+    'Final Score - After Extra Time',
 }
+ESPN_FINAL_PENALTIES = {
+    'Final Score - After Penalties',
+}
+
+def espn_estado(status: dict) -> str:
+    """
+    Determina estado a partir de status.type de ESPN.
+    Usa los campos 'state' y 'completed' (más estables que 'description').
+    state: 'pre' | 'in' | 'post'
+    """
+    stype     = status.get('type', {})
+    state     = stype.get('state', 'pre')
+    completed = stype.get('completed', False)
+    desc      = stype.get('description', '')
+
+    if state == 'post' or completed:
+        return 'finalizado'
+    if state == 'in':
+        return 'en_curso'
+    # 'pre' o desconocido
+    if desc not in ('', 'Scheduled', 'Timed'):
+        print(f'  INFO ESPN status desconocido: state={state!r} desc={desc!r}')
+    return 'pendiente'
 
 ESPN_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
 GOAL_TYPES   = {'goal', 'goal - header', 'penalty - scored'}
@@ -225,8 +232,9 @@ def parse_espn_event(event: dict) -> dict | None:
     equipo_local  = traducir_equipo(home_raw)
     equipo_visita = traducir_equipo(away_raw)
 
-    status_desc = event.get('status', {}).get('type', {}).get('description', 'Scheduled')
-    estado      = ESPN_STATUS_MAP.get(status_desc, 'pendiente')
+    status_obj  = event.get('status', {})
+    status_desc = status_obj.get('type', {}).get('description', 'Scheduled')
+    estado      = espn_estado(status_obj)
 
     # Marcador reglamentario (90'). ESPN muestra el marcador de 90' como score
     # principal; los goles de prórroga y penales NO están incluidos aquí.
@@ -240,7 +248,7 @@ def parse_espn_event(event: dict) -> dict | None:
     tipo_fin  = None
     pen_local, pen_visita = None, None
 
-    if status_desc == 'Final Score - After Extra Time':
+    if status_desc in ESPN_FINAL_EXTRA:
         # ESPN incluye goles de ET en el score → buscar marcador real al 90'
         et_total_local  = int(home_score) if home_score not in (None, '') else None
         et_total_visita = int(away_score) if away_score not in (None, '') else None
@@ -252,7 +260,7 @@ def parse_espn_event(event: dict) -> dict | None:
             pen_local, pen_visita = et_total_local, et_total_visita
         else:
             gl, gv = et_total_local, et_total_visita
-    elif 'penalties' in status_desc.lower():
+    elif status_desc in ESPN_FINAL_PENALTIES or 'penalties' in status_desc.lower():
         pen_local, pen_visita = parse_penalty_notes(comp.get('notes', []), home_raw, away_raw)
         tipo_fin = 'penales'
         gl = int(home_score) if home_score not in (None, '') else None
