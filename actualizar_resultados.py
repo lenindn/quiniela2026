@@ -48,6 +48,7 @@ EQUIPO_MAP = {
     'Czech Republic':         'Chequia',
     'Canada':                 'Canadá',
     'Bosnia and Herzegovina': 'Bosnia y Herzegovina',
+    'Bosnia-Herzegovina':     'Bosnia y Herzegovina',
     'Qatar':                  'Qatar',
     'Switzerland':            'Suiza',
     'Brazil':                 'Brasil',
