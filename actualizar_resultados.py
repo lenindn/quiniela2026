@@ -378,9 +378,18 @@ def sync_from_espn(sb: Client, espn_matches: list) -> list:
         if not m:
             continue
         key      = (m['equipo_local'], m['equipo_visita'])
-        existing = db_map.get(key)
+        key_inv  = (m['equipo_visita'], m['equipo_local'])
+        existing = db_map.get(key) or db_map.get(key_inv)
         if not existing:
             continue
+        # Si ESPN tiene los equipos invertidos vs la BD, invertir goles para que cuadren
+        espn_invertido = (db_map.get(key) is None and db_map.get(key_inv) is not None)
+        if espn_invertido:
+            m['goles_local'], m['goles_visita']   = m['goles_visita'], m['goles_local']
+            m['penales_local'], m['penales_visita'] = m['penales_visita'], m['penales_local']
+            if m['avanza_local'] is not None:
+                m['avanza_local'] = not m['avanza_local']
+            print(f'  WARN: ESPN invertido vs BD para {key_inv[0]} vs {key_inv[1]} — ajustando goles')
 
         # Nunca modificar partidos ya finalizados en la BD
         if existing.get('estado') == 'finalizado':
