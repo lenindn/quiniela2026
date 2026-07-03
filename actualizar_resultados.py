@@ -284,7 +284,8 @@ def parse_espn_event(event: dict) -> dict | None:
 
     # Minuto en vivo (ej. "35'", "45'+2'")
     clock  = event.get('status', {}).get('displayClock', '')
-    minuto = clock if estado == 'en_curso' and clock else None
+    # Guardar solo la parte numérica antes del apóstrofe (ej. "45'+2'" → "45+2", "58'" → "58")
+    minuto = clock.replace("'", '').strip() if estado == 'en_curso' and clock else None
 
     venue = comp.get('venue', {})
     sede  = venue.get('fullName', '')
