@@ -422,7 +422,6 @@ def sync_from_espn(sb: Client, espn_matches: list) -> list:
         updates = {
             'goles_local':    m['goles_local']  if m['goles_local']  is not None else existing.get('goles_local'),
             'goles_visita':   m['goles_visita'] if m['goles_visita'] is not None else existing.get('goles_visita'),
-            'minuto':         m['minuto'],
             'avanza_local':   m['avanza_local'],
             'penales_local':  m['penales_local'],
             'penales_visita': m['penales_visita'],
@@ -432,14 +431,16 @@ def sync_from_espn(sb: Client, espn_matches: list) -> list:
             'sede':           m['sede'] or existing.get('sede', ''),
         }
 
-        try:
-            sb.table('partidos').update(updates).eq('id', existing['id']).execute()
-            print(f'  UPD: {key[0]} vs {key[1]} — {m["estado"]}')
-        except Exception as ex:
-            print(f'  WARN update falló ({ex}), reintentando sin minuto...')
-            updates.pop('minuto', None)
-            sb.table('partidos').update(updates).eq('id', existing['id']).execute()
-            print(f'  UPD (sin minuto): {key[0]} vs {key[1]} — {m["estado"]}')
+        sb.table('partidos').update(updates).eq('id', existing['id']).execute()
+        print(f'  UPD: {key[0]} vs {key[1]} — {m["estado"]}')
+
+        # Minuto en vivo — update separado para no bloquear el update principal si falla
+        if m['minuto'] is not None:
+            try:
+                sb.table('partidos').update({'minuto': m['minuto']}).eq('id', existing['id']).execute()
+                print(f'  MINUTO: {m["minuto"]}')
+            except Exception as ex:
+                print(f'  WARN minuto no guardado ({ex})')
 
         if was_not_final and is_now_final:
             recien_finalizados.append({**existing, **updates})
