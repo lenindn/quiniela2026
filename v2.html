@@ -3164,17 +3164,18 @@ function renderLeaderboardGeneral(parts, prons, partidos) {
       return b.llenos - a.llenos;
     });
 
-    const medals = ['🥇','🥈','🥉'];
-    // Solo son ganadores quienes tienen pts > 0. Si nadie puntuo, no hay podio.
-    const conPts = ranking.filter(p => p.pts > 0).slice(0, 3);
-    const chips  = conPts.length === 0
+    const medalMap = { 1:'🥇', 2:'🥈', 3:'🥉' };
+    // Usar rangos densos para respetar empates: todos con rango <= 3 y pts > 0
+    const conRangoG = asignarRangos(ranking.filter(p => p.pts > 0), 'pts');
+    const podioG    = conRangoG.filter(p => p.rango <= 3);
+    const chips  = podioG.length === 0
       ? '<span style="color:var(--gris);font-size:0.78rem;font-style:italic">Sin ganadores (nadie puntu&#xF3;)</span>'
-      : conPts.map((p, i) => {
+      : podioG.map(p => {
           const nEsc = p.nombre.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
           return `<span data-pid="${p.id}" data-nombre="${nEsc}" data-fase="${f}"
             onclick="verDetalleParticipante(this.dataset.pid, this.dataset.nombre, false, this.dataset.fase)"
             style="display:inline-flex;align-items:center;gap:4px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:3px 8px;font-size:0.8rem;cursor:pointer;text-decoration:underline dotted">
-            ${medals[i]} <strong>${p.nombre}</strong>
+            ${medalMap[p.rango] || p.rango+'.'} <strong>${p.nombre}</strong>
             <span style="color:var(--gris);font-size:0.7rem">${p.pts}pts</span>
           </span>`;
         }).join('');
