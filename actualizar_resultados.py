@@ -419,20 +419,20 @@ def generar_cruces_eliminatoria(sb: Client, fase: str, fase_anterior: str,
         if par in ya_creados:
             continue
 
+        # Siempre validar que ambos equipos vengan de la fase anterior correcta
+        num_a = fuente_map.get(m['equipo_local'])
+        num_b = fuente_map.get(m['equipo_visita'])
+        if not num_a or not num_b:
+            print(f'  SKIP: {m["equipo_local"]} vs {m["equipo_visita"]} no son de {fase_anterior}')
+            continue
+
         if fase in ('tercer_lugar', 'final'):
             numero = base_nueva
         else:
-            num_a = fuente_map.get(m['equipo_local'])
-            num_b = fuente_map.get(m['equipo_visita'])
-            if num_a and num_b:
-                numero = base_nueva + (min(num_a, num_b) - base_anterior) // 2
-                # Si hay colisión (bracket cruzado), buscar el siguiente número libre
-                while numero in ya_numeros:
-                    numero += 1
-            else:
-                # Uno o ambos equipos no son ganadores de la fase anterior — no insertar
-                print(f'  SKIP: {m["equipo_local"]} vs {m["equipo_visita"]} no son ganadores de {fase_anterior}')
-                continue
+            numero = base_nueva + (min(num_a, num_b) - base_anterior) // 2
+            # Si hay colisión (bracket cruzado), buscar el siguiente número libre
+            while numero in ya_numeros:
+                numero += 1
 
         res = sb.table('partidos').insert({
             'fase':          fase,
@@ -731,19 +731,19 @@ def main():
     print(f'  {len(recien_finalizados)} partidos recién finalizados.')
 
     # 4. Auto-generar cruces y reparar numeros faltantes
-    # partidos_hoy se incluye en cada llamada para cubrir el caso en que la fecha
-    # de la fase es hoy mismo (fetch_fase_futura solo busca fechas futuras).
+    # hoy_validos solo se pasa a r16 y cuartos: esas fases pueden crearse el mismo
+    # día que corre el script. Semis/final/3er usan solo sus fechas futuras.
     hoy_validos = [p for p in partidos_hoy if p]
     print('\n[4/5] Verificando cruces eliminatorios...')
     generar_cruces_r16(sb, [p for p in partidos_r16 if p] + hoy_validos)
     reparar_numeros_r16(sb)
     generar_cruces_eliminatoria(sb, 'cuartos',      'r16',     R16_BASE,     CUARTOS_BASE, [p for p in partidos_cuartos if p] + hoy_validos)
     reparar_numeros_eliminatoria(sb, 'cuartos',     'r16',     R16_BASE,     CUARTOS_BASE)
-    generar_cruces_eliminatoria(sb, 'semis',        'cuartos', CUARTOS_BASE, SEMIS_BASE,   [p for p in partidos_semis if p] + hoy_validos)
+    generar_cruces_eliminatoria(sb, 'semis',        'cuartos', CUARTOS_BASE, SEMIS_BASE,   [p for p in partidos_semis if p])
     reparar_numeros_eliminatoria(sb, 'semis',       'cuartos', CUARTOS_BASE, SEMIS_BASE)
-    generar_cruces_eliminatoria(sb, 'tercer_lugar', 'semis',   SEMIS_BASE,   TERCERO_BASE, [p for p in partidos_3er if p] + hoy_validos)
+    generar_cruces_eliminatoria(sb, 'tercer_lugar', 'semis',   SEMIS_BASE,   TERCERO_BASE, [p for p in partidos_3er if p])
     reparar_numeros_eliminatoria(sb, 'tercer_lugar','semis',   SEMIS_BASE,   TERCERO_BASE)
-    generar_cruces_eliminatoria(sb, 'final',        'semis',   SEMIS_BASE,   FINAL_BASE,   [p for p in partidos_final if p] + hoy_validos)
+    generar_cruces_eliminatoria(sb, 'final',        'semis',   SEMIS_BASE,   FINAL_BASE,   [p for p in partidos_final if p])
     reparar_numeros_eliminatoria(sb, 'final',       'semis',   SEMIS_BASE,   FINAL_BASE)
 
     # 5. Calcular puntos y bonus campeón
