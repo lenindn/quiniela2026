@@ -351,14 +351,13 @@ def generar_cruces_r16(sb: Client, espn_matches: list):
         if par in ya_creados:
             continue
 
-        # Calcular numero de bracket: pares adyacentes de R32 alimentan un slot de R16
+        # Solo insertar si ambos equipos son ganadores de R32
         r32_a = ganadores.get(m['equipo_local'])
         r32_b = ganadores.get(m['equipo_visita'])
-        if r32_a and r32_b:
-            numero = R16_BASE + (min(r32_a, r32_b) - R32_BASE) // 2
-        else:
-            numero = None
-            print(f'  WARN: no se pudo calcular numero para {m["equipo_local"]} vs {m["equipo_visita"]} (ganadores R32 no encontrados)')
+        if not r32_a or not r32_b:
+            print(f'  SKIP R16: {m["equipo_local"]} vs {m["equipo_visita"]} no son ganadores de R32')
+            continue
+        numero = R16_BASE + (min(r32_a, r32_b) - R32_BASE) // 2
 
         res = sb.table('partidos').insert({
             'fase':          'r16',
@@ -702,11 +701,14 @@ def main():
     partidos_hoy  = [parse_espn_event(e) for e in eventos_combinados]
     print(f'  {len([p for p in partidos_hoy if p])} partidos válidos (ayer+hoy).')
 
-    def fetch_fase_futura(fechas: list, label: str) -> list:
-        """Fetcha ESPN en las fechas futuras de una fase y retorna partidos válidos."""
+    def fetch_fase(fechas: list, label: str) -> list:
+        """
+        Fetcha ESPN en las fechas de una fase (hoy incluido, pasado excluido).
+        Incluye hoy porque el partido puede ser hoy mismo.
+        """
         partidos = []
         for fecha in fechas:
-            if fecha <= today:
+            if fecha < today:        # solo omite fechas ya pasadas
                 continue
             eventos = fetch_espn(fecha)
             parsed  = [parse_espn_event(e) for e in eventos]
@@ -716,13 +718,13 @@ def main():
                 print(f'  {label} {fecha}: {len(validos)} partidos con equipos definidos.')
         return partidos
 
-    # 2. Fetch ESPN fechas futuras de cada fase eliminatoria
+    # 2. Fetch ESPN fechas de cada fase eliminatoria (hoy inclusive)
     print('\n[2/5] Consultando ESPN (fases pendientes)...')
-    partidos_r16      = fetch_fase_futura(FECHAS_R16,      'R16')
-    partidos_cuartos  = fetch_fase_futura(FECHAS_CUARTOS,  'Cuartos')
-    partidos_semis    = fetch_fase_futura(FECHAS_SEMIS,    'Semis')
-    partidos_3er      = fetch_fase_futura(FECHA_3ER_LUGAR, '3er')
-    partidos_final    = fetch_fase_futura(FECHAS_FINAL,    'Final')
+    partidos_r16      = fetch_fase(FECHAS_R16,      'R16')
+    partidos_cuartos  = fetch_fase(FECHAS_CUARTOS,  'Cuartos')
+    partidos_semis    = fetch_fase(FECHAS_SEMIS,    'Semis')
+    partidos_3er      = fetch_fase(FECHA_3ER_LUGAR, '3er')
+    partidos_final    = fetch_fase(FECHAS_FINAL,    'Final')
 
     # 3. Sincronizar resultados de hoy (primero, para que generar_cruces_*
     #    encuentren los ganadores ya actualizados en BD)
@@ -731,13 +733,13 @@ def main():
     print(f'  {len(recien_finalizados)} partidos recién finalizados.')
 
     # 4. Auto-generar cruces y reparar numeros faltantes
-    # hoy_validos solo se pasa a r16 y cuartos: esas fases pueden crearse el mismo
-    # día que corre el script. Semis/final/3er usan solo sus fechas futuras.
-    hoy_validos = [p for p in partidos_hoy if p]
+    # Cada generador solo recibe los partidos de SU fase (por fecha).
+    # La validación en generar_cruces_* garantiza que solo inserta si ambos
+    # equipos son ganadores/perdedores legítimos de la fase anterior.
     print('\n[4/5] Verificando cruces eliminatorios...')
-    generar_cruces_r16(sb, [p for p in partidos_r16 if p] + hoy_validos)
+    generar_cruces_r16(sb, [p for p in partidos_r16 if p])
     reparar_numeros_r16(sb)
-    generar_cruces_eliminatoria(sb, 'cuartos',      'r16',     R16_BASE,     CUARTOS_BASE, [p for p in partidos_cuartos if p] + hoy_validos)
+    generar_cruces_eliminatoria(sb, 'cuartos',      'r16',     R16_BASE,     CUARTOS_BASE, [p for p in partidos_cuartos if p])
     reparar_numeros_eliminatoria(sb, 'cuartos',     'r16',     R16_BASE,     CUARTOS_BASE)
     generar_cruces_eliminatoria(sb, 'semis',        'cuartos', CUARTOS_BASE, SEMIS_BASE,   [p for p in partidos_semis if p])
     reparar_numeros_eliminatoria(sb, 'semis',       'cuartos', CUARTOS_BASE, SEMIS_BASE)
