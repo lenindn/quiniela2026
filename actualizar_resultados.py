@@ -20,12 +20,20 @@ SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
 
-# Fechas con partidos de R16 (para auto-generación de cruces)
-FECHAS_R16 = ['20260704', '20260705', '20260706', '20260707']
+# Fechas con partidos de cada fase eliminatoria (para auto-generación de cruces)
+FECHAS_R16      = ['20260704', '20260705', '20260706', '20260707']
+FECHAS_CUARTOS  = ['20260710', '20260711', '20260712']
+FECHAS_SEMIS    = ['20260714', '20260715', '20260716']
+FECHAS_FINAL    = ['20260719']
+FECHA_3ER_LUGAR = ['20260718']
 
-# Numeración del bracket eliminatorio
-R32_BASE = 73   # numero del primer partido de R32
-R16_BASE = 89   # numero del primer partido de R16
+# Numeración del bracket eliminatorio (debe coincidir con NUMERO_BASE_ELIM en v2.html)
+R32_BASE        = 73   # numeros 73-88  (16 partidos)
+R16_BASE        = 89   # numeros 89-96  (8 partidos)
+CUARTOS_BASE    = 97   # numeros 97-100 (4 partidos)
+SEMIS_BASE      = 101  # numeros 101-102 (2 partidos)
+TERCERO_BASE    = 103  # numero 103      (1 partido)
+FINAL_BASE      = 104  # numero 104      (1 partido)
 
 # Sistema de puntos (debe coincidir con v2.html)
 PUNTOS = {
@@ -224,10 +232,13 @@ def parse_espn_event(event: dict) -> dict | None:
     home_raw = home.get('team', {}).get('displayName', '')
     away_raw = away.get('team', {}).get('displayName', '')
 
-    # Ignorar partidos donde los equipos aún no están definidos
+    # Ignorar partidos donde los equipos aún no están definidos (placeholders ESPN)
+    PLACEHOLDER_KW = ('winner', 'loser', 'quarterfinal', 'semifinal', 'round of')
     if not home_raw or not away_raw:
         return None
-    if 'winner' in home_raw.lower() or 'winner' in away_raw.lower():
+    if any(kw in home_raw.lower() for kw in PLACEHOLDER_KW):
+        return None
+    if any(kw in away_raw.lower() for kw in PLACEHOLDER_KW):
         return None
 
     equipo_local  = traducir_equipo(home_raw)
@@ -367,6 +378,123 @@ def generar_cruces_r16(sb: Client, espn_matches: list):
 
     if nuevos == 0:
         print('  Sin cruces nuevos.')
+
+
+def generar_cruces_eliminatoria(sb: Client, fase: str, fase_anterior: str,
+                                 base_anterior: int, base_nueva: int,
+                                 espn_matches: list):
+    """
+    Crea partidos de una fase eliminatoria (cuartos, semis, tercer_lugar, final)
+    cuando ESPN ya tiene los equipos definidos.
+    El numero se calcula igual que en R16: base + (min(nums_ant) - base_ant) // 2.
+    Para tercer_lugar y final se asigna directamente base_nueva (solo 1 slot).
+    """
+    ya_creados_res = sb.table('partidos').select('equipo_local,equipo_visita,numero').eq('fase', fase).execute()
+    ya_creados  = {frozenset([p['equipo_local'], p['equipo_visita']]) for p in (ya_creados_res.data or [])}
+    ya_numeros  = {p['numero'] for p in (ya_creados_res.data or []) if p.get('numero') is not None}
+
+    # Ganadores (o perdedores para tercer_lugar) de la fase anterior
+    ant_res = sb.table('partidos') \
+        .select('numero,equipo_local,equipo_visita,avanza_local,estado') \
+        .eq('fase', fase_anterior).execute()
+    ganadores = {}
+    perdedores = {}
+    for p in (ant_res.data or []):
+        if p.get('estado') != 'finalizado' or p.get('numero') is None:
+            continue
+        if p.get('avanza_local') is True:
+            ganadores[p['equipo_local']]  = p['numero']
+            perdedores[p['equipo_visita']] = p['numero']
+        elif p.get('avanza_local') is False:
+            ganadores[p['equipo_visita']]  = p['numero']
+            perdedores[p['equipo_local']]  = p['numero']
+
+    fuente_map = perdedores if fase == 'tercer_lugar' else ganadores
+
+    nuevos = 0
+    for m in espn_matches:
+        if not m:
+            continue
+        par = frozenset([m['equipo_local'], m['equipo_visita']])
+        if par in ya_creados:
+            continue
+
+        if fase in ('tercer_lugar', 'final'):
+            numero = base_nueva
+        else:
+            num_a = fuente_map.get(m['equipo_local'])
+            num_b = fuente_map.get(m['equipo_visita'])
+            if num_a and num_b:
+                numero = base_nueva + (min(num_a, num_b) - base_anterior) // 2
+                # Si hay colisión (bracket cruzado), buscar el siguiente número libre
+                while numero in ya_numeros:
+                    numero += 1
+            else:
+                numero = None
+                print(f'  WARN: no se pudo calcular numero para {m["equipo_local"]} vs {m["equipo_visita"]}')
+
+        res = sb.table('partidos').insert({
+            'fase':          fase,
+            'equipo_local':  m['equipo_local'],
+            'equipo_visita': m['equipo_visita'],
+            'fecha_partido': m['fecha_partido'],
+            'sede':          m['sede'],
+            'estado':        'pendiente',
+            'numero':        numero,
+            'fuente':        'pendiente',
+        }).execute()
+
+        if res.data:
+            ya_creados.add(par)
+            nuevos += 1
+            print(f'  CRUCE {fase.upper()}: {m["equipo_local"]} vs {m["equipo_visita"]} | numero={numero} | {m["sede"]}')
+
+    if nuevos == 0:
+        print(f'  Sin cruces nuevos ({fase}).')
+
+
+def reparar_numeros_eliminatoria(sb: Client, fase: str, fase_anterior: str,
+                                  base_anterior: int, base_nueva: int):
+    """Rellena numero=null en partidos de una fase que ya tienen ganadores en BD."""
+    ant_res = sb.table('partidos') \
+        .select('numero,equipo_local,equipo_visita,avanza_local,estado') \
+        .eq('fase', fase_anterior).execute()
+    fuente_map = {}
+    for p in (ant_res.data or []):
+        if p.get('estado') != 'finalizado' or p.get('numero') is None:
+            continue
+        if fase == 'tercer_lugar':
+            # tercer lugar = perdedores de semis
+            if p.get('avanza_local') is False:
+                fuente_map[p['equipo_local']]  = p['numero']
+            elif p.get('avanza_local') is True:
+                fuente_map[p['equipo_visita']] = p['numero']
+        else:
+            if p.get('avanza_local') is True:
+                fuente_map[p['equipo_local']]  = p['numero']
+            elif p.get('avanza_local') is False:
+                fuente_map[p['equipo_visita']] = p['numero']
+
+    fase_res = sb.table('partidos').select('id,equipo_local,equipo_visita,numero').eq('fase', fase).execute()
+    ya_numeros = {p['numero'] for p in (fase_res.data or []) if p.get('numero') is not None}
+    for p in (fase_res.data or []):
+        if p.get('numero') is not None:
+            continue
+        if fase in ('tercer_lugar', 'final'):
+            numero = base_nueva
+        else:
+            num_a = fuente_map.get(p['equipo_local'])
+            num_b = fuente_map.get(p['equipo_visita'])
+            if num_a and num_b:
+                numero = base_nueva + (min(num_a, num_b) - base_anterior) // 2
+                while numero in ya_numeros:
+                    numero += 1
+            else:
+                continue
+        ya_numeros.add(numero)
+        sb.table('partidos').update({'numero': numero}).eq('id', p['id']).execute()
+        print(f'  REPAIR {fase}: numero={numero} → {p["equipo_local"]} vs {p["equipo_visita"]}')
+
 
 # ============================================================
 # SINCRONIZACIÓN DE RESULTADOS
@@ -573,29 +701,49 @@ def main():
     partidos_hoy  = [parse_espn_event(e) for e in eventos_combinados]
     print(f'  {len([p for p in partidos_hoy if p])} partidos válidos (ayer+hoy).')
 
-    # 2. Fetch ESPN fechas R16 futuras (para auto-generación de cruces)
-    print('\n[2/5] Consultando ESPN (fechas R16 pendientes)...')
-    partidos_r16 = []
-    for fecha in FECHAS_R16:
-        if fecha <= today:
-            continue
-        eventos = fetch_espn(fecha)
-        parsed  = [parse_espn_event(e) for e in eventos]
-        validos = [p for p in parsed if p]
-        partidos_r16.extend(validos)
-        if validos:
-            print(f'  {fecha}: {len(validos)} partidos con equipos definidos.')
+    def fetch_fase_futura(fechas: list, label: str) -> list:
+        """Fetcha ESPN en las fechas futuras de una fase y retorna partidos válidos."""
+        partidos = []
+        for fecha in fechas:
+            if fecha <= today:
+                continue
+            eventos = fetch_espn(fecha)
+            parsed  = [parse_espn_event(e) for e in eventos]
+            validos = [p for p in parsed if p]
+            partidos.extend(validos)
+            if validos:
+                print(f'  {label} {fecha}: {len(validos)} partidos con equipos definidos.')
+        return partidos
 
-    # 3. Sincronizar resultados de hoy (primero, para que generar_cruces_r16
-    #    encuentre los ganadores de R32 ya actualizados en BD)
+    # 2. Fetch ESPN fechas futuras de cada fase eliminatoria
+    print('\n[2/5] Consultando ESPN (fases pendientes)...')
+    partidos_r16      = fetch_fase_futura(FECHAS_R16,      'R16')
+    partidos_cuartos  = fetch_fase_futura(FECHAS_CUARTOS,  'Cuartos')
+    partidos_semis    = fetch_fase_futura(FECHAS_SEMIS,    'Semis')
+    partidos_3er      = fetch_fase_futura(FECHA_3ER_LUGAR, '3er')
+    partidos_final    = fetch_fase_futura(FECHAS_FINAL,    'Final')
+
+    # 3. Sincronizar resultados de hoy (primero, para que generar_cruces_*
+    #    encuentren los ganadores ya actualizados en BD)
     print('\n[3/5] Sincronizando resultados...')
     recien_finalizados = sync_from_espn(sb, partidos_hoy)
     print(f'  {len(recien_finalizados)} partidos recién finalizados.')
 
-    # 4. Auto-generar cruces R16 y reparar numeros faltantes
-    print('\n[4/5] Verificando cruces R16...')
-    generar_cruces_r16(sb, [p for p in partidos_r16 if p])
+    # 4. Auto-generar cruces y reparar numeros faltantes
+    # partidos_hoy se incluye en cada llamada para cubrir el caso en que la fecha
+    # de la fase es hoy mismo (fetch_fase_futura solo busca fechas futuras).
+    hoy_validos = [p for p in partidos_hoy if p]
+    print('\n[4/5] Verificando cruces eliminatorios...')
+    generar_cruces_r16(sb, [p for p in partidos_r16 if p] + hoy_validos)
     reparar_numeros_r16(sb)
+    generar_cruces_eliminatoria(sb, 'cuartos',      'r16',     R16_BASE,     CUARTOS_BASE, [p for p in partidos_cuartos if p] + hoy_validos)
+    reparar_numeros_eliminatoria(sb, 'cuartos',     'r16',     R16_BASE,     CUARTOS_BASE)
+    generar_cruces_eliminatoria(sb, 'semis',        'cuartos', CUARTOS_BASE, SEMIS_BASE,   [p for p in partidos_semis if p] + hoy_validos)
+    reparar_numeros_eliminatoria(sb, 'semis',       'cuartos', CUARTOS_BASE, SEMIS_BASE)
+    generar_cruces_eliminatoria(sb, 'tercer_lugar', 'semis',   SEMIS_BASE,   TERCERO_BASE, [p for p in partidos_3er if p] + hoy_validos)
+    reparar_numeros_eliminatoria(sb, 'tercer_lugar','semis',   SEMIS_BASE,   TERCERO_BASE)
+    generar_cruces_eliminatoria(sb, 'final',        'semis',   SEMIS_BASE,   FINAL_BASE,   [p for p in partidos_final if p] + hoy_validos)
+    reparar_numeros_eliminatoria(sb, 'final',       'semis',   SEMIS_BASE,   FINAL_BASE)
 
     # 5. Calcular puntos y bonus campeón
     print('\n[5/5] Calculando puntos...')

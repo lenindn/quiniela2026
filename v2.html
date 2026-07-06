@@ -1317,6 +1317,7 @@ let currentPicksTab  = 'grupos';
 let currentTablaFase = 'general';
 let currentProyeccionFase = 'general';
 let currentResTab   = 'grupos';
+let currentResTabAutoSelected = false;
 let filtroEquipo    = '';
 let currentGrupoKey = '';  // valor del ?g=... en la URL, clave de localStorage
 let leaderboardPollInterval = null; // auto-refresh de la tabla de posiciones mientras esa vista esta activa
@@ -3591,6 +3592,15 @@ async function renderResultados() {
 
   const { data: fresh } = await sb.from('partidos').select('id,numero,fase,grupo,equipo_local,equipo_visita,goles_local,goles_visita,penales_local,penales_visita,tipo_fin,avanza_local,estado,fecha_partido,sede,fuente,minuto,ciudad,estadio').order('numero');
   if (fresh) allPartidos = fresh;
+
+  // Auto-seleccionar la fase más activa la primera vez que se carga Resultados
+  if (!currentResTabAutoSelected && allPartidos.length) {
+    currentResTabAutoSelected = true;
+    const FASES_PRIORIDAD = ['final','tercer_lugar','semis','cuartos','r16','r32','grupos'];
+    const faseEnCurso = FASES_PRIORIDAD.find(f => allPartidos.some(p => p.fase === f && p.estado === 'en_curso'));
+    const faseConPartidos = FASES_PRIORIDAD.find(f => allPartidos.some(p => p.fase === f && p.estado !== 'pendiente'));
+    currentResTab = faseEnCurso || faseConPartidos || 'grupos';
+  }
 
   const tabs = document.getElementById('res-tabs');
   tabs.innerHTML = '';
