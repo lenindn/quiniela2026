@@ -430,8 +430,9 @@ def generar_cruces_eliminatoria(sb: Client, fase: str, fase_anterior: str,
                 while numero in ya_numeros:
                     numero += 1
             else:
-                numero = None
-                print(f'  WARN: no se pudo calcular numero para {m["equipo_local"]} vs {m["equipo_visita"]}')
+                # Uno o ambos equipos no son ganadores de la fase anterior — no insertar
+                print(f'  SKIP: {m["equipo_local"]} vs {m["equipo_visita"]} no son ganadores de {fase_anterior}')
+                continue
 
         res = sb.table('partidos').insert({
             'fase':          fase,
