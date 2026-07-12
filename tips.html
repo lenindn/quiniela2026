@@ -61,6 +61,11 @@ header h1 span{color:var(--oro-claro)}
 .rank{color:var(--gris);font-size:0.75rem;width:20px}
 .elim{opacity:0.5;font-style:italic}
 
+/* RANKING FIFA */
+.tabla tr.semis td{background:#fef9e7}
+.tabla tr.semis td:first-child{border-left:3px solid var(--oro)}
+.pts{color:var(--texto2);font-size:0.72rem}
+
 /* PORTEROS */
 .portero-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .portero-card{background:var(--carta);border-radius:12px;padding:12px;border:1px solid var(--borde);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
@@ -193,6 +198,73 @@ header h1 span{color:var(--oro-claro)}
       <span class="vs">🇦🇷 Argentina vs Inglaterra 🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
       <span class="sede">Atlanta</span>
     </div>
+  </div>
+
+  <!-- RANKING FIFA -->
+  <div class="section">
+    <div class="section-title">🌍 Ranking Mundial FIFA — Top 10</div>
+    <div class="tabla-wrap">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>#</th><th>Selección</th><th>Puntos</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="semis">
+            <td class="rank">1</td>
+            <td><strong>🇫🇷 Francia</strong></td>
+            <td class="pts">1.925,86</td>
+          </tr>
+          <tr class="semis">
+            <td class="rank">2</td>
+            <td><strong>🇦🇷 Argentina</strong></td>
+            <td class="pts">1.925,15</td>
+          </tr>
+          <tr class="semis">
+            <td class="rank">3</td>
+            <td><strong>🇪🇸 España</strong></td>
+            <td class="pts">1.912,34</td>
+          </tr>
+          <tr class="semis">
+            <td class="rank">4</td>
+            <td><strong>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</strong></td>
+            <td class="pts">1.871,39</td>
+          </tr>
+          <tr>
+            <td class="rank">5</td>
+            <td>🇧🇷 Brasil</td>
+            <td class="pts">1.804,92</td>
+          </tr>
+          <tr>
+            <td class="rank elim">6</td>
+            <td class="elim">🇲🇦 Marruecos ✗</td>
+            <td class="pts">1.803,99</td>
+          </tr>
+          <tr>
+            <td class="rank">7</td>
+            <td>🇵🇹 Portugal</td>
+            <td class="pts">1.787,85</td>
+          </tr>
+          <tr>
+            <td class="rank elim">8</td>
+            <td class="elim">🇧🇪 Bélgica ✗</td>
+            <td class="pts">1.778,36</td>
+          </tr>
+          <tr>
+            <td class="rank">9</td>
+            <td>🇳🇱 Países Bajos</td>
+            <td class="pts">1.775,54</td>
+          </tr>
+          <tr>
+            <td class="rank">10</td>
+            <td>🇲🇽 México</td>
+            <td class="pts">1.754,30</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.68rem;color:var(--gris);margin-top:6px;padding:0 2px">Última actualización oficial FIFA: 11 de junio de 2026 (próxima: 20 de julio). Semifinalistas resaltados en dorado; ✗ = eliminado del Mundial.</p>
   </div>
 
   <!-- GOLEADORES -->
