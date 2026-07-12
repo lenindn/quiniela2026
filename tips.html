@@ -10,225 +10,82 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💡</text></svg>">
 <style>
 :root {
-  --verde:     #1a5c2a;
-  --verde2:    #2d7d3f;
-  --oro:       #c9a023;
-  --oro-claro: #f0d060;
-  --rojo:      #c0392b;
-  --fondo:     #f0f4f1;
-  --carta:     #ffffff;
-  --borde:     #d4e0d8;
-  --texto:     #1a1a1a;
-  --texto2:    #555;
-  --gris:      #9ca3af;
-  --exito:     #16a34a;
-  --amarillo:  #d97706;
+  --verde:#1a5c2a;--verde2:#2d7d3f;--oro:#c9a023;--oro-claro:#f0d060;
+  --rojo:#c0392b;--fondo:#f0f4f1;--carta:#ffffff;--borde:#d4e0d8;
+  --texto:#1a1a1a;--texto2:#555;--gris:#9ca3af;--exito:#16a34a;--amarillo:#d97706;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--fondo);
-  color: var(--texto);
-  min-height: 100vh;
-  padding-bottom: 32px;
-}
-header {
-  background: linear-gradient(135deg, var(--verde) 0%, var(--verde2) 100%);
-  color: white;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-.back-btn {
-  background: rgba(255,255,255,0.2);
-  border: none;
-  color: white;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-header h1 { font-size: 1.1rem; font-weight: 700; }
-header h1 span { color: var(--oro-claro); }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--fondo);color:var(--texto);min-height:100vh;padding-bottom:32px}
+header{background:linear-gradient(135deg,var(--verde) 0%,var(--verde2) 100%);color:white;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.back-btn{background:rgba(255,255,255,0.2);border:none;color:white;border-radius:8px;padding:6px 12px;font-size:0.9rem;cursor:pointer;white-space:nowrap}
+header h1{font-size:1.1rem;font-weight:700}
+header h1 span{color:var(--oro-claro)}
+.container{max-width:700px;margin:0 auto;padding:16px}
+.section{margin-bottom:20px}
+.section-title{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--verde);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--borde)}
 
-.container { max-width: 700px; margin: 0 auto; padding: 16px; }
+/* CUARTOS TERMINADOS */
+.cuarto-card{background:var(--carta);border-radius:12px;padding:12px 14px;border:1px solid var(--borde);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cuarto-equipos{flex:1}
+.cuarto-row{display:flex;align-items:center;justify-content:space-between;font-size:0.85rem}
+.cuarto-row .eq{font-weight:600}
+.cuarto-row .eq.ganador{color:var(--exito);font-weight:700}
+.cuarto-row .gol{font-weight:700;font-size:1rem;font-variant-numeric:tabular-nums;min-width:16px;text-align:right}
+.cuarto-row .gol.ganador{color:var(--exito)}
+.cuarto-meta{font-size:0.65rem;color:var(--gris);margin-top:4px}
+.badge-fin{font-size:0.62rem;font-weight:700;background:#dcfce7;color:#15803d;border-radius:4px;padding:2px 7px;white-space:nowrap}
 
-.section { margin-bottom: 20px; }
-.section-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--verde);
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 2px solid var(--borde);
-}
+/* SEMIFINALES */
+.semi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.semi-card{background:var(--carta);border-radius:12px;padding:14px;border:1px solid var(--borde);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.semi-card.confirmado{border-left:4px solid var(--exito)}
+.semi-card .bandera{font-size:2rem;display:block;margin-bottom:4px}
+.semi-card .nombre{font-weight:700;font-size:0.95rem}
+.semi-card .detalle{font-size:0.72rem;color:var(--texto2);margin-top:2px}
+.semi-card .badge{display:inline-block;font-size:0.65rem;font-weight:700;border-radius:4px;padding:2px 6px;margin-top:6px;background:#dcfce7;color:#15803d}
+.semi-fixture{background:linear-gradient(135deg,var(--verde),var(--verde2));border-radius:12px;padding:12px 16px;margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:white}
+.semi-fixture .fecha{font-size:0.68rem;opacity:0.8;white-space:nowrap}
+.semi-fixture .vs{font-weight:700;font-size:0.85rem;flex:1;text-align:center}
+.semi-fixture .sede{font-size:0.65rem;opacity:0.8;white-space:nowrap}
 
-/* SEMIFINALISTAS */
-.semi-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.semi-card {
-  background: var(--carta);
-  border-radius: 12px;
-  padding: 14px;
-  border: 1px solid var(--borde);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-.semi-card.confirmado { border-left: 4px solid var(--exito); }
-.semi-card.pendiente  { border-left: 4px solid var(--gris); opacity: 0.75; }
-.semi-card .bandera   { font-size: 2rem; display: block; margin-bottom: 4px; }
-.semi-card .nombre    { font-weight: 700; font-size: 0.95rem; }
-.semi-card .detalle   { font-size: 0.72rem; color: var(--texto2); margin-top: 2px; }
-.semi-card .badge {
-  display: inline-block;
-  font-size: 0.65rem;
-  font-weight: 700;
-  border-radius: 4px;
-  padding: 2px 6px;
-  margin-top: 6px;
-}
-.badge-ok  { background: #dcfce7; color: #15803d; }
-.badge-tbp { background: #f3f4f6; color: #6b7280; }
-
-.semi-fixture {
-  background: var(--carta);
-  border-radius: 12px;
-  padding: 12px 16px;
-  border: 1px solid var(--borde);
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.semi-fixture .fecha { font-size: 0.7rem; color: var(--texto2); white-space: nowrap; }
-.semi-fixture .vs    { font-weight: 700; font-size: 0.85rem; flex: 1; text-align: center; }
-.semi-fixture .sede  { font-size: 0.68rem; color: var(--texto2); white-space: nowrap; }
-
-/* TABLA GOLEADORES */
-.tabla { width: 100%; border-collapse: collapse; }
-.tabla th {
-  background: var(--verde);
-  color: white;
-  font-size: 0.72rem;
-  padding: 8px 10px;
-  text-align: left;
-}
-.tabla th:last-child, .tabla td:last-child { text-align: center; }
-.tabla td {
-  padding: 9px 10px;
-  font-size: 0.82rem;
-  border-bottom: 1px solid var(--borde);
-}
-.tabla tr:last-child td { border-bottom: none; }
-.tabla tr:nth-child(even) td { background: #f7faf8; }
-.tabla-wrap {
-  background: var(--carta);
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--borde);
-  overflow-x: auto;
-}
-.goles-badge {
-  display: inline-block;
-  background: var(--verde);
-  color: white;
-  border-radius: 20px;
-  padding: 2px 10px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  min-width: 32px;
-  text-align: center;
-}
-.rank { color: var(--gris); font-size: 0.75rem; width: 20px; }
+/* GOLEADORES */
+.tabla{width:100%;border-collapse:collapse}
+.tabla th{background:var(--verde);color:white;font-size:0.72rem;padding:8px 10px;text-align:left}
+.tabla th:last-child,.tabla td:last-child{text-align:center}
+.tabla td{padding:9px 10px;font-size:0.82rem;border-bottom:1px solid var(--borde)}
+.tabla tr:last-child td{border-bottom:none}
+.tabla tr:nth-child(even) td{background:#f7faf8}
+.tabla-wrap{background:var(--carta);border-radius:12px;overflow:hidden;border:1px solid var(--borde);overflow-x:auto}
+.goles-badge{display:inline-block;background:var(--verde);color:white;border-radius:20px;padding:2px 10px;font-weight:700;font-size:0.8rem;min-width:32px;text-align:center}
+.goles-badge.top{background:var(--oro);color:#1a1a1a}
+.rank{color:var(--gris);font-size:0.75rem;width:20px}
+.elim{opacity:0.5;font-style:italic}
 
 /* PORTEROS */
-.portero-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.portero-card {
-  background: var(--carta);
-  border-radius: 12px;
-  padding: 12px;
-  border: 1px solid var(--borde);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-.portero-card .nombre  { font-weight: 700; font-size: 0.88rem; }
-.portero-card .pais    { font-size: 0.72rem; color: var(--texto2); margin-bottom: 8px; }
-.portero-stat {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  margin-top: 4px;
-  color: var(--texto2);
-}
-.portero-stat strong { color: var(--texto); }
-.portero-card.top { border-top: 3px solid var(--oro); }
+.portero-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.portero-card{background:var(--carta);border-radius:12px;padding:12px;border:1px solid var(--borde);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.portero-card .nombre{font-weight:700;font-size:0.88rem}
+.portero-card .pais{font-size:0.72rem;color:var(--texto2);margin-bottom:8px}
+.portero-stat{display:flex;justify-content:space-between;font-size:0.72rem;margin-top:4px;color:var(--texto2)}
+.portero-stat strong{color:var(--texto)}
+.portero-card.top{border-top:3px solid var(--oro)}
 
 /* STATS EQUIPOS */
-.equipo-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.equipo-card {
-  background: var(--carta);
-  border-radius: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--borde);
-}
-.equipo-card .eq-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.equipo-card .bandera { font-size: 1.6rem; }
-.equipo-card .eq-nombre { font-weight: 700; font-size: 0.88rem; }
-.eq-stat {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  color: var(--texto2);
-  padding: 3px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-.eq-stat:last-child { border-bottom: none; }
-.eq-stat strong { color: var(--texto); }
+.equipo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.equipo-card{background:var(--carta);border-radius:12px;padding:12px 14px;border:1px solid var(--borde)}
+.equipo-card .eq-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.equipo-card .bandera{font-size:1.6rem}
+.equipo-card .eq-nombre{font-weight:700;font-size:0.88rem}
+.eq-stat{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--texto2);padding:3px 0;border-bottom:1px solid #f0f0f0}
+.eq-stat:last-child{border-bottom:none}
+.eq-stat strong{color:var(--texto)}
 
 /* DATOS CURIOSOS */
-.curiosidad {
-  background: var(--carta);
-  border-radius: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--borde);
-  margin-bottom: 8px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-.curiosidad .icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 1px; }
-.curiosidad p { font-size: 0.82rem; line-height: 1.45; color: var(--texto2); }
-.curiosidad p strong { color: var(--texto); }
-
-.updated {
-  text-align: center;
-  font-size: 0.68rem;
-  color: var(--gris);
-  margin-top: 16px;
-}
+.curiosidad{background:var(--carta);border-radius:12px;padding:12px 14px;border:1px solid var(--borde);margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
+.curiosidad .icon{font-size:1.4rem;flex-shrink:0;margin-top:1px}
+.curiosidad p{font-size:0.82rem;line-height:1.45;color:var(--texto2)}
+.curiosidad p strong{color:var(--texto)}
+.updated{text-align:center;font-size:0.68rem;color:var(--gris);margin-top:16px}
 </style>
 </head>
 <body>
@@ -240,33 +97,90 @@ header h1 span { color: var(--oro-claro); }
 
 <div class="container">
 
+  <!-- CUARTOS DE FINAL — TODOS JUGADOS -->
+  <div class="section">
+    <div class="section-title">✅ Cuartos de Final — Resultados</div>
+
+    <div class="cuarto-card">
+      <div class="cuarto-equipos">
+        <div class="cuarto-row">
+          <span class="eq ganador">🇫🇷 Francia</span><span class="gol ganador">2</span>
+        </div>
+        <div class="cuarto-row">
+          <span class="eq">🇲🇦 Marruecos</span><span class="gol">0</span>
+        </div>
+        <div class="cuarto-meta">Jue 9 jul · Boston · Mbappé y Dembélé</div>
+      </div>
+      <span class="badge-fin">Finalizado</span>
+    </div>
+
+    <div class="cuarto-card">
+      <div class="cuarto-equipos">
+        <div class="cuarto-row">
+          <span class="eq ganador">🇪🇸 España</span><span class="gol ganador">2</span>
+        </div>
+        <div class="cuarto-row">
+          <span class="eq">🇧🇪 Bélgica</span><span class="gol">1</span>
+        </div>
+        <div class="cuarto-meta">Vie 10 jul · Los Ángeles · Gol agónico de Merino</div>
+      </div>
+      <span class="badge-fin">Finalizado</span>
+    </div>
+
+    <div class="cuarto-card">
+      <div class="cuarto-equipos">
+        <div class="cuarto-row">
+          <span class="eq ganador">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</span><span class="gol ganador">2</span>
+        </div>
+        <div class="cuarto-row">
+          <span class="eq">🇳🇴 Noruega</span><span class="gol">1</span>
+        </div>
+        <div class="cuarto-meta">Sáb 11 jul · Miami · Doblete de Bellingham (prórroga)</div>
+      </div>
+      <span class="badge-fin">Finalizado</span>
+    </div>
+
+    <div class="cuarto-card">
+      <div class="cuarto-equipos">
+        <div class="cuarto-row">
+          <span class="eq ganador">🇦🇷 Argentina</span><span class="gol ganador">3</span>
+        </div>
+        <div class="cuarto-row">
+          <span class="eq">🇨🇭 Suiza</span><span class="gol">1</span>
+        </div>
+        <div class="cuarto-meta">Sáb 11 jul · Kansas City · Mac Allister, Álvarez, Lautaro</div>
+      </div>
+      <span class="badge-fin">Finalizado</span>
+    </div>
+  </div>
+
   <!-- SEMIFINALES -->
   <div class="section">
-    <div class="section-title">🏟️ Semifinalistas</div>
+    <div class="section-title">🏟️ Semifinales</div>
     <div class="semi-grid">
       <div class="semi-card confirmado">
         <span class="bandera">🇫🇷</span>
         <div class="nombre">Francia</div>
         <div class="detalle">Venció a Marruecos 2-0</div>
-        <span class="badge badge-ok">✓ Clasificado</span>
+        <span class="badge">✓ Clasificado</span>
       </div>
       <div class="semi-card confirmado">
         <span class="bandera">🇪🇸</span>
         <div class="nombre">España</div>
         <div class="detalle">Venció a Bélgica 2-1</div>
-        <span class="badge badge-ok">✓ Clasificado</span>
+        <span class="badge">✓ Clasificado</span>
       </div>
-      <div class="semi-card pendiente">
-        <span class="bandera">🇳🇴🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
-        <div class="nombre">NOR vs ING</div>
-        <div class="detalle">Hoy 15:00 CDMX · Miami</div>
-        <span class="badge badge-tbp">⏳ Por jugar</span>
+      <div class="semi-card confirmado">
+        <span class="bandera">🇦🇷</span>
+        <div class="nombre">Argentina</div>
+        <div class="detalle">Venció a Suiza 3-1</div>
+        <span class="badge">✓ Clasificado</span>
       </div>
-      <div class="semi-card pendiente">
-        <span class="bandera">🇦🇷🇨🇭</span>
-        <div class="nombre">ARG vs SUI</div>
-        <div class="detalle">Hoy 19:00 CDMX · Kansas City</div>
-        <span class="badge badge-tbp">⏳ Por jugar</span>
+      <div class="semi-card confirmado">
+        <span class="bandera">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
+        <div class="nombre">Inglaterra</div>
+        <div class="detalle">Venció a Noruega 2-1</div>
+        <span class="badge">✓ Clasificado</span>
       </div>
     </div>
     <div class="semi-fixture">
@@ -276,7 +190,7 @@ header h1 span { color: var(--oro-claro); }
     </div>
     <div class="semi-fixture">
       <span class="fecha">Mié 15 jul · 15:00 CDMX</span>
-      <span class="vs">TBD vs TBD</span>
+      <span class="vs">🇦🇷 Argentina vs Inglaterra 🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
       <span class="sede">Atlanta</span>
     </div>
   </div>
@@ -288,10 +202,7 @@ header h1 span { color: var(--oro-claro); }
       <table class="tabla">
         <thead>
           <tr>
-            <th>#</th>
-            <th>Jugador</th>
-            <th>País</th>
-            <th>Goles</th>
+            <th>#</th><th>Jugador</th><th>País</th><th>Goles</th>
           </tr>
         </thead>
         <tbody>
@@ -299,18 +210,18 @@ header h1 span { color: var(--oro-claro); }
             <td class="rank">1</td>
             <td><strong>K. Mbappé</strong></td>
             <td>🇫🇷 Francia</td>
-            <td><span class="goles-badge">8</span></td>
+            <td><span class="goles-badge top">8</span></td>
           </tr>
           <tr>
-            <td class="rank">1</td>
+            <td class="rank">2</td>
             <td><strong>L. Messi</strong></td>
             <td>🇦🇷 Argentina</td>
-            <td><span class="goles-badge">8</span></td>
+            <td><span class="goles-badge top">8</span></td>
           </tr>
           <tr>
-            <td class="rank">3</td>
-            <td><strong>E. Haaland</strong></td>
-            <td>🇳🇴 Noruega</td>
+            <td class="rank elim">3</td>
+            <td class="elim"><strong>E. Haaland</strong></td>
+            <td class="elim">🇳🇴 Noruega ✗</td>
             <td><span class="goles-badge">7</span></td>
           </tr>
           <tr>
@@ -318,6 +229,12 @@ header h1 span { color: var(--oro-claro); }
             <td><strong>H. Kane</strong></td>
             <td>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</td>
             <td><span class="goles-badge">6</span></td>
+          </tr>
+          <tr>
+            <td class="rank">5</td>
+            <td><strong>J. Bellingham</strong></td>
+            <td>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</td>
+            <td><span class="goles-badge">5</span></td>
           </tr>
           <tr>
             <td class="rank">5</td>
@@ -331,40 +248,36 @@ header h1 span { color: var(--oro-claro); }
             <td>🇪🇸 España</td>
             <td><span class="goles-badge">5</span></td>
           </tr>
-          <tr>
-            <td class="rank">7</td>
-            <td><strong>G. Xhaka</strong></td>
-            <td>🇨🇭 Suiza</td>
-            <td><span class="goles-badge">4</span></td>
-          </tr>
-          <tr>
-            <td class="rank">7</td>
-            <td><strong>R. De Bruyne</strong></td>
-            <td>🇧🇪 Bélgica</td>
-            <td><span class="goles-badge">4</span></td>
-          </tr>
         </tbody>
       </table>
     </div>
+    <p style="font-size:0.68rem;color:var(--gris);margin-top:6px;padding:0 2px">* Mbappé lidera por asistencias (3 vs 1 de Messi). Equipos eliminados en gris.</p>
   </div>
 
   <!-- PORTEROS -->
   <div class="section">
-    <div class="section-title">🧤 Mejores Porteros</div>
+    <div class="section-title">🧤 Mejores Porteros — Guante de Oro</div>
     <div class="portero-grid">
       <div class="portero-card top">
         <div class="nombre">Unai Simón</div>
-        <div class="pais">🇪🇸 España</div>
+        <div class="pais">🇪🇸 España 🥇 Favorito</div>
         <div class="portero-stat"><span>Vallas invictas</span><strong>5</strong></div>
-        <div class="portero-stat"><span>% atajadas</span><strong>84.2%</strong></div>
+        <div class="portero-stat"><span>% atajadas</span><strong>87.5%</strong></div>
         <div class="portero-stat"><span>Goles recibidos</span><strong>3</strong></div>
       </div>
       <div class="portero-card">
         <div class="nombre">M. Maignan</div>
         <div class="pais">🇫🇷 Francia</div>
         <div class="portero-stat"><span>Vallas invictas</span><strong>4</strong></div>
-        <div class="portero-stat"><span>% atajadas</span><strong>79.1%</strong></div>
-        <div class="portero-stat"><span>Goles recibidos</span><strong>4</strong></div>
+        <div class="portero-stat"><span>Atajadas</span><strong>9</strong></div>
+        <div class="portero-stat"><span>Goles recibidos</span><strong>2</strong></div>
+      </div>
+      <div class="portero-card">
+        <div class="nombre">E. Martínez</div>
+        <div class="pais">🇦🇷 Argentina 🏆 Guante 2022</div>
+        <div class="portero-stat"><span>Vallas invictas</span><strong>3</strong></div>
+        <div class="portero-stat"><span>% atajadas</span><strong>77.8%</strong></div>
+        <div class="portero-stat"><span>Goles recibidos</span><strong>5</strong></div>
       </div>
       <div class="portero-card">
         <div class="nombre">J. Pickford</div>
@@ -373,79 +286,40 @@ header h1 span { color: var(--oro-claro); }
         <div class="portero-stat"><span>% atajadas</span><strong>76.5%</strong></div>
         <div class="portero-stat"><span>Goles recibidos</span><strong>5</strong></div>
       </div>
-      <div class="portero-card">
-        <div class="nombre">E. Martínez</div>
-        <div class="pais">🇦🇷 Argentina</div>
-        <div class="portero-stat"><span>Vallas invictas</span><strong>3</strong></div>
-        <div class="portero-stat"><span>% atajadas</span><strong>77.8%</strong></div>
-        <div class="portero-stat"><span>Goles recibidos</span><strong>5</strong></div>
-      </div>
     </div>
   </div>
 
-  <!-- STATS EQUIPOS -->
+  <!-- STATS EQUIPOS VIVOS -->
   <div class="section">
-    <div class="section-title">📊 Estadísticas por Equipo</div>
+    <div class="section-title">📊 Estadísticas — 4 Semifinalistas</div>
     <div class="equipo-grid">
       <div class="equipo-card">
-        <div class="eq-header">
-          <span class="bandera">🇫🇷</span>
-          <span class="eq-nombre">Francia</span>
-        </div>
+        <div class="eq-header"><span class="bandera">🇫🇷</span><span class="eq-nombre">Francia</span></div>
         <div class="eq-stat"><span>Goles a favor</span><strong>17</strong></div>
         <div class="eq-stat"><span>Goles en contra</span><strong>4</strong></div>
-        <div class="eq-stat"><span>PJ</span><strong>6</strong></div>
+        <div class="eq-stat"><span>Partidos jugados</span><strong>6</strong></div>
         <div class="eq-stat"><span>Posesión prom.</span><strong>58%</strong></div>
       </div>
       <div class="equipo-card">
-        <div class="eq-header">
-          <span class="bandera">🇪🇸</span>
-          <span class="eq-nombre">España</span>
-        </div>
+        <div class="eq-header"><span class="bandera">🇪🇸</span><span class="eq-nombre">España</span></div>
         <div class="eq-stat"><span>Goles a favor</span><strong>14</strong></div>
         <div class="eq-stat"><span>Goles en contra</span><strong>3</strong></div>
-        <div class="eq-stat"><span>PJ</span><strong>6</strong></div>
+        <div class="eq-stat"><span>Partidos jugados</span><strong>6</strong></div>
         <div class="eq-stat"><span>Posesión prom.</span><strong>63%</strong></div>
       </div>
       <div class="equipo-card">
-        <div class="eq-header">
-          <span class="bandera">🇳🇴</span>
-          <span class="eq-nombre">Noruega</span>
-        </div>
-        <div class="eq-stat"><span>Goles a favor</span><strong>16</strong></div>
-        <div class="eq-stat"><span>Goles en contra</span><strong>6</strong></div>
-        <div class="eq-stat"><span>PJ</span><strong>6</strong></div>
-        <div class="eq-stat"><span>Posesión prom.</span><strong>47%</strong></div>
-      </div>
-      <div class="equipo-card">
-        <div class="eq-header">
-          <span class="bandera">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
-          <span class="eq-nombre">Inglaterra</span>
-        </div>
-        <div class="eq-stat"><span>Goles a favor</span><strong>13</strong></div>
-        <div class="eq-stat"><span>Goles en contra</span><strong>5</strong></div>
-        <div class="eq-stat"><span>PJ</span><strong>6</strong></div>
-        <div class="eq-stat"><span>Posesión prom.</span><strong>52%</strong></div>
-      </div>
-      <div class="equipo-card">
-        <div class="eq-header">
-          <span class="bandera">🇦🇷</span>
-          <span class="eq-nombre">Argentina</span>
-        </div>
-        <div class="eq-stat"><span>Goles a favor</span><strong>15</strong></div>
-        <div class="eq-stat"><span>Goles en contra</span><strong>6</strong></div>
-        <div class="eq-stat"><span>PJ</span><strong>6</strong></div>
+        <div class="eq-header"><span class="bandera">🇦🇷</span><span class="eq-nombre">Argentina</span></div>
+        <div class="eq-stat"><span>Goles a favor</span><strong>18</strong></div>
+        <div class="eq-stat"><span>Goles en contra</span><strong>7</strong></div>
+        <div class="eq-stat"><span>Partidos jugados</span><strong>6</strong></div>
         <div class="eq-stat"><span>Posesión prom.</span><strong>50%</strong></div>
       </div>
       <div class="equipo-card">
-        <div class="eq-header">
-          <span class="bandera">🇨🇭</span>
-          <span class="eq-nombre">Suiza</span>
-        </div>
-        <div class="eq-stat"><span>Goles a favor</span><strong>10</strong></div>
-        <div class="eq-stat"><span>Goles en contra</span><strong>7</strong></div>
-        <div class="eq-stat"><span>PJ</span><strong>6</strong></div>
-        <div class="eq-stat"><span>Posesión prom.</span><strong>45%</strong></div>
+        <div class="eq-header"><span class="bandera">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span><span class="eq-nombre">Inglaterra</span></div>
+        <div class="eq-stat"><span>Goles a favor</span><strong>15</strong></div>
+        <div class="eq-stat"><span>Goles en contra</span><strong>6</strong></div>
+        <div class="eq-stat"><span>Partidos jugados</span><strong>6</strong></div>
+        <div class="eq-stat"><span>Posesión prom.</span><strong>52%</strong></div>
       </div>
     </div>
   </div>
@@ -454,32 +328,32 @@ header h1 span { color: var(--oro-claro); }
   <div class="section">
     <div class="section-title">🎯 Datos Curiosos</div>
     <div class="curiosidad">
+      <span class="icon">⚔️</span>
+      <p><strong>La revancha de 1986</strong>: Argentina vs Inglaterra en semifinales recuerda al mítico cuarto de final de México 1986, donde Maradona marcó "La Mano de Dios" y el "Gol del Siglo". Ahora Messi busca su propia historia.</p>
+    </div>
+    <div class="curiosidad">
+      <span class="icon">🇫🇷🇪🇸</span>
+      <p><strong>Francia vs España por primera vez en semis</strong>: dos de las selecciones con más títulos mundiales entre sí (3 Francia + 1 España = 4) nunca se habían enfrentado en una semifinal de Copa del Mundo.</p>
+    </div>
+    <div class="curiosidad">
+      <span class="icon">⚡</span>
+      <p><strong>Bellingham, el héroe de los cuartos</strong>: el mediocampista inglés firmó un doblete en prórroga contra Noruega (2-1) para clasificar a Inglaterra a sus segundas semifinales consecutivas.</p>
+    </div>
+    <div class="curiosidad">
       <span class="icon">👑</span>
-      <p><strong>Mbappé y Messi empatados</strong> en la tabla de goleadores con 8 goles cada uno. La final podría decidir quién se lleva la Bota de Oro.</p>
-    </div>
-    <div class="curiosidad">
-      <span class="icon">🇳🇴</span>
-      <p><strong>Haaland sorpresa del torneo</strong>: Noruega llegó a semifinales por primera vez en su historia. Haaland lleva 7 goles en 6 partidos.</p>
-    </div>
-    <div class="curiosidad">
-      <span class="icon">🇪🇸</span>
-      <p><strong>España, la más dominante</strong>: lidera el torneo en posesión (63% promedio) y es el equipo con menos goles recibidos entre los 4 semifinalistas.</p>
-    </div>
-    <div class="curiosidad">
-      <span class="icon">🏆</span>
-      <p><strong>Francia busca el triplete</strong>: de ganar, sería el tercer Mundial para Les Bleus (1998, 2018, 2026) — igualando a Brasil en cantidad de títulos del siglo XXI.</p>
-    </div>
-    <div class="curiosidad">
-      <span class="icon">📅</span>
-      <p><strong>La Final</strong> es el <strong>domingo 19 de julio</strong> a las 21:00 CDMX (03:00 del lunes en España) en el MetLife Stadium, Nueva York/Nueva Jersey.</p>
+      <p><strong>Mbappé lidera la Bota de Oro</strong>: empata con Messi en 8 goles, pero lo supera por asistencias (3 vs 1). Si Francia gana el Mundial, podría llevarse Bota de Oro + trofeo — como Ronaldo en 2002.</p>
     </div>
     <div class="curiosidad">
       <span class="icon">🇦🇷</span>
-      <p><strong>Messi: ¿el último baile?</strong> Con 39 años, el capitán argentino podría convertirse en el primer jugador en ganar dos Copas del Mundo.</p>
+      <p><strong>Messi: ¿dos Mundiales?</strong> Con 39 años, el capitán argentino busca convertirse en el primer jugador de la historia en ganar dos Copas del Mundo con su selección.</p>
+    </div>
+    <div class="curiosidad">
+      <span class="icon">📅</span>
+      <p><strong>Final</strong>: domingo <strong>19 de julio</strong> — 21:00 CDMX (03:00 del lunes en España) en el MetLife Stadium, Nueva York/Nueva Jersey.</p>
     </div>
   </div>
 
-  <p class="updated">Actualizado: 11 de julio de 2026</p>
+  <p class="updated">Actualizado: 12 de julio de 2026 · Fuentes: FIFA · ESPN · FOX Sports · Infobae</p>
 
 </div>
 </body>
