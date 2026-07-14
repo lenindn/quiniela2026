@@ -24,7 +24,7 @@ header h1 span{color:var(--oro-claro)}
 .section{margin-bottom:20px}
 .section-title{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--verde);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--borde)}
 
-/* CUARTOS TERMINADOS */
+/* SEMIFINALES / FINAL */
 .cuarto-card{background:var(--carta);border-radius:12px;padding:12px 14px;border:1px solid var(--borde);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .cuarto-equipos{flex:1}
 .cuarto-row{display:flex;align-items:center;justify-content:space-between;font-size:0.85rem}
@@ -35,18 +35,15 @@ header h1 span{color:var(--oro-claro)}
 .cuarto-meta{font-size:0.65rem;color:var(--gris);margin-top:4px}
 .badge-fin{font-size:0.62rem;font-weight:700;background:#dcfce7;color:#15803d;border-radius:4px;padding:2px 7px;white-space:nowrap}
 
-/* SEMIFINALES */
-.semi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.semi-card{background:var(--carta);border-radius:12px;padding:14px;border:1px solid var(--borde);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
-.semi-card.confirmado{border-left:4px solid var(--exito)}
-.semi-card .bandera{font-size:2rem;display:block;margin-bottom:4px}
-.semi-card .nombre{font-weight:700;font-size:0.95rem}
-.semi-card .detalle{font-size:0.72rem;color:var(--texto2);margin-top:2px}
-.semi-card .badge{display:inline-block;font-size:0.65rem;font-weight:700;border-radius:4px;padding:2px 6px;margin-top:6px;background:#dcfce7;color:#15803d}
 .semi-fixture{background:linear-gradient(135deg,var(--verde),var(--verde2));border-radius:12px;padding:12px 16px;margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:white}
 .semi-fixture .fecha{font-size:0.68rem;opacity:0.8;white-space:nowrap}
 .semi-fixture .vs{font-weight:700;font-size:0.85rem;flex:1;text-align:center}
 .semi-fixture .sede{font-size:0.65rem;opacity:0.8;white-space:nowrap}
+
+.final-card{background:linear-gradient(135deg,var(--oro) 0%,#a9821a 100%);border-radius:12px;padding:16px;color:white;text-align:center}
+.final-card .titulo{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;opacity:0.9;margin-bottom:6px}
+.final-card .vs{font-size:1rem;font-weight:700;margin-bottom:6px}
+.final-card .meta{font-size:0.72rem;opacity:0.9}
 
 /* GOLEADORES */
 .tabla{width:100%;border-collapse:collapse}
@@ -61,11 +58,6 @@ header h1 span{color:var(--oro-claro)}
 .rank{color:var(--gris);font-size:0.75rem;width:20px}
 .elim{opacity:0.5;font-style:italic}
 
-/* RANKING FIFA */
-.tabla tr.semis td{background:#fef9e7}
-.tabla tr.semis td:first-child{border-left:3px solid var(--oro)}
-.pts{color:var(--texto2);font-size:0.72rem}
-
 /* PORTEROS */
 .portero-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .portero-card{background:var(--carta);border-radius:12px;padding:12px;border:1px solid var(--borde);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
@@ -74,6 +66,7 @@ header h1 span{color:var(--oro-claro)}
 .portero-stat{display:flex;justify-content:space-between;font-size:0.72rem;margin-top:4px;color:var(--texto2)}
 .portero-stat strong{color:var(--texto)}
 .portero-card.top{border-top:3px solid var(--oro)}
+.portero-card.elim{opacity:0.6}
 
 /* STATS EQUIPOS */
 .equipo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -102,22 +95,9 @@ header h1 span{color:var(--oro-claro)}
 
 <div class="container">
 
-  <!-- CUARTOS DE FINAL — TODOS JUGADOS -->
+  <!-- SEMIFINALES -->
   <div class="section">
-    <div class="section-title">✅ Cuartos de Final — Resultados</div>
-
-    <div class="cuarto-card">
-      <div class="cuarto-equipos">
-        <div class="cuarto-row">
-          <span class="eq ganador">🇫🇷 Francia</span><span class="gol ganador">2</span>
-        </div>
-        <div class="cuarto-row">
-          <span class="eq">🇲🇦 Marruecos</span><span class="gol">0</span>
-        </div>
-        <div class="cuarto-meta">Jue 9 jul · Boston · Mbappé y Dembélé</div>
-      </div>
-      <span class="badge-fin">Finalizado</span>
-    </div>
+    <div class="section-title">🏟️ Semifinales</div>
 
     <div class="cuarto-card">
       <div class="cuarto-equipos">
@@ -125,146 +105,28 @@ header h1 span{color:var(--oro-claro)}
           <span class="eq ganador">🇪🇸 España</span><span class="gol ganador">2</span>
         </div>
         <div class="cuarto-row">
-          <span class="eq">🇧🇪 Bélgica</span><span class="gol">1</span>
+          <span class="eq">🇫🇷 Francia</span><span class="gol">0</span>
         </div>
-        <div class="cuarto-meta">Vie 10 jul · Los Ángeles · Gol agónico de Merino</div>
+        <div class="cuarto-meta">Mar 14 jul · Arlington (Dallas) · Penal de Oyarzabal (22') y gol de Porro (58')</div>
       </div>
       <span class="badge-fin">Finalizado</span>
     </div>
 
-    <div class="cuarto-card">
-      <div class="cuarto-equipos">
-        <div class="cuarto-row">
-          <span class="eq ganador">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</span><span class="gol ganador">2</span>
-        </div>
-        <div class="cuarto-row">
-          <span class="eq">🇳🇴 Noruega</span><span class="gol">1</span>
-        </div>
-        <div class="cuarto-meta">Sáb 11 jul · Miami · Doblete de Bellingham (prórroga)</div>
-      </div>
-      <span class="badge-fin">Finalizado</span>
-    </div>
-
-    <div class="cuarto-card">
-      <div class="cuarto-equipos">
-        <div class="cuarto-row">
-          <span class="eq ganador">🇦🇷 Argentina</span><span class="gol ganador">3</span>
-        </div>
-        <div class="cuarto-row">
-          <span class="eq">🇨🇭 Suiza</span><span class="gol">1</span>
-        </div>
-        <div class="cuarto-meta">Sáb 11 jul · Kansas City · Mac Allister, Álvarez, Lautaro</div>
-      </div>
-      <span class="badge-fin">Finalizado</span>
-    </div>
-  </div>
-
-  <!-- SEMIFINALES -->
-  <div class="section">
-    <div class="section-title">🏟️ Semifinales</div>
-    <div class="semi-grid">
-      <div class="semi-card confirmado">
-        <span class="bandera">🇫🇷</span>
-        <div class="nombre">Francia</div>
-        <div class="detalle">Venció a Marruecos 2-0</div>
-        <span class="badge">✓ Clasificado</span>
-      </div>
-      <div class="semi-card confirmado">
-        <span class="bandera">🇪🇸</span>
-        <div class="nombre">España</div>
-        <div class="detalle">Venció a Bélgica 2-1</div>
-        <span class="badge">✓ Clasificado</span>
-      </div>
-      <div class="semi-card confirmado">
-        <span class="bandera">🇦🇷</span>
-        <div class="nombre">Argentina</div>
-        <div class="detalle">Venció a Suiza 3-1</div>
-        <span class="badge">✓ Clasificado</span>
-      </div>
-      <div class="semi-card confirmado">
-        <span class="bandera">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
-        <div class="nombre">Inglaterra</div>
-        <div class="detalle">Venció a Noruega 2-1</div>
-        <span class="badge">✓ Clasificado</span>
-      </div>
-    </div>
     <div class="semi-fixture">
-      <span class="fecha">Mar 14 jul · 13:00 CDMX</span>
-      <span class="vs">🇫🇷 Francia vs España 🇪🇸</span>
-      <span class="sede">Dallas</span>
-    </div>
-    <div class="semi-fixture">
-      <span class="fecha">Mié 15 jul · 15:00 CDMX</span>
+      <span class="fecha">Mié 15 jul · 15:00 CDMX / ET</span>
       <span class="vs">🇦🇷 Argentina vs Inglaterra 🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
       <span class="sede">Atlanta</span>
     </div>
   </div>
 
-  <!-- RANKING FIFA -->
+  <!-- GRAN FINAL -->
   <div class="section">
-    <div class="section-title">🌍 Ranking Mundial FIFA — Top 10</div>
-    <div class="tabla-wrap">
-      <table class="tabla">
-        <thead>
-          <tr>
-            <th>#</th><th>Selección</th><th>Puntos</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="semis">
-            <td class="rank">1</td>
-            <td><strong>🇫🇷 Francia</strong></td>
-            <td class="pts">1.925,86</td>
-          </tr>
-          <tr class="semis">
-            <td class="rank">2</td>
-            <td><strong>🇦🇷 Argentina</strong></td>
-            <td class="pts">1.925,15</td>
-          </tr>
-          <tr class="semis">
-            <td class="rank">3</td>
-            <td><strong>🇪🇸 España</strong></td>
-            <td class="pts">1.912,34</td>
-          </tr>
-          <tr class="semis">
-            <td class="rank">4</td>
-            <td><strong>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</strong></td>
-            <td class="pts">1.871,39</td>
-          </tr>
-          <tr>
-            <td class="rank">5</td>
-            <td>🇧🇷 Brasil</td>
-            <td class="pts">1.804,92</td>
-          </tr>
-          <tr>
-            <td class="rank elim">6</td>
-            <td class="elim">🇲🇦 Marruecos ✗</td>
-            <td class="pts">1.803,99</td>
-          </tr>
-          <tr>
-            <td class="rank">7</td>
-            <td>🇵🇹 Portugal</td>
-            <td class="pts">1.787,85</td>
-          </tr>
-          <tr>
-            <td class="rank elim">8</td>
-            <td class="elim">🇧🇪 Bélgica ✗</td>
-            <td class="pts">1.778,36</td>
-          </tr>
-          <tr>
-            <td class="rank">9</td>
-            <td>🇳🇱 Países Bajos</td>
-            <td class="pts">1.775,54</td>
-          </tr>
-          <tr>
-            <td class="rank">10</td>
-            <td>🇲🇽 México</td>
-            <td class="pts">1.754,30</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="section-title">🏆 Gran Final</div>
+    <div class="final-card">
+      <div class="titulo">Domingo 19 de julio · MetLife Stadium (Nueva Jersey)</div>
+      <div class="vs">🇪🇸 España vs. Ganador Argentina-Inglaterra</div>
+      <div class="meta">15:00 hora del Este · Show de medio tiempo con Madonna, Shakira y Chris Martin (Coldplay)</div>
     </div>
-    <p style="font-size:0.68rem;color:var(--gris);margin-top:6px;padding:0 2px">Última actualización oficial FIFA: 11 de junio de 2026 (próxima: 20 de julio). Semifinalistas resaltados en dorado; ✗ = eliminado del Mundial.</p>
   </div>
 
   <!-- GOLEADORES -->
@@ -279,9 +141,9 @@ header h1 span{color:var(--oro-claro)}
         </thead>
         <tbody>
           <tr>
-            <td class="rank">1</td>
-            <td><strong>K. Mbappé</strong></td>
-            <td>🇫🇷 Francia</td>
+            <td class="rank elim">1</td>
+            <td class="elim"><strong>K. Mbappé</strong></td>
+            <td class="elim">🇫🇷 Francia ✗</td>
             <td><span class="goles-badge top">8</span></td>
           </tr>
           <tr>
@@ -310,18 +172,18 @@ header h1 span{color:var(--oro-claro)}
           </tr>
           <tr>
             <td class="rank">6</td>
-            <td><strong>O. Dembélé</strong></td>
-            <td>🇫🇷 Francia</td>
-            <td><span class="goles-badge">4</span></td>
-          </tr>
-          <tr>
-            <td class="rank">6</td>
             <td><strong>M. Oyarzabal</strong></td>
             <td>🇪🇸 España</td>
+            <td><span class="goles-badge">5</span></td>
+          </tr>
+          <tr>
+            <td class="rank elim">7</td>
+            <td class="elim"><strong>O. Dembélé</strong></td>
+            <td class="elim">🇫🇷 Francia ✗</td>
             <td><span class="goles-badge">4</span></td>
           </tr>
           <tr>
-            <td class="rank elim">6</td>
+            <td class="rank elim">7</td>
             <td class="elim"><strong>Vinícius Jr.</strong></td>
             <td class="elim">🇧🇷 Brasil ✗</td>
             <td><span class="goles-badge">4</span></td>
@@ -329,7 +191,7 @@ header h1 span{color:var(--oro-claro)}
         </tbody>
       </table>
     </div>
-    <p style="font-size:0.68rem;color:var(--gris);margin-top:6px;padding:0 2px">* Mbappé lidera por asistencias sobre Messi (ambos con 8 goles). Equipos eliminados en gris.</p>
+    <p style="font-size:0.68rem;color:var(--gris);margin-top:6px;padding:0 2px">Mbappé y Messi empatados en 8 goles; Mbappé lidera por asistencias (3 vs 1). Oyarzabal subió a 5 tras su penal ante Francia. Equipos eliminados en gris.</p>
   </div>
 
   <!-- PORTEROS -->
@@ -338,16 +200,14 @@ header h1 span{color:var(--oro-claro)}
     <div class="portero-grid">
       <div class="portero-card top">
         <div class="nombre">Unai Simón</div>
-        <div class="pais">🇪🇸 España 🥇 Favorito — récord 519' invicto</div>
-        <div class="portero-stat"><span>Vallas invictas</span><strong>4</strong></div>
-        <div class="portero-stat"><span>% atajadas</span><strong>85%</strong></div>
+        <div class="pais">🇪🇸 España 🥇 Favorito — récord histórico 649' invicto</div>
+        <div class="portero-stat"><span>Vallas invictas</span><strong>5</strong></div>
         <div class="portero-stat"><span>Goles recibidos</span><strong>3</strong></div>
       </div>
-      <div class="portero-card">
+      <div class="portero-card elim">
         <div class="nombre">M. Maignan</div>
-        <div class="pais">🇫🇷 Francia</div>
-        <div class="portero-stat"><span>Vallas invictas</span><strong>4</strong></div>
-        <div class="portero-stat"><span>Atajadas</span><strong>9</strong></div>
+        <div class="pais">🇫🇷 Francia ✗ Eliminado</div>
+        <div class="portero-stat"><span>Vallas invictas</span><strong>5</strong></div>
         <div class="portero-stat"><span>Goles recibidos</span><strong>2</strong></div>
       </div>
       <div class="portero-card">
@@ -369,20 +229,13 @@ header h1 span{color:var(--oro-claro)}
 
   <!-- STATS EQUIPOS VIVOS -->
   <div class="section">
-    <div class="section-title">📊 Estadísticas — 4 Semifinalistas</div>
+    <div class="section-title">📊 Estadísticas — Equipos Vivos</div>
     <div class="equipo-grid">
       <div class="equipo-card">
-        <div class="eq-header"><span class="bandera">🇫🇷</span><span class="eq-nombre">Francia</span></div>
-        <div class="eq-stat"><span>Goles a favor</span><strong>16</strong></div>
-        <div class="eq-stat"><span>Goles en contra</span><strong>2</strong></div>
-        <div class="eq-stat"><span>Partidos jugados</span><strong>6</strong></div>
-        <div class="eq-stat"><span>Posesión prom.</span><strong>58%</strong></div>
-      </div>
-      <div class="equipo-card">
-        <div class="eq-header"><span class="bandera">🇪🇸</span><span class="eq-nombre">España</span></div>
-        <div class="eq-stat"><span>Goles a favor</span><strong>11</strong></div>
+        <div class="eq-header"><span class="bandera">🇪🇸</span><span class="eq-nombre">España — Finalista</span></div>
+        <div class="eq-stat"><span>Goles a favor</span><strong>13</strong></div>
         <div class="eq-stat"><span>Goles en contra</span><strong>3</strong></div>
-        <div class="eq-stat"><span>Partidos jugados</span><strong>6</strong></div>
+        <div class="eq-stat"><span>Partidos jugados</span><strong>7</strong></div>
         <div class="eq-stat"><span>Posesión prom.</span><strong>59%</strong></div>
       </div>
       <div class="equipo-card">
@@ -406,32 +259,32 @@ header h1 span{color:var(--oro-claro)}
   <div class="section">
     <div class="section-title">🎯 Datos Curiosos</div>
     <div class="curiosidad">
-      <span class="icon">🏆</span>
-      <p><strong>Cuatro ex-campeones en semis</strong>: Argentina (3 títulos), Francia (2), España e Inglaterra (1 cada una) son los 4 semifinalistas — solo la 3ª vez en la historia que esto ocurre (México 1970 e Italia 1990).</p>
+      <span class="icon">🇪🇸</span>
+      <p><strong>España vuelve a la final</strong>: tras vencer 2-0 a Francia, La Roja jugará su primera final de Mundial desde 2010, buscando su segunda estrella.</p>
     </div>
     <div class="curiosidad">
-      <span class="icon">⚔️</span>
-      <p><strong>La revancha de 1986</strong>: Argentina vs Inglaterra en semifinales recuerda al mítico cuarto de final de México 1986, donde Maradona marcó "La Mano de Dios" y el "Gol del Siglo". Ahora Messi busca su propia historia.</p>
-    </div>
-    <div class="curiosidad">
-      <span class="icon">🇪🇸🇫🇷</span>
-      <p><strong>Cuenta pendiente</strong>: España ya eliminó a Francia en semis de la Eurocopa 2024 y volvió a vencerla en la Nations League 2025. Los franceses buscan revancha en Dallas.</p>
-    </div>
-    <div class="curiosidad">
-      <span class="icon">😬</span>
-      <p><strong>Messi, el rey (al revés) de los penales</strong>: es el jugador que más penales ha fallado en la historia de los Mundiales (4): Islandia 2018, Polonia 2022, y en este torneo ante Austria y Egipto.</p>
-    </div>
-    <div class="curiosidad">
-      <span class="icon">⚡</span>
-      <p><strong>Bellingham iguala a Maradona</strong>: con su doblete ante Noruega en cuartos, es el segundo jugador más joven (23 años) en anotar 2+ goles en partidos consecutivos de eliminación directa, solo detrás de Pelé (1958).</p>
+      <span class="icon">🌟</span>
+      <p><strong>El blooper de Digne</strong>: el penal que abrió el marcador nació de un error del defensor francés Lucas Digne, que perdió de vista a Lamine Yamal al intentar despejar y lo derribó dentro del área.</p>
     </div>
     <div class="curiosidad">
       <span class="icon">🧤</span>
-      <p><strong>Récord para Pickford</strong>: el portero inglés superó a Peter Shilton como el jugador de Inglaterra con más partidos disputados en la historia de los Mundiales (18 presencias).</p>
+      <p><strong>Récord mundialista para Simón</strong>: el portero español llegó a 649 minutos sin recibir gol antes de la semifinal, la racha más larga en la historia de los Mundiales.</p>
+    </div>
+    <div class="curiosidad">
+      <span class="icon">⚔️</span>
+      <p><strong>Sexto duelo mundialista Argentina-Inglaterra</strong>: de los 14 enfrentamientos históricos entre ambas selecciones, Inglaterra ganó 6, empató 6 y perdió solo 2 (ambas eliminaciones fueron en Mundiales: México 1986 y Francia 1998).</p>
+    </div>
+    <div class="curiosidad">
+      <span class="icon">🏆</span>
+      <p><strong>Lo que está en juego</strong>: Argentina busca su cuarta estrella (y bicampeonato), mientras Inglaterra pelea por su primera final desde 1966, año en que ganó el único título de su historia.</p>
+    </div>
+    <div class="curiosidad">
+      <span class="icon">🎤</span>
+      <p><strong>Final histórica en EE.UU.</strong>: el 19 de julio, MetLife Stadium (Nueva Jersey) será sede de la primera final de un Mundial masculino en suelo estadounidense desde 1994, con show de medio tiempo de Madonna, Shakira y Chris Martin (Coldplay).</p>
     </div>
   </div>
 
-  <p class="updated">Actualizado: 13 de julio de 2026 · Fuentes: FIFA · ESPN · FOX Sports · Goal.com</p>
+  <p class="updated">Actualizado: 14 de julio de 2026 · Fuentes: FIFA · ESPN · CNN · NBC Sports · Goal.com</p>
 
 </div>
 </body>
