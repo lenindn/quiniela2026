@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Tips — Mundial 2026</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💡</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
 <style>
 :root {
   --verde:#1a5c2a;--verde2:#2d7d3f;--oro:#c9a023;--oro-claro:#f0d060;
@@ -24,7 +24,24 @@ header h1 span{color:var(--oro-claro)}
 .section{margin-bottom:20px}
 .section-title{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--verde);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--borde)}
 
-/* SEMIFINALES / FINAL */
+/* CAMPEÓN */
+.campeon-card{background:linear-gradient(135deg,var(--oro) 0%,#a9821a 100%);border-radius:16px;padding:28px 20px;color:white;text-align:center;box-shadow:0 4px 16px rgba(201,160,35,0.35)}
+.campeon-card .trofeo{font-size:3rem;margin-bottom:8px}
+.campeon-card .titulo{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;margin-bottom:10px}
+.campeon-card .pais{font-size:1.8rem;font-weight:800;margin-bottom:6px}
+.campeon-card .marcador{font-size:1.1rem;font-weight:700;margin-bottom:6px}
+.campeon-card .detalle{font-size:0.8rem;opacity:0.95;line-height:1.5}
+
+/* PREMIOS */
+.premios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.premio-card{background:var(--carta);border-radius:12px;padding:14px 10px;border:1px solid var(--borde);text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.premio-card .icon{font-size:1.6rem;margin-bottom:6px}
+.premio-card .label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--gris);font-weight:700}
+.premio-card .nombre{font-size:0.85rem;font-weight:700;margin-top:4px}
+.premio-card .pais{font-size:0.68rem;color:var(--texto2);margin-top:2px}
+.premio-card .stat{font-size:0.68rem;color:var(--oro);font-weight:700;margin-top:4px}
+
+/* CAMINO A LA FINAL */
 .cuarto-card{background:var(--carta);border-radius:12px;padding:12px 14px;border:1px solid var(--borde);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .cuarto-equipos{flex:1}
 .cuarto-row{display:flex;align-items:center;justify-content:space-between;font-size:0.85rem}
@@ -35,17 +52,7 @@ header h1 span{color:var(--oro-claro)}
 .cuarto-meta{font-size:0.65rem;color:var(--gris);margin-top:4px}
 .badge-fin{font-size:0.62rem;font-weight:700;background:#dcfce7;color:#15803d;border-radius:4px;padding:2px 7px;white-space:nowrap}
 
-.semi-fixture{background:linear-gradient(135deg,var(--verde),var(--verde2));border-radius:12px;padding:12px 16px;margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:white}
-.semi-fixture .fecha{font-size:0.68rem;opacity:0.8;white-space:nowrap}
-.semi-fixture .vs{font-weight:700;font-size:0.85rem;flex:1;text-align:center}
-.semi-fixture .sede{font-size:0.65rem;opacity:0.8;white-space:nowrap}
-
-.final-card{background:linear-gradient(135deg,var(--oro) 0%,#a9821a 100%);border-radius:12px;padding:16px;color:white;text-align:center}
-.final-card .titulo{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;opacity:0.9;margin-bottom:6px}
-.final-card .vs{font-size:1rem;font-weight:700;margin-bottom:6px}
-.final-card .meta{font-size:0.72rem;opacity:0.9}
-
-/* GOLEADORES */
+/* TABLA FINAL */
 .tabla{width:100%;border-collapse:collapse}
 .tabla th{background:var(--verde);color:white;font-size:0.72rem;padding:8px 10px;text-align:left}
 .tabla th:last-child,.tabla td:last-child{text-align:center}
@@ -53,30 +60,10 @@ header h1 span{color:var(--oro-claro)}
 .tabla tr:last-child td{border-bottom:none}
 .tabla tr:nth-child(even) td{background:#f7faf8}
 .tabla-wrap{background:var(--carta);border-radius:12px;overflow:hidden;border:1px solid var(--borde);overflow-x:auto}
-.goles-badge{display:inline-block;background:var(--verde);color:white;border-radius:20px;padding:2px 10px;font-weight:700;font-size:0.8rem;min-width:32px;text-align:center}
-.goles-badge.top{background:var(--oro);color:#1a1a1a}
-.rank{color:var(--gris);font-size:0.75rem;width:20px}
-.elim{opacity:0.5;font-style:italic}
-
-/* PORTEROS */
-.portero-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.portero-card{background:var(--carta);border-radius:12px;padding:12px;border:1px solid var(--borde);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
-.portero-card .nombre{font-weight:700;font-size:0.88rem}
-.portero-card .pais{font-size:0.72rem;color:var(--texto2);margin-bottom:8px}
-.portero-stat{display:flex;justify-content:space-between;font-size:0.72rem;margin-top:4px;color:var(--texto2)}
-.portero-stat strong{color:var(--texto)}
-.portero-card.top{border-top:3px solid var(--oro)}
-.portero-card.elim{opacity:0.6}
-
-/* STATS EQUIPOS */
-.equipo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.equipo-card{background:var(--carta);border-radius:12px;padding:12px 14px;border:1px solid var(--borde)}
-.equipo-card .eq-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.equipo-card .bandera{font-size:1.6rem}
-.equipo-card .eq-nombre{font-weight:700;font-size:0.88rem}
-.eq-stat{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--texto2);padding:3px 0;border-bottom:1px solid #f0f0f0}
-.eq-stat:last-child{border-bottom:none}
-.eq-stat strong{color:var(--texto)}
+.pos-badge{display:inline-block;background:var(--verde);color:white;border-radius:20px;padding:2px 10px;font-weight:700;font-size:0.8rem;min-width:24px;text-align:center}
+.pos-badge.oro{background:var(--oro);color:#1a1a1a}
+.pos-badge.plata{background:#c0c0c0;color:#1a1a1a}
+.pos-badge.bronce{background:#cd7f32;color:white}
 
 /* DATOS CURIOSOS */
 .curiosidad{background:var(--carta);border-radius:12px;padding:12px 14px;border:1px solid var(--borde);margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
@@ -84,21 +71,95 @@ header h1 span{color:var(--oro-claro)}
 .curiosidad p{font-size:0.82rem;line-height:1.45;color:var(--texto2)}
 .curiosidad p strong{color:var(--texto)}
 .updated{text-align:center;font-size:0.68rem;color:var(--gris);margin-top:16px}
+.cierre-nota{text-align:center;font-size:0.72rem;color:var(--texto2);margin-top:8px;padding:0 8px;line-height:1.5}
 </style>
 </head>
 <body>
 
 <header>
   <button class="back-btn" onclick="window.close()">← Volver</button>
-  <h1>💡 Tips <span>Mundial 2026</span></h1>
+  <h1>🏆 Tips <span>Mundial 2026</span></h1>
 </header>
 
 <div class="container">
 
-  <!-- SEMIFINALES -->
+  <!-- CAMPEÓN -->
   <div class="section">
-    <div class="section-title">🏟️ Semifinales</div>
+    <div class="campeon-card">
+      <div class="trofeo">🏆</div>
+      <div class="titulo">Campeón del Mundo · Mundial 2026</div>
+      <div class="pais">🇪🇸 España</div>
+      <div class="marcador">1-0 vs. 🇦🇷 Argentina (tiempo extra)</div>
+      <div class="detalle">Gol de Ferran Torres al minuto 106' · Domingo 19 de julio · MetLife Stadium, Nueva Jersey<br>Segunda estrella para España, 16 años después de Sudáfrica 2010</div>
+    </div>
+  </div>
 
+  <!-- PREMIOS INDIVIDUALES -->
+  <div class="section">
+    <div class="section-title">🥇 Premios Individuales</div>
+    <div class="premios-grid">
+      <div class="premio-card">
+        <div class="icon">⚽</div>
+        <div class="label">Balón de Oro</div>
+        <div class="nombre">Rodri</div>
+        <div class="pais">🇪🇸 España</div>
+        <div class="stat">Mejor jugador</div>
+      </div>
+      <div class="premio-card">
+        <div class="icon">🥾</div>
+        <div class="label">Bota de Oro</div>
+        <div class="nombre">Mbappé</div>
+        <div class="pais">🇫🇷 Francia</div>
+        <div class="stat">10 goles</div>
+      </div>
+      <div class="premio-card">
+        <div class="icon">🧤</div>
+        <div class="label">Guante de Oro</div>
+        <div class="nombre">Unai Simón</div>
+        <div class="pais">🇪🇸 España</div>
+        <div class="stat">7 vallas invictas</div>
+      </div>
+    </div>
+    <p class="cierre-nota">Mbappé se consagró bicampeón consecutivo de la Bota de Oro (2022 y 2026), superando a Messi por goles en el partido por el tercer lugar. España se llevó los tres premios principales de jugadores.</p>
+  </div>
+
+  <!-- PODIO FINAL -->
+  <div class="section">
+    <div class="section-title">🏅 Podio del Mundial 2026</div>
+    <div class="tabla-wrap">
+      <table class="tabla">
+        <thead>
+          <tr><th>Pos.</th><th>Selección</th><th>Resultado</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pos-badge oro">1°</span></td>
+            <td><strong>🇪🇸 España</strong></td>
+            <td>Campeón</td>
+          </tr>
+          <tr>
+            <td><span class="pos-badge plata">2°</span></td>
+            <td><strong>🇦🇷 Argentina</strong></td>
+            <td>Subcampeón</td>
+          </tr>
+          <tr>
+            <td><span class="pos-badge bronce">3°</span></td>
+            <td><strong>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</strong></td>
+            <td>6-4 vs. Francia</td>
+          </tr>
+          <tr>
+            <td><span class="pos-badge">4°</span></td>
+            <td><strong>🇫🇷 Francia</strong></td>
+            <td>Cuarto lugar</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CAMINO A LA FINAL -->
+  <div class="section">
+    <div class="section-title">🏟️ El Camino de España a la Gloria</div>
     <div class="cuarto-card">
       <div class="cuarto-equipos">
         <div class="cuarto-row">
@@ -107,206 +168,54 @@ header h1 span{color:var(--oro-claro)}
         <div class="cuarto-row">
           <span class="eq">🇫🇷 Francia</span><span class="gol">0</span>
         </div>
-        <div class="cuarto-meta">Mar 14 jul · Arlington (Dallas) · Penal de Oyarzabal (22') y gol de Porro (58')</div>
+        <div class="cuarto-meta">Semifinal · Arlington (Dallas)</div>
       </div>
       <span class="badge-fin">Finalizado</span>
     </div>
-
     <div class="cuarto-card">
       <div class="cuarto-equipos">
         <div class="cuarto-row">
-          <span class="eq ganador">🇦🇷 Argentina</span><span class="gol ganador">2</span>
+          <span class="eq ganador">🇪🇸 España</span><span class="gol ganador">1</span>
         </div>
         <div class="cuarto-row">
-          <span class="eq">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</span><span class="gol">1</span>
+          <span class="eq">🇦🇷 Argentina</span><span class="gol">0</span>
         </div>
-        <div class="cuarto-meta">Mié 15 jul · Atlanta · Gordon (55') adelantó a Inglaterra; remontada de Enzo Fernández (85') y Lautaro Martínez (90+2'), ambos con asistencia de Messi</div>
+        <div class="cuarto-meta">Final · MetLife Stadium (Nueva Jersey) · Gol de Ferran Torres al 106' en tiempo extra</div>
       </div>
-      <span class="badge-fin">Finalizado</span>
+      <span class="badge-fin">🏆 Campeón</span>
     </div>
-  </div>
-
-  <!-- TERCER LUGAR -->
-  <div class="section">
-    <div class="section-title">🥉 Partido por el Tercer Lugar</div>
-    <div class="cuarto-card">
-      <div class="cuarto-equipos">
-        <div class="cuarto-row">
-          <span class="eq ganador">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</span><span class="gol ganador">6</span>
-        </div>
-        <div class="cuarto-row">
-          <span class="eq">🇫🇷 Francia</span><span class="gol">4</span>
-        </div>
-        <div class="cuarto-meta">Sáb 18 jul · Hard Rock Stadium (Miami) · Goles: Rice (3'), Konsa (18'), Saka (37', 45+1', 87'-P) por Inglaterra; Mbappé (48', 66'), Barcola (54'), Dembélé (90+6') por Francia · Bellingham (90+8') cerró el marcador</div>
-      </div>
-      <span class="badge-fin">Finalizado</span>
-    </div>
-  </div>
-
-  <!-- GRAN FINAL -->
-  <div class="section">
-    <div class="section-title">🏆 Gran Final — HOY</div>
-    <div class="final-card">
-      <div class="titulo">Domingo 19 de julio · MetLife Stadium (Nueva Jersey)</div>
-      <div class="vs">🇪🇸 España vs. 🇦🇷 Argentina</div>
-      <div class="meta">13:00 CDMX / 15:00 hora del Este · Árbitro: Slavko Vinčić (Eslovenia) · Show de medio tiempo con Madonna, Shakira y Chris Martin (Coldplay)</div>
-    </div>
-  </div>
-
-  <!-- GOLEADORES -->
-  <div class="section">
-    <div class="section-title">⚽ Tabla de Goleadores</div>
-    <div class="tabla-wrap">
-      <table class="tabla">
-        <thead>
-          <tr>
-            <th>#</th><th>Jugador</th><th>País</th><th>Goles</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="rank elim">1</td>
-            <td class="elim"><strong>K. Mbappé</strong></td>
-            <td class="elim">🇫🇷 Francia — 4to lugar</td>
-            <td><span class="goles-badge top">10</span></td>
-          </tr>
-          <tr>
-            <td class="rank">2</td>
-            <td><strong>L. Messi</strong></td>
-            <td>🇦🇷 Argentina — Final HOY</td>
-            <td><span class="goles-badge top">8</span></td>
-          </tr>
-          <tr>
-            <td class="rank elim">3</td>
-            <td class="elim"><strong>E. Haaland</strong></td>
-            <td class="elim">🇳🇴 Noruega ✗</td>
-            <td><span class="goles-badge">7</span></td>
-          </tr>
-          <tr>
-            <td class="rank elim">3</td>
-            <td class="elim"><strong>J. Bellingham</strong></td>
-            <td class="elim">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra — 3er lugar</td>
-            <td><span class="goles-badge">7</span></td>
-          </tr>
-          <tr>
-            <td class="rank elim">5</td>
-            <td class="elim"><strong>H. Kane</strong></td>
-            <td class="elim">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra — 3er lugar</td>
-            <td><span class="goles-badge">6</span></td>
-          </tr>
-          <tr>
-            <td class="rank">6</td>
-            <td><strong>M. Oyarzabal</strong></td>
-            <td>🇪🇸 España — Final HOY</td>
-            <td><span class="goles-badge">5</span></td>
-          </tr>
-          <tr>
-            <td class="rank elim">6</td>
-            <td class="elim"><strong>O. Dembélé</strong></td>
-            <td class="elim">🇫🇷 Francia — 4to lugar</td>
-            <td><span class="goles-badge">5</span></td>
-          </tr>
-          <tr>
-            <td class="rank elim">8</td>
-            <td class="elim"><strong>Vinícius Jr.</strong></td>
-            <td class="elim">🇧🇷 Brasil ✗</td>
-            <td><span class="goles-badge">4</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <p style="font-size:0.68rem;color:var(--gris);margin-top:6px;padding:0 2px">Con el partido por el tercer lugar ya jugado, Mbappé se despegó con un doblete y llegó a 10 goles, quedando fuera de carrera por el título (Francia ya no juega). El Botín de Oro real se decide hoy: Messi necesita 3 goles en la final para superarlo, aunque el trofeo ya es virtualmente de Mbappé salvo una hazaña histórica de Messi u Oyarzabal.</p>
-  </div>
-
-  <!-- PORTEROS -->
-  <div class="section">
-    <div class="section-title">🧤 Mejores Porteros — Guante de Oro</div>
-    <div class="portero-grid">
-      <div class="portero-card top">
-        <div class="nombre">Unai Simón</div>
-        <div class="pais">🇪🇸 España 🥇 Favorito — récord histórico 649' invicto</div>
-        <div class="portero-stat"><span>Vallas invictas</span><strong>6</strong></div>
-        <div class="portero-stat"><span>Goles recibidos</span><strong>3</strong></div>
-      </div>
-      <div class="portero-card top">
-        <div class="nombre">E. Martínez</div>
-        <div class="pais">🇦🇷 Argentina 🏆 Guante 2022 — Final HOY</div>
-        <div class="portero-stat"><span>Vallas invictas</span><strong>2</strong></div>
-        <div class="portero-stat"><span>% atajadas</span><strong>77.8%</strong></div>
-        <div class="portero-stat"><span>Goles recibidos</span><strong>7</strong></div>
-      </div>
-      <div class="portero-card elim">
-        <div class="nombre">M. Maignan</div>
-        <div class="pais">🇫🇷 Francia — 4to lugar (torneo terminado)</div>
-        <div class="portero-stat"><span>Vallas invictas</span><strong>4</strong></div>
-        <div class="portero-stat"><span>Goles recibidos</span><strong>8</strong></div>
-      </div>
-      <div class="portero-card elim">
-        <div class="nombre">J. Pickford</div>
-        <div class="pais">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra — 3er lugar (torneo terminado)</div>
-        <div class="portero-stat"><span>Vallas invictas</span><strong>2</strong></div>
-        <div class="portero-stat"><span>Goles recibidos</span><strong>11</strong></div>
-      </div>
-    </div>
-    <p style="font-size:0.68rem;color:var(--gris);margin-top:6px;padding:0 2px">Simón y Martínez son los únicos porteros que aún pueden sumar valla invicta hoy en la final; el Guante de Oro se decide entre ellos dos.</p>
-  </div>
-
-  <!-- STATS EQUIPOS VIVOS -->
-  <div class="section">
-    <div class="section-title">📊 Estadísticas — Los Dos Finalistas</div>
-    <div class="equipo-grid">
-      <div class="equipo-card">
-        <div class="eq-header"><span class="bandera">🇪🇸</span><span class="eq-nombre">España — Finalista</span></div>
-        <div class="eq-stat"><span>Goles a favor</span><strong>13</strong></div>
-        <div class="eq-stat"><span>Goles en contra</span><strong>3</strong></div>
-        <div class="eq-stat"><span>Partidos jugados</span><strong>7</strong></div>
-        <div class="eq-stat"><span>Posesión prom.</span><strong>59%</strong></div>
-      </div>
-      <div class="equipo-card">
-        <div class="eq-header"><span class="bandera">🇦🇷</span><span class="eq-nombre">Argentina — Finalista</span></div>
-        <div class="eq-stat"><span>Goles a favor</span><strong>17</strong></div>
-        <div class="eq-stat"><span>Goles en contra</span><strong>7</strong></div>
-        <div class="eq-stat"><span>Partidos jugados</span><strong>7</strong></div>
-        <div class="eq-stat"><span>Posesión vs Inglaterra</span><strong>56%</strong></div>
-      </div>
-    </div>
-    <p style="font-size:0.68rem;color:var(--gris);margin-top:6px;padding:0 2px">Francia (4to lugar) e Inglaterra (3er lugar) ya terminaron su Mundial tras el 6-4 de hoy en Miami. España llega invicta con solo 3 goles en contra; Argentina, campeona vigente, llega también invicta.</p>
   </div>
 
   <!-- DATOS CURIOSOS -->
   <div class="section">
-    <div class="section-title">🎯 Datos Curiosos</div>
+    <div class="section-title">🎯 Datos Curiosos del Cierre</div>
     <div class="curiosidad">
-      <span class="icon">🎆</span>
-      <p><strong>Festival de goles en Miami</strong>: el partido por el tercer lugar terminó 6-4 a favor de Inglaterra, con hat-trick de Bukayo Saka (37', 45+1', 87'-P) y doblete de Mbappé (48', 66'). Diez goles combinados en un solo partido, el marcador más abultado del Mundial en fase eliminatoria.</p>
+      <span class="icon">🏆</span>
+      <p><strong>Segunda estrella</strong>: España se coronó campeona del mundo por segunda vez en su historia, 16 años después de su primer título en Sudáfrica 2010, sumando así la Eurocopa y el Mundial en su palmarés reciente.</p>
     </div>
     <div class="curiosidad">
-      <span class="icon">🇦🇷</span>
-      <p><strong>Remontada de infarto</strong>: Argentina perdía 0-1 hasta el minuto 85, cuando Enzo Fernández y Lautaro Martínez (90+2') voltearon el marcador ante Inglaterra en Atlanta, ambos goles asistidos por Messi.</p>
+      <span class="icon">😔</span>
+      <p><strong>El sueño del bicampeonato se apaga</strong>: Argentina buscaba ser la primera selección en revalidar el título desde Brasil en 1958-1962, pero España lo impidió con un gol agónico en el alargue.</p>
     </div>
     <div class="curiosidad">
-      <span class="icon">🥇</span>
-      <p><strong>Duelo del 1 vs 2</strong>: por primera vez desde que existe el ranking FIFA (1992), la final de un Mundial enfrentará a las dos selecciones mejor rankeadas del planeta: Argentina (1ª) contra España (2ª).</p>
+      <span class="icon">⏱️</span>
+      <p><strong>Gol de oro tardío</strong>: Ferran Torres definió la final al minuto 106, en pleno tiempo extra, tras un partido dominado por España con 20 remates frente a solo 2 de Argentina.</p>
     </div>
     <div class="curiosidad">
-      <span class="icon">🟨</span>
-      <p><strong>Árbitro confirmado para la final</strong>: la FIFA designó este 17 de julio al esloveno Slavko Vinčić para dirigir España-Argentina, su cuarta asignación en el torneo. Lo acompañarán sus compatriotas Tomaž Klančnik y Andraž Kovačič, con el jordano Adham Makhadmeh como cuarto árbitro.</p>
+      <span class="icon">🥾</span>
+      <p><strong>Doble Bota de Oro</strong>: Kylian Mbappé se convirtió en el primer jugador en ganar la Bota de Oro en dos Mundiales consecutivos (2022 y 2026), pese a que Francia no llegó a la final.</p>
     </div>
     <div class="curiosidad">
       <span class="icon">🧤</span>
-      <p><strong>Récord mundialista para Simón</strong>: el portero español llegó a 649 minutos sin recibir gol antes de la semifinal ante Francia, la racha más larga en la historia de los Mundiales.</p>
+      <p><strong>Récord de Unai Simón</strong>: el portero español cerró el torneo con siete vallas invictas, la mayor cantidad registrada por un arquero en la historia de los Mundiales, y se llevó el Guante de Oro.</p>
     </div>
     <div class="curiosidad">
-      <span class="icon">🏟️</span>
-      <p><strong>El Azteca hace historia</strong>: el Estadio Azteca se convierte en la primera cancha del mundo en albergar partidos de tres Copas del Mundo distintas (1970, 1986 y 2026).</p>
-    </div>
-    <div class="curiosidad">
-      <span class="icon">🎤</span>
-      <p><strong>Final histórica en EE.UU.</strong>: el 19 de julio, MetLife Stadium (Nueva Jersey) será sede de la primera final de un Mundial masculino en suelo estadounidense desde 1994, con show de medio tiempo de Madonna, Shakira y Chris Martin (Coldplay).</p>
+      <span class="icon">🌎</span>
+      <p><strong>Mundial histórico</strong>: la edición 2026, organizada por Estados Unidos, México y Canadá, fue la primera con 48 selecciones y 104 partidos, cerrando con la consagración de España en suelo estadounidense.</p>
     </div>
   </div>
 
-  <p class="updated">Actualizado: 19 de julio de 2026 · Fuentes: FIFA · ESPN · NBC Sports · Al Jazeera · Goal.com · Fox Sports</p>
+  <p class="updated">Mundial 2026 finalizado · Actualizado: 20 de julio de 2026 · Fuentes: FIFA · ESPN · CNN · Telemundo · NBC Sports · Fox Sports</p>
 
 </div>
 </body>
