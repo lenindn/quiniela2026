@@ -1,6 +1,6 @@
 // ============================================================
 // Service Worker — Quiniela Mundial 2026
-// BUILD: 2026-07-11
+// BUILD: 2026-07-20
 // ============================================================
 
 self.addEventListener('install', () => self.skipWaiting());
